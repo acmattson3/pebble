@@ -4,7 +4,7 @@ set -euo pipefail
 PORT="${PORT:-/dev/ttyACM0}"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 SKETCH="${SKETCH:-${SCRIPT_DIR}/FRED_seeed-xiao-samd21}"
-# Default to Seeed XIAO SAMD21. Override FQBN if your FRED board differs.
+# Default FQBN targets Seeed XIAO SAMD21; override for different FRED-compatible boards.
 FQBN="${FQBN:-Seeeduino:samd:seeed_XIAO_m0}"
 
 echo "Reminder: Do NOT run with sudo!"

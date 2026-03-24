@@ -6,13 +6,13 @@
 #include <time.h>
 #include <math.h>
 
-// Copy private_config.h.example to private_config.h and fill in local secrets.
+// Local credentials live in private_config.h.
 #include "private_config.h"
 
 // --------- battery sensing ---------
 // D0 is tied to the Wemos R330 battery shield divider via a 100k/100k pair.
 const uint8_t PIN_BATT = D0;
-// If you have an external divider, set this to (R1 + R2) / R2.
+// External dividers use (R1 + R2) / R2.
 // Two 100k resistors -> ratio 2.0.
 const float BATTERY_DIVIDER_RATIO = 2.0f;
 const float BATTERY_ADC_REF = 3.3f;
@@ -394,13 +394,13 @@ void configureMqttTls() {
 }
 
 void setup() {
-  pinMode(WIFI_ENABLE, OUTPUT); // pinMode(3, OUTPUT);
-  digitalWrite(WIFI_ENABLE, LOW); // digitalWrite(3, LOW); // Activate RF switch control
+  pinMode(WIFI_ENABLE, OUTPUT);
+  digitalWrite(WIFI_ENABLE, LOW); // Activate RF switch control
 
   delay(100);
 
-  pinMode(WIFI_ANT_CONFIG, OUTPUT); // pinMode(14, OUTPUT);
-  digitalWrite(WIFI_ANT_CONFIG, HIGH); // digitalWrite(14, HIGH); // Use external antenna
+  pinMode(WIFI_ANT_CONFIG, OUTPUT);
+  digitalWrite(WIFI_ANT_CONFIG, HIGH); // Use external antenna
 
   Serial.begin(115200);
   dbgPrintln("Booting MiniLAMP (Seeed ESP32C6)...");

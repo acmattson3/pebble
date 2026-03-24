@@ -8,6 +8,7 @@ These platform directories are preserved as repository examples:
 - Goob
 - Fred
 - MiniLAMP (Seeed XIAO ESP32-C6 firmware)
+- BUMPERBOT
 
 ## Repository Layout
 

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <time.h>
 
-// Copy private_config.h.example to private_config.h and fill in local secrets.
+// Local credentials live in private_config.h.
 #include "private_config.h"
 
 // --------- I2C motor controller setup ---------
@@ -19,7 +19,7 @@ const uint8_t MOTOR_CTRL_ADDR = 0x30;
 Motor MOTOR_LEFT(MOTOR_CTRL_ADDR, _MOTOR_A, 1000);
 Motor MOTOR_RIGHT(MOTOR_CTRL_ADDR, _MOTOR_B, 1000);
 
-// Set these to true if your wiring/motor orientation is inverted.
+// Invert these flags when wiring or motor orientation is reversed.
 const bool INVERT_LEFT_MOTOR = false;
 const bool INVERT_RIGHT_MOTOR = true;
 

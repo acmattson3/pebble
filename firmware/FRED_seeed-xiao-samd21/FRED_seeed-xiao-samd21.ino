@@ -236,11 +236,6 @@ void loop() {
     lastForwardTrendMs = 0;
   }
 
-  // revert LEDs to default if no L/F in 10s
-  //if (!ledIsDefault && (now - lastLedCmdMs > 10000UL)) {
-  //  setDefaultLed();
-  //}
-
   // periodic telemetry every 0.5s
   if (now - lastTelemetryMs >= TELEMETRY_PERIOD_MS) {
     lastTelemetryMs = now;
