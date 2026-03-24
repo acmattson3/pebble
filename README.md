@@ -2,6 +2,8 @@
 
 Pebble is a local-first MQTT communication stack for distributed components.
 
+![Pebble architecture overview](pebble-full-diagram.png)
+
 ## Included Reference Platforms
 
 These platform directories are preserved as repository examples:
