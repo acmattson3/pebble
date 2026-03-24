@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680">
+<rect x="0" y="0" width="1200" height="680" fill="white"/>
+<line x1="90" y1="50" x2="90" y2="600" stroke="#222"/>
+<line x1="90" y1="600" x2="1170" y2="600" stroke="#222"/>
+<text x="600.0" y="24" text-anchor="middle" font-size="20" font-family="sans-serif">goob: Session-Only Active-Hour Bandwidth Trend</text>
+<text x="600.0" y="664" text-anchor="middle" font-size="14" font-family="sans-serif">chronological active-hour bucket</text>
+<text x="28" y="340.0" transform="rotate(-90 28 340.0)" text-anchor="middle" font-size="14" font-family="sans-serif">kbps</text>
+<line x1="90" y1="600.0" x2="1170" y2="600.0" stroke="#ddd"/>
+<text x="80" y="604.0" text-anchor="end" font-size="12" font-family="sans-serif">0.0</text>
+<line x1="90" y1="490.0" x2="1170" y2="490.0" stroke="#ddd"/>
+<text x="80" y="494.0" text-anchor="end" font-size="12" font-family="sans-serif">40.0</text>
+<line x1="90" y1="380.0" x2="1170" y2="380.0" stroke="#ddd"/>
+<text x="80" y="384.0" text-anchor="end" font-size="12" font-family="sans-serif">80.0</text>
+<line x1="90" y1="270.0" x2="1170" y2="270.0" stroke="#ddd"/>
+<text x="80" y="274.0" text-anchor="end" font-size="12" font-family="sans-serif">120.0</text>
+<line x1="90" y1="160.0" x2="1170" y2="160.0" stroke="#ddd"/>
+<text x="80" y="164.0" text-anchor="end" font-size="12" font-family="sans-serif">160.0</text>
+<line x1="90" y1="50.0" x2="1170" y2="50.0" stroke="#ddd"/>
+<text x="80" y="54.0" text-anchor="end" font-size="12" font-family="sans-serif">200.0</text>
+<text x="90.0" y="624" text-anchor="middle" font-size="11" font-family="sans-serif">1</text>
+<text x="230.9" y="624" text-anchor="middle" font-size="11" font-family="sans-serif">4</text>
+<text x="324.8" y="624" text-anchor="middle" font-size="11" font-family="sans-serif">6</text>
+<text x="465.7" y="624" text-anchor="middle" font-size="11" font-family="sans-serif">9</text>
+<text x="559.6" y="624" text-anchor="middle" font-size="11" font-family="sans-serif">11</text>
+<text x="700.4" y="624" text-anchor="middle" font-size="11" font-family="sans-serif">14</text>
+<text x="794.3" y="624" text-anchor="middle" font-size="11" font-family="sans-serif">16</text>
+<text x="935.2" y="624" text-anchor="middle" font-size="11" font-family="sans-serif">19</text>
+<text x="1029.1" y="624" text-anchor="middle" font-size="11" font-family="sans-serif">21</text>
+<text x="1170.0" y="624" text-anchor="middle" font-size="11" font-family="sans-serif">24</text>
+<polyline fill="none" stroke="#9467bd" stroke-width="2" points="90.0,599.9 137.0,600.0 230.9,600.0 277.8,600.0 324.8,599.9 371.7,600.0 418.7,599.9 465.7,599.8 512.6,597.0 559.6,598.2 606.5,596.2 653.5,599.8 700.4,599.8 747.4,599.9 794.3,599.9 841.3,599.9 888.3,599.9 935.2,599.8 982.2,599.9 1029.1,599.2 1076.1,597.3 1123.0,596.6 1170.0,588.0"/>
+<rect x="100" y="58" width="12" height="12" fill="#9467bd"/>
+<text x="118" y="69" font-size="12" font-family="sans-serif">control status</text>
+<polyline fill="none" stroke="#2ca02c" stroke-width="2" points="465.7,580.9 935.2,588.2 982.2,598.9"/>
+<rect x="270" y="58" width="12" height="12" fill="#2ca02c"/>
+<text x="288" y="69" font-size="12" font-family="sans-serif">audio down</text>
+<polyline fill="none" stroke="#d62728" stroke-width="2" points="137.0,600.0 183.9,600.0 230.9,600.0 324.8,600.0 371.7,600.0 465.7,600.0 512.6,599.9 559.6,600.0 606.5,600.0 888.3,599.9 935.2,599.9 982.2,600.0 1029.1,600.0 1076.1,600.0 1123.0,600.0 1170.0,600.0"/>
+<rect x="440" y="58" width="12" height="12" fill="#d62728"/>
+<text x="458" y="69" font-size="12" font-family="sans-serif">drive commands</text>
+<polyline fill="none" stroke="#ff7f0e" stroke-width="2" points="465.7,508.0 512.6,307.4 559.6,452.8 606.5,376.9 888.3,485.1 935.2,216.0 982.2,562.9"/>
+<rect x="610" y="58" width="12" height="12" fill="#ff7f0e"/>
+<text x="628" y="69" font-size="12" font-family="sans-serif">audio up</text>
+<polyline fill="none" stroke="#1f77b4" stroke-width="2" points="324.8,590.9 371.7,597.8 465.7,568.4 512.6,515.5 559.6,525.3 606.5,515.1 888.3,523.5 935.2,430.2 982.2,560.9 1123.0,561.8 1170.0,515.1"/>
+<rect x="780" y="58" width="12" height="12" fill="#1f77b4"/>
+<text x="798" y="69" font-size="12" font-family="sans-serif">video</text>
+</svg>

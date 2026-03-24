@@ -1,0 +1,21 @@
+%YAML:1.0
+---
+image_width: 640
+image_height: 480
+camera_matrix: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 623.86599547529431, 0., 291.17060135690957, 0.,
+       622.46354704080545, 233.68824754109784, 0., 0., 1. ]
+distortion_coefficients: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data: [ 0.068895769636499168, -0.58423941143057334,
+       0.0021547171219373469, -0.0010538976999578148, 1.2141206535208207 ]
+reprojection_error: 0.22106094342723076
+marker_dictionary: APRILTAG_25H9
+marker_id: 13
+marker_size: 0.25
+num_samples: 48

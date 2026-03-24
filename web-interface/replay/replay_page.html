@@ -1,0 +1,865 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Pebble Replay Archive</title>
+<style>
+  :root {
+    --bg: #f4ecdf;
+    --card: #fffaf1;
+    --panel: #efe1cc;
+    --ink: #33261a;
+    --muted: #6d5b49;
+    --line: #c8b49a;
+    --accent: #9f5c2d;
+    --accent-soft: #ecd0b7;
+    --ok: #2f6b3d;
+    --warn: #8b5e16;
+    --off: #8c3f3f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    background: radial-gradient(circle at top, #fbf5ea 0%, var(--bg) 58%, #ead9c0 100%);
+    color: var(--ink);
+  }
+  .app {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    min-height: 100vh;
+  }
+  .sidebar {
+    border-right: 1px solid var(--line);
+    background: rgba(255,255,255,0.4);
+    backdrop-filter: blur(4px);
+    padding: 18px;
+    overflow: auto;
+  }
+  .main {
+    padding: 18px;
+    overflow: auto;
+  }
+  h1, h2, h3 {
+    margin: 0 0 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 8px 18px rgba(68, 45, 22, 0.08);
+  }
+  .toolbar {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto auto;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 16px;
+  }
+  .toolbar .card {
+    padding: 10px 12px;
+  }
+  .session-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 10px;
+    max-height: calc(100vh - 260px);
+    overflow: auto;
+    padding-right: 4px;
+  }
+  .session-item {
+    width: 100%;
+    text-align: left;
+    background: var(--card);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-radius: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+  }
+  .session-item.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .session-item small {
+    display: block;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .session-summary {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .field { display: grid; gap: 6px; }
+  label { font-size: 13px; color: var(--muted); font-weight: 600; }
+  input[type="datetime-local"], input[type="range"], select, button {
+    font: inherit;
+  }
+  input[type="datetime-local"], select {
+    width: 100%;
+    padding: 9px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+  }
+  input[type="range"] { width: 100%; }
+  button {
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  button.primary {
+    background: var(--accent);
+    color: #fff8f0;
+    border-color: #7f431c;
+  }
+  button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .subtle {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .component-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .component-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .video-box {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #130d08;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+  .video-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .video-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f8e5d0;
+    text-align: center;
+    padding: 18px;
+    font-size: 14px;
+    background: rgba(0,0,0,0.35);
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    padding: 4px 8px;
+    border: 1px solid var(--line);
+    background: #fff;
+    font-size: 12px;
+  }
+  .pill.ok { color: var(--ok); border-color: #7db18b; background: #eef9f1; }
+  .pill.warn { color: var(--warn); border-color: #d8bc82; background: #fff6e6; }
+  .pill.off { color: var(--off); border-color: #d4a7a7; background: #fff0f0; }
+  .drive-grid {
+    display: grid;
+    justify-content: center;
+    gap: 6px;
+    margin: 10px 0;
+  }
+  .drive-row { display: flex; justify-content: center; gap: 6px; }
+  kbd {
+    min-width: 40px;
+    text-align: center;
+    display: inline-block;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: #fff;
+    box-shadow: inset 0 -2px 0 rgba(0,0,0,0.08);
+  }
+  kbd.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.25);
+    display: inline-block;
+  }
+  .meta-list {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+    font-size: 14px;
+  }
+  .logs {
+    margin-top: 10px;
+    max-height: 180px;
+    overflow: auto;
+    padding: 10px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid var(--line);
+    font: 12px/1.4 ui-monospace, monospace;
+    white-space: pre-wrap;
+  }
+  .status-line {
+    margin-top: 10px;
+    min-height: 20px;
+  }
+  .sidebar-controls {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  @media (max-width: 1100px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { border-right: 0; border-bottom: 1px solid var(--line); }
+    .toolbar { grid-template-columns: 1fr 1fr; }
+    .session-list { max-height: 420px; }
+  }
+</style>
+
+<div class="app">
+  <aside class="sidebar">
+    <h1>Replay Archive</h1>
+    <div class="subtle">Historical system replay for archived Pebble MQTT sessions.</div>
+    <div class="status-line" id="discoveryStatus"></div>
+    <div class="sidebar-controls">
+      <div class="field">
+        <label for="sessionSearchTime">Search Time</label>
+        <input id="sessionSearchTime" type="datetime-local" step="0.001">
+      </div>
+      <div class="row" style="margin-top:0;">
+        <button id="refreshSessions">Refresh Sessions</button>
+      </div>
+    </div>
+    <div class="session-list" id="sessionList"></div>
+  </aside>
+
+  <main class="main">
+    <div class="toolbar">
+      <div class="card field">
+        <label for="currentTime">Current Time</label>
+        <input id="currentTime" type="datetime-local" step="0.001">
+      </div>
+      <div class="card field">
+        <label>Session</label>
+        <div id="currentSessionLabel" class="subtle">No session selected</div>
+      </div>
+      <div class="card field">
+        <label>Navigation</label>
+        <div class="row">
+          <button id="prevSession">Prev Session</button>
+          <button id="nextSession">Next Session</button>
+        </div>
+      </div>
+      <div class="card field">
+        <label>Playback</label>
+        <div class="row">
+          <button id="prevFrame">Prev Frame</button>
+          <button id="playPause" class="primary">Play</button>
+          <button id="nextFrame">Next Frame</button>
+        </div>
+      </div>
+      <div class="card field">
+        <label>Audio Stream</label>
+        <select id="audioSelect"></select>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 16px;">
+      <label for="timelineBar">Timeline</label>
+      <input id="timelineBar" type="range" min="0" max="0" value="0" step="0.1">
+      <div class="subtle" id="timelineHint">Select a session to begin.</div>
+    </div>
+
+    <div class="card" style="margin-bottom: 16px;">
+      <h2>Components</h2>
+      <div class="component-filter" id="componentFilters"></div>
+      <div class="subtle">All components in the session are shown by default. Disable any you do not want to render.</div>
+    </div>
+
+    <div class="grid" id="componentGrid"></div>
+  </main>
+</div>
+
+<script>
+const state = {
+  sessions: [],
+  selectedSessionId: null,
+  selectedSession: null,
+  currentTimeMs: null,
+  playing: false,
+  selectedComponents: new Set(),
+  audioComponent: "",
+  playTimer: null,
+  audioCtx: null,
+  nextAudioFetchMs: null,
+  audioScheduleTime: 0,
+  audioGeneration: 0,
+  activeAudioSources: new Set(),
+  displayedVideo: new Set(),
+  videoRequestTokens: {},
+  loadingVideo: new Set(),
+  sessionSearchBeforeIso: null,
+  streamStartIso: null,
+  streamToken: null,
+  streamGeneration: 0,
+};
+
+function toLocalInputValue(isoString) {
+  const date = new Date(isoString);
+  const pad = (value, width = 2) => String(value).padStart(width, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}`;
+}
+
+function formatTimestamp(ms) {
+  return new Date(ms).toLocaleString();
+}
+
+function formatDuration(seconds) {
+  const s = Math.max(0, Math.round(seconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const rem = s % 60;
+  if (h > 0) return `${h}h ${m}m ${rem}s`;
+  if (m > 0) return `${m}m ${rem}s`;
+  return `${rem}s`;
+}
+
+function rgbFromPayload(value) {
+  const b = Math.max(0, Math.min(255, Math.round((Number(value?.b) || 0) * 255)));
+  const g = Math.max(0, Math.min(255, Math.round((Number(value?.g) || 0) * 255)));
+  const r = Math.max(0, Math.min(255, Math.round((Number(value?.r) || 0) * 255)));
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function driveKeyClass(active) {
+  return active ? "active" : "";
+}
+
+async function fetchJson(url, options) {
+  const res = await fetch(url, options);
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.description || data.error || `Request failed: ${res.status}`);
+  }
+  return data;
+}
+
+function setDiscoveryStatus(text, isError = false) {
+  const el = document.getElementById("discoveryStatus");
+  el.textContent = text;
+  el.className = isError ? "status-line pill off" : "status-line subtle";
+}
+
+async function startDiscovery() {
+  try {
+    const data = await fetchJson("/replay/api/discovery/start", { method: "POST" });
+    setDiscoveryStatus(data.started ? "Discovering sessions in background..." : "Discovery already running.");
+  } catch (err) {
+    setDiscoveryStatus(String(err), true);
+  }
+}
+
+async function refreshDiscoveryStatus() {
+  try {
+    const data = await fetchJson("/replay/api/discovery/status");
+    if (data.running) {
+      setDiscoveryStatus("Discovering sessions in background...");
+    } else if (data.error) {
+      setDiscoveryStatus(`Discovery error: ${data.error}`, true);
+    } else if (data.lastScannedTs) {
+      setDiscoveryStatus(`Archive scanned through ${new Date(data.lastScannedTs).toLocaleString()}`);
+    } else {
+      setDiscoveryStatus("Replay discovery idle.");
+    }
+  } catch (err) {
+    setDiscoveryStatus(String(err), true);
+  }
+}
+
+function renderSessions() {
+  const list = document.getElementById("sessionList");
+  list.innerHTML = "";
+  for (const session of state.sessions) {
+    const btn = document.createElement("button");
+    btn.className = `session-item${session.id === state.selectedSessionId ? " active" : ""}`;
+    btn.innerHTML = `
+      <strong>${new Date(session.startTs).toLocaleString()}</strong>
+      <small>Duration ${formatDuration(session.durationS)} • ${session.componentIds.length} components • ${session.eventCount} events</small>
+      <div class="session-summary">${Object.entries(session.activityCounts || {}).map(([k,v]) => `${k}:${v}`).join(" • ") || "No summary"}</div>
+    `;
+    btn.addEventListener("click", () => selectSession(session.id));
+    list.appendChild(btn);
+  }
+}
+
+async function loadSessions() {
+  const params = new URLSearchParams({ limit: "20" });
+  if (state.sessionSearchBeforeIso) params.set("before", state.sessionSearchBeforeIso);
+  const data = await fetchJson(`/replay/api/sessions?${params.toString()}`);
+  state.sessions = data.sessions || [];
+  renderSessions();
+  if (!state.selectedSessionId && state.sessions.length > 0) {
+    await selectSession(state.sessions[0].id);
+  }
+}
+
+function sessionById(id) {
+  return state.sessions.find(item => item.id === id) || null;
+}
+
+function setPlaybackButtons() {
+  document.getElementById("playPause").textContent = state.playing ? "Pause" : "Play";
+  document.getElementById("playPause").disabled = false;
+}
+
+function stopPlayback() {
+  state.playing = false;
+  state.audioGeneration += 1;
+  if (state.playTimer) {
+    clearTimeout(state.playTimer);
+    state.playTimer = null;
+  }
+  state.nextAudioFetchMs = null;
+  state.audioScheduleTime = 0;
+  stopVideoStreams();
+  for (const source of state.activeAudioSources) {
+    try { source.onended = null; } catch (_err) {}
+    try { source.stop(); } catch (_err) {}
+    try { source.disconnect(); } catch (_err) {}
+  }
+  state.activeAudioSources.clear();
+  if (state.audioCtx) {
+    const ctx = state.audioCtx;
+    state.audioCtx = null;
+    ctx.close().catch(() => {});
+  }
+  setPlaybackButtons();
+}
+
+function clampCurrentTime() {
+  if (!state.selectedSession) return;
+  const startMs = new Date(state.selectedSession.startTs).getTime();
+  const endMs = new Date(state.selectedSession.endTs).getTime();
+  if (state.currentTimeMs == null) state.currentTimeMs = startMs;
+  state.currentTimeMs = Math.max(startMs, Math.min(endMs, state.currentTimeMs));
+}
+
+function updateTimeInputs() {
+  if (!state.selectedSession || state.currentTimeMs == null) return;
+  document.getElementById("currentTime").value = toLocalInputValue(new Date(state.currentTimeMs).toISOString());
+  const startMs = new Date(state.selectedSession.startTs).getTime();
+  const endMs = new Date(state.selectedSession.endTs).getTime();
+  const slider = document.getElementById("timelineBar");
+  slider.min = String(startMs);
+  slider.max = String(endMs);
+  slider.value = String(state.currentTimeMs);
+  document.getElementById("timelineHint").textContent = `${formatTimestamp(state.currentTimeMs)} of session ${formatDuration(state.selectedSession.durationS)}`;
+}
+
+function renderComponentFilters() {
+  const container = document.getElementById("componentFilters");
+  container.innerHTML = "";
+  if (!state.selectedSession) return;
+  for (const componentId of state.selectedSession.componentIds || []) {
+    const label = document.createElement("label");
+    label.className = "component-pill";
+    const checked = state.selectedComponents.has(componentId);
+    label.innerHTML = `<input type="checkbox" ${checked ? "checked" : ""}> <span>${componentId}</span>`;
+    label.querySelector("input").addEventListener("change", async (event) => {
+      if (event.target.checked) state.selectedComponents.add(componentId);
+      else state.selectedComponents.delete(componentId);
+      if (state.playing) {
+        state.streamStartIso = new Date(state.currentTimeMs).toISOString();
+      }
+      await renderSnapshot();
+    });
+    container.appendChild(label);
+  }
+}
+
+function updateAudioSelect(components) {
+  const select = document.getElementById("audioSelect");
+  const current = state.audioComponent;
+  const activeIds = components.filter(item => item.audio?.available).map(item => item.id);
+  select.innerHTML = "";
+  for (const componentId of activeIds) {
+    const option = document.createElement("option");
+    option.value = componentId;
+    option.textContent = componentId;
+    select.appendChild(option);
+  }
+  if (activeIds.length === 0) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No audio in session";
+    select.appendChild(option);
+    state.audioComponent = "";
+    return;
+  }
+  state.audioComponent = activeIds.includes(current) ? current : activeIds[0];
+  select.value = state.audioComponent;
+}
+
+function renderSnapshotCards(data) {
+  const grid = document.getElementById("componentGrid");
+  grid.innerHTML = "";
+  const components = (data.components || []).filter(item => state.selectedComponents.has(item.id));
+  updateAudioSelect(data.components || []);
+  state.displayedVideo = new Set(components.filter(item => item.video?.available).map(item => item.id));
+  for (const component of components) {
+    const drive = component.drive || {};
+    const lights = component.lights || {};
+    const video = component.video || {};
+    const audio = component.audio || {};
+    const heartbeat = component.heartbeat || {};
+    const soundboard = component.soundboard || {};
+    const autonomy = component.autonomy || {};
+    const odom = component.odometry || {};
+    const logs = component.logs || [];
+    const card = document.createElement("section");
+    card.className = "card";
+    const lightColor = rgbFromPayload(lights.value || {});
+    const x = Number(drive.x || 0);
+    const z = Number(drive.z || 0);
+    const y = Number(drive.y || 0);
+    const logText = logs.map(item => `[${item.level || "INFO"}] ${item.service || "log"}: ${item.message || ""}`).join("\n") || "No logs in current session window.";
+    card.innerHTML = `
+      <div class="row" style="justify-content: space-between; align-items: baseline;">
+        <h2>${component.name || component.id}</h2>
+        <span class="pill ${heartbeat.status === "online" ? "ok" : heartbeat.status === "offline" ? "off" : "warn"}">${heartbeat.status || "unknown"}</span>
+      </div>
+      <div class="video-box">
+        <img id="video-${component.id}" alt="Replay frame for ${component.id}">
+        <div class="video-placeholder" id="video-placeholder-${component.id}">Loading archived frame...</div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <span class="pill ${video.active ? "ok" : "warn"}">Video ${video.active ? "active" : "inactive"}</span>
+        <span class="pill ${audio.active ? "ok" : "warn"}">Audio ${audio.active ? "active" : "inactive"}</span>
+        <span class="pill ${component.charging ? "ok" : "warn"}">${component.charging ? "Charging" : "Not charging"}</span>
+        <span class="pill ${state.audioComponent === component.id ? "ok" : ""}">${state.audioComponent === component.id ? "Audio selected" : "Audio muted"}</span>
+      </div>
+      <div class="drive-grid">
+        <div class="drive-row"><kbd class="${driveKeyClass(z > 0.15)}">W</kbd></div>
+        <div class="drive-row"><kbd class="${driveKeyClass(y < -0.15)}">Q</kbd></div>
+        <div class="drive-row">
+          <kbd class="${driveKeyClass(x < -0.15)}">A</kbd>
+          <kbd class="${driveKeyClass(Math.abs(z) <= 0.15 && Math.abs(x) <= 0.15)}">S</kbd>
+          <kbd class="${driveKeyClass(x > 0.15)}">D</kbd>
+        </div>
+        <div class="drive-row"><kbd class="${driveKeyClass(y > 0.15)}">E</kbd></div>
+      </div>
+      <div class="meta-list">
+        <div><strong>Lights:</strong> ${lights.mode || "off"} <span class="swatch" style="background:${lightColor}"></span></div>
+        <div><strong>Battery:</strong> ${component.batteryVoltage != null ? `${component.batteryVoltage.toFixed(2)} V` : "n/a"}</div>
+        <div><strong>Odometry:</strong> ${odom.x_mm != null ? `x=${Number(odom.x_mm).toFixed(1)} y=${Number(odom.y_mm).toFixed(1)} heading=${Number(odom.heading_deg || 0).toFixed(1)}°` : "n/a"}</div>
+        <div><strong>Autonomy:</strong> ${autonomy.running ? `running ${autonomy.file || ""}` : (autonomy.error || "idle")}</div>
+        <div><strong>Soundboard:</strong> ${soundboard.playing ? `playing ${soundboard.file || ""}` : (soundboard.error || "idle")}</div>
+      </div>
+      <div class="logs">${logText}</div>
+    `;
+    grid.appendChild(card);
+    loadVideoFrame(component.id);
+  }
+}
+
+async function renderSnapshot() {
+  if (!state.selectedSession || state.currentTimeMs == null) return;
+  updateTimeInputs();
+  const params = new URLSearchParams();
+  params.set("at", new Date(state.currentTimeMs).toISOString());
+  for (const componentId of state.selectedComponents) params.append("component", componentId);
+  const data = await fetchJson(`/replay/api/session/${state.selectedSession.id}/snapshot?${params.toString()}`);
+  renderSnapshotCards(data);
+}
+
+async function loadVideoFrame(componentId) {
+  if (!state.currentTimeMs) return;
+  if (state.playing) return;
+  if (state.loadingVideo.has(componentId)) return;
+  const img = document.getElementById(`video-${componentId}`);
+  const placeholder = document.getElementById(`video-placeholder-${componentId}`);
+  const token = `${state.currentTimeMs}-${Math.random().toString(36).slice(2)}`;
+  state.videoRequestTokens[componentId] = token;
+  state.loadingVideo.add(componentId);
+  try {
+    const url = `/replay/api/video/frame/${componentId}?session=${encodeURIComponent(state.selectedSession.id)}&at=${encodeURIComponent(new Date(state.currentTimeMs).toISOString())}`;
+    if (!img.getAttribute("src")) {
+      placeholder.textContent = "Loading archived frame...";
+      placeholder.style.display = "flex";
+    }
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("No frame");
+    const blob = await res.blob();
+    if (state.videoRequestTokens[componentId] !== token) return;
+    img.src = URL.createObjectURL(blob);
+    placeholder.textContent = "";
+    placeholder.style.display = "none";
+  } catch (_err) {
+    if (state.videoRequestTokens[componentId] !== token) return;
+    if (!img.getAttribute("src")) {
+      placeholder.textContent = "No archived frame at this time.";
+      placeholder.style.display = "flex";
+      img.removeAttribute("src");
+    }
+  } finally {
+    state.loadingVideo.delete(componentId);
+  }
+}
+
+function stopVideoStreams() {
+  state.streamGeneration += 1;
+  state.streamToken = null;
+  for (const componentId of state.selectedComponents) {
+    const img = document.getElementById(`video-${componentId}`);
+    const placeholder = document.getElementById(`video-placeholder-${componentId}`);
+    if (!img) continue;
+    img.onload = null;
+    img.onerror = null;
+    img.removeAttribute("src");
+    if (placeholder) {
+      placeholder.style.display = "flex";
+      placeholder.textContent = "Paused.";
+    }
+  }
+}
+
+function startVideoStreams() {
+  if (!state.selectedSession || !state.streamStartIso) return;
+  state.streamGeneration += 1;
+  state.streamToken = `${state.streamGeneration}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  for (const componentId of state.selectedComponents) {
+    const img = document.getElementById(`video-${componentId}`);
+    const placeholder = document.getElementById(`video-placeholder-${componentId}`);
+    if (!img) continue;
+    img.dataset.streamToken = state.streamToken;
+    if (placeholder) {
+      placeholder.style.display = "flex";
+      placeholder.textContent = "Streaming archived video...";
+    }
+    img.onload = () => {
+      if (img.dataset.streamToken !== state.streamToken) return;
+      if (placeholder) placeholder.style.display = "none";
+    };
+    img.onerror = () => {
+      if (img.dataset.streamToken !== state.streamToken) return;
+      if (placeholder) {
+        placeholder.style.display = "flex";
+        placeholder.textContent = "No archived frame at this time.";
+      }
+    };
+    img.src = `/replay/api/video/stream/${componentId}?session=${encodeURIComponent(state.selectedSession.id)}&start=${encodeURIComponent(state.streamStartIso)}&token=${encodeURIComponent(state.streamToken)}&ts=${Date.now()}`;
+  }
+}
+
+function ensureAudioContext() {
+  if (!state.audioCtx) state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (state.audioCtx.state === "suspended") state.audioCtx.resume().catch(() => {});
+}
+
+function decodePcm16(base64Data) {
+  const binary = atob(base64Data);
+  const out = new Int16Array(binary.length / 2);
+  for (let i = 0; i < out.length; i += 1) {
+    const lo = binary.charCodeAt(i * 2);
+    const hi = binary.charCodeAt(i * 2 + 1);
+    let value = (hi << 8) | lo;
+    if (value & 0x8000) value = value - 0x10000;
+    out[i] = value;
+  }
+  return out;
+}
+
+function playAudioChunk(chunk, generation) {
+  if (!state.audioCtx) return;
+  if (generation !== state.audioGeneration) return;
+  const channels = Number(chunk.channels || 1);
+  const rate = Number(chunk.rate || 16000);
+  const pcm = decodePcm16(chunk.data);
+  const frameSamples = Number(chunk.frameSamples || Math.floor(pcm.length / Math.max(1, channels)));
+  const buffer = state.audioCtx.createBuffer(channels, frameSamples, rate);
+  for (let ch = 0; ch < channels; ch += 1) {
+    const channel = buffer.getChannelData(ch);
+    for (let i = 0; i < frameSamples; i += 1) {
+      const sample = pcm[i * channels + ch] || 0;
+      channel[i] = sample / 32768;
+    }
+  }
+  const source = state.audioCtx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(state.audioCtx.destination);
+  const startAt = Math.max(state.audioCtx.currentTime + 0.02, state.audioScheduleTime || 0);
+  state.activeAudioSources.add(source);
+  source.onended = () => {
+    state.activeAudioSources.delete(source);
+    try { source.disconnect(); } catch (_err) {}
+  };
+  source.start(startAt);
+  state.audioScheduleTime = startAt + buffer.duration;
+}
+
+async function fetchAudioWindow() {
+  if (!state.playing || !state.selectedSession || !state.audioComponent || state.currentTimeMs == null) return;
+  const generation = state.audioGeneration;
+  ensureAudioContext();
+  const startMs = state.nextAudioFetchMs == null ? state.currentTimeMs : state.nextAudioFetchMs;
+  const endMs = Math.min(startMs + 800, new Date(state.selectedSession.endTs).getTime());
+  const data = await fetchJson(`/replay/api/audio/chunks/${state.audioComponent}?start=${encodeURIComponent(new Date(startMs).toISOString())}&end=${encodeURIComponent(new Date(endMs).toISOString())}`);
+  if (generation !== state.audioGeneration || !state.playing) return;
+  for (const chunk of data.chunks || []) {
+    playAudioChunk(chunk, generation);
+  }
+  state.nextAudioFetchMs = endMs;
+}
+
+async function stepFrame(direction) {
+  if (!state.selectedSession || state.currentTimeMs == null) return;
+  const params = new URLSearchParams({
+    at: new Date(state.currentTimeMs).toISOString(),
+    direction,
+  });
+  for (const componentId of state.selectedComponents) params.append("component", componentId);
+  const data = await fetchJson(`/replay/api/session/${state.selectedSession.id}/frame-step?${params.toString()}`);
+  if (data.at) {
+    state.currentTimeMs = new Date(data.at).getTime();
+    await renderSnapshot();
+  }
+}
+
+async function selectSession(sessionId) {
+  stopPlayback();
+  state.selectedSessionId = sessionId;
+  state.selectedSession = sessionById(sessionId);
+  renderSessions();
+  if (!state.selectedSession) return;
+  document.getElementById("currentSessionLabel").textContent = `${new Date(state.selectedSession.startTs).toLocaleString()} • ${formatDuration(state.selectedSession.durationS)}`;
+  state.selectedComponents = new Set(state.selectedSession.componentIds || []);
+  state.currentTimeMs = new Date(state.selectedSession.startTs).getTime();
+  state.nextAudioFetchMs = state.currentTimeMs;
+  renderComponentFilters();
+  await renderSnapshot();
+}
+
+async function togglePlayback() {
+  if (!state.selectedSession || state.currentTimeMs == null) return;
+  if (state.playing) {
+    stopPlayback();
+    return;
+  }
+  state.playing = true;
+  setPlaybackButtons();
+  ensureAudioContext();
+  state.streamStartIso = new Date(state.currentTimeMs).toISOString();
+  startVideoStreams();
+  state.nextAudioFetchMs = state.currentTimeMs;
+  state.audioScheduleTime = state.audioCtx ? state.audioCtx.currentTime + 0.02 : 0;
+  await fetchAudioWindow();
+  const tick = async () => {
+    if (!state.playing || !state.selectedSession) return;
+    state.currentTimeMs += 250;
+    const endMs = new Date(state.selectedSession.endTs).getTime();
+    if (state.currentTimeMs >= endMs) {
+      state.currentTimeMs = endMs;
+      updateTimeInputs();
+      stopPlayback();
+      await renderSnapshot();
+      return;
+    }
+    updateTimeInputs();
+    await fetchAudioWindow();
+    if (!state.playing) return;
+    state.playTimer = setTimeout(() => { tick().catch(console.error); }, 250);
+  };
+  state.playTimer = setTimeout(() => { tick().catch(console.error); }, 250);
+}
+
+document.getElementById("refreshSessions").addEventListener("click", () => loadSessions().catch(err => setDiscoveryStatus(String(err), true)));
+document.getElementById("sessionSearchTime").addEventListener("change", async (event) => {
+  const value = event.target.value;
+  state.sessionSearchBeforeIso = value ? new Date(value).toISOString() : null;
+  state.selectedSessionId = null;
+  state.selectedSession = null;
+  await loadSessions();
+});
+document.getElementById("prevSession").addEventListener("click", async () => {
+  if (!state.selectedSessionId) return;
+  const index = state.sessions.findIndex(item => item.id === state.selectedSessionId);
+  if (index >= 0 && index < state.sessions.length - 1) await selectSession(state.sessions[index + 1].id);
+});
+document.getElementById("nextSession").addEventListener("click", async () => {
+  if (!state.selectedSessionId) return;
+  const index = state.sessions.findIndex(item => item.id === state.selectedSessionId);
+  if (index > 0) await selectSession(state.sessions[index - 1].id);
+});
+document.getElementById("playPause").addEventListener("click", () => togglePlayback().catch(console.error));
+document.getElementById("prevFrame").addEventListener("click", () => stepFrame("prev").catch(console.error));
+document.getElementById("nextFrame").addEventListener("click", () => stepFrame("next").catch(console.error));
+document.getElementById("currentTime").addEventListener("change", async (event) => {
+  if (!state.selectedSession) return;
+  const value = event.target.value;
+  if (!value) return;
+  stopPlayback();
+  state.currentTimeMs = new Date(value).getTime();
+  state.nextAudioFetchMs = state.currentTimeMs;
+  await renderSnapshot();
+});
+document.getElementById("timelineBar").addEventListener("change", async (event) => {
+  stopPlayback();
+  state.currentTimeMs = Number(event.target.value);
+  state.nextAudioFetchMs = state.currentTimeMs;
+  await renderSnapshot();
+});
+document.getElementById("audioSelect").addEventListener("change", (event) => {
+  state.audioComponent = event.target.value;
+});
+
+(async function init() {
+  try { await startDiscovery(); } catch (err) { console.error(err); }
+  try { await refreshDiscoveryStatus(); } catch (err) { console.error(err); }
+  document.getElementById("sessionSearchTime").value = toLocalInputValue(new Date().toISOString());
+  state.sessionSearchBeforeIso = new Date().toISOString();
+  try { await loadSessions(); } catch (err) {
+    console.error(err);
+    setDiscoveryStatus(String(err), true);
+  }
+  setInterval(() => refreshDiscoveryStatus().catch(console.error), 3000);
+  setInterval(() => loadSessions().catch(console.error), 5000);
+})();
+</script>

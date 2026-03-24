@@ -1,0 +1,376 @@
+{
+  "log_level": "INFO",
+  "robot": {
+    "system": "pebble",
+    "type": "robots",
+    "id": "goob"
+  },
+  "local_mqtt": {
+    "host": "127.0.0.1",
+    "port": 1883,
+    "keepalive": 60,
+    "username": "",
+    "password": "",
+    "tls": {
+      "enabled": false,
+      "ca_cert": "",
+      "client_cert": "",
+      "client_key": "",
+      "insecure": false,
+      "ciphers": ""
+    }
+  },
+  "services": {
+    "defaults": {
+      "retained_publish_interval_seconds": 3600
+    },
+    "launcher": {
+      "enabled": true,
+      "restart_delay_seconds": 2.0,
+      "shutdown_timeout_seconds": 8.0,
+      "log_level": "INFO",
+      "capabilities": {
+        "enabled": true,
+        "topic": "pebble/robots/goob/outgoing/capabilities",
+        "qos": 1,
+        "retain": true,
+        "publish_interval_seconds": 3600
+      },
+      "logs": {
+        "enabled": true,
+        "topic": "pebble/robots/goob/outgoing/logs",
+        "qos": 0,
+        "retain": false,
+        "min_level": "INFO",
+        "max_message_chars": 2048
+      }
+    },
+    "av_daemon": {
+      "enabled": true,
+      "log_level": "INFO",
+      "restart_delay_seconds": 2.0,
+      "stop_timeout_seconds": 5.0,
+      "cwd": "../..",
+      "env": {},
+      "video": {
+        "enabled": true,
+        "backend": "v4l2",
+        "capture_format": "mjpeg",
+        "device": "/dev/video1",
+        "camera_name": "",
+        "width": 1920,
+        "height": 1080,
+        "fps": 30,
+        "rotate_degrees": 0,
+        "socket_path": "/tmp/pebble-video.sock",
+        "shm_size": 16777216,
+        "wait_for_connection": false
+      },
+      "audio": {
+        "enabled": true,
+        "source": "alsa",
+        "device": "hw:4,0",
+        "rate": 16000,
+        "channels": 2,
+        "socket_path": "/tmp/pebble-audio.sock",
+        "shm_size": 524288,
+        "wait_for_connection": false
+      }
+    },
+    "mqtt_bridge": {
+      "enabled": true,
+      "log_level": "INFO",
+      "remote_mqtt": {
+        "host": "",
+        "port": 1883,
+        "keepalive": 60,
+        "username": "",
+        "password": "",
+        "tls": {
+          "enabled": false,
+          "ca_cert": "",
+          "client_cert": "",
+          "client_key": "",
+          "insecure": false,
+          "ciphers": ""
+        }
+      },
+      "topics": {
+        "remote_mirror": "pebble/robots/goob/incoming/flags/remote-mirror",
+        "mqtt_audio": "pebble/robots/goob/incoming/flags/mqtt-audio",
+        "mqtt_video": "pebble/robots/goob/incoming/flags/mqtt-video",
+        "reboot": "pebble/robots/goob/incoming/flags/reboot",
+        "git_pull": "pebble/robots/goob/incoming/flags/git-pull",
+        "audio_control": "pebble/robots/goob/incoming/audio",
+        "video_control": "pebble/robots/goob/incoming/front-camera"
+      },
+      "heartbeat": {
+        "enabled": true,
+        "topic": "pebble/robots/goob/outgoing/online",
+        "interval_seconds": 0.25,
+        "qos": 1,
+        "retain": true
+      },
+      "media": {
+        "video_publisher": {
+          "profile": "default",
+          "topic": "pebble/robots/goob/outgoing/front-camera",
+          "input_shm": "/tmp/pebble-video.sock",
+          "input_retry_seconds": 2.0,
+          "width": 1920,
+          "height": 1080,
+          "fps": 30,
+          "publish_width": 640,
+          "publish_height": 360,
+          "publish_fps": 10,
+          "target_fps": 10,
+          "keyframe_interval": 5,
+          "jpeg_quality": 10,
+          "rotate_degrees": 0,
+          "reconnect_seconds": 10
+        },
+        "audio_publisher": {
+          "topic": "pebble/robots/goob/outgoing/audio",
+          "input_shm": "/tmp/pebble-audio.sock",
+          "input_retry_seconds": 2.0,
+          "rate": 16000,
+          "channels": 2,
+          "chunk_ms": 20,
+          "qos": 0
+        },
+        "audio_receiver": {
+          "topic": "pebble/robots/goob/incoming/audio-stream",
+          "device": "default",
+          "rate": 16000,
+          "channels": 2,
+          "queue_limit": 48,
+          "concealment_ms": 100,
+          "qos": 0
+        }
+      },
+      "video_control": {
+        "command": [
+          "python3",
+          "video/camera_publisher.py",
+          "--config",
+          "control/configs/config.json"
+        ],
+        "cwd": "../..",
+        "stop_timeout": 8,
+        "env": {}
+      },
+      "audio_control": {
+        "publisher_command": [
+          "python3",
+          "audio/audio_publisher.py",
+          "--config",
+          "control/configs/config.json"
+        ],
+        "publisher_cwd": "../..",
+        "receiver_command": [
+          "python3",
+          "audio/audio_receiver.py",
+          "--config",
+          "control/configs/config.json"
+        ],
+        "receiver_cwd": "../..",
+        "stop_timeout": 8,
+        "env": {}
+      },
+      "reboot_control": {
+        "command": ["sudo", "-n", "/sbin/reboot"],
+        "cwd": "",
+        "cooldown_seconds": 30,
+        "ignore_retained": true,
+        "env": {}
+      },
+      "git_pull_control": {
+        "command": ["git", "-C", "/opt/pebble", "pull", "--ff-only"],
+        "cwd": "",
+        "cooldown_seconds": 60,
+        "ignore_retained": true,
+        "env": {}
+      }
+    },
+    "serial_mcu_bridge": {
+      "enabled": true,
+      "log_level": "INFO",
+      "retained_publish_interval_seconds": 3600,
+      "serial": {
+        "port": "/dev/ttyACM0",
+        "baud": 460800,
+        "timeout_seconds": 0.1
+      },
+      "telemetry": {
+        "publish_touch_sensors": false
+      },
+      "odometry_shm": {
+        "enabled": true,
+        "name": "pebble_robots_goob_odometry_raw",
+        "slots": 2048
+      },
+      "safety": {
+        "drive_timeout_seconds": 0.75,
+        "ignore_retained_drive": true,
+        "stop_on_shutdown": true
+      },
+      "topics": {
+        "drive_values": "pebble/robots/goob/incoming/drive-values",
+        "lights_solid": "pebble/robots/goob/incoming/lights-solid",
+        "lights_flash": "pebble/robots/goob/incoming/lights-flash",
+        "touch_sensors": "pebble/robots/goob/outgoing/touch-sensors",
+        "charging_status": "pebble/robots/goob/outgoing/charging-status"
+      }
+    },
+    "soundboard_handler": {
+      "enabled": true,
+      "log_level": "INFO",
+      "topics": {
+        "command": "pebble/robots/goob/incoming/soundboard-command",
+        "files": "pebble/robots/goob/outgoing/soundboard-files",
+        "status": "pebble/robots/goob/outgoing/soundboard-status"
+      },
+      "playback": {
+        "directory": "/var/lib/pebble/sounds",
+        "player_command": ["aplay"],
+        "stop_timeout": 5,
+        "scan_interval": 10,
+        "cwd": "",
+        "env": {}
+      }
+    },
+    "autonomy_manager": {
+      "enabled": true,
+      "log_level": "INFO",
+      "autonomy_root": "autonomy",
+      "scan_interval_seconds": 5,
+      "stop_timeout_seconds": 8,
+      "topics": {
+        "command": "pebble/robots/goob/incoming/autonomy-command",
+        "files": "pebble/robots/goob/outgoing/autonomy-files",
+        "status": "pebble/robots/goob/outgoing/autonomy-status"
+      },
+      "scripts": {
+        "apriltag-follow": {
+          "enabled": true,
+          "display_name": "AprilTag Follow",
+          "entrypoint": "run.py",
+          "cwd": "",
+          "env": {},
+          "args": [
+            {
+              "key": "tag_id",
+              "label": "Tag ID",
+              "type": "int",
+              "default": 13,
+              "arg": "--marker-id",
+              "min": 0
+            },
+            {
+              "key": "tag_size_m",
+              "label": "Tag Size (m)",
+              "type": "float",
+              "default": 0.25,
+              "arg": "--marker-size",
+              "min": 0.01,
+              "required": true
+            },
+            {
+              "key": "target_distance_m",
+              "label": "Target Distance (m)",
+              "type": "float",
+              "default": 0.6,
+              "arg": "--target-distance",
+              "min": 0.05
+            },
+            {
+              "key": "control_rate_hz",
+              "label": "Control Rate (Hz)",
+              "type": "float",
+              "default": 10.0,
+              "arg": "--rate",
+              "min": 1.0
+            },
+            {
+              "key": "turn_power",
+              "label": "Turn Power",
+              "type": "float",
+              "default": 0.5,
+              "arg": "--turn-power",
+              "min": 0.05,
+              "max": 1.0
+            },
+            {
+              "key": "search_pause_s",
+              "label": "Search Pause (s)",
+              "type": "float",
+              "default": 0.2,
+              "arg": "--search-pause",
+              "min": 0.0
+            },
+            {
+              "key": "search_reverse_after_s",
+              "label": "Search Reverse After (s)",
+              "type": "float",
+              "default": 0.0,
+              "arg": "--search-reverse-after",
+              "min": 0.0
+            },
+            {
+              "key": "preview",
+              "label": "Preview Window",
+              "type": "bool",
+              "default": false,
+              "arg": "--preview",
+              "mode": "flag"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "web_interface": {
+    "log_level": "INFO",
+    "robot_discovery": {
+      "seed_configured": true
+    },
+    "mqtt": {
+      "host": "127.0.0.1",
+      "port": 1883,
+      "keepalive": 60,
+      "username": "",
+      "password": "",
+      "tls": {
+        "enabled": false,
+        "ca_cert": "",
+        "client_cert": "",
+        "client_key": "",
+        "insecure": false,
+        "ciphers": ""
+      }
+    },
+    "robots": [
+      {
+        "id": "goob",
+        "name": "Goob",
+        "type": "robots",
+        "video": {
+          "topic": "pebble/robots/goob/outgoing/front-camera",
+          "controls": true
+        },
+        "audio": {
+          "topic": "pebble/robots/goob/outgoing/audio",
+          "uplink_topic": "pebble/robots/goob/incoming/audio-stream",
+          "rate": 16000,
+          "channels": 2,
+          "chunk_ms": 20,
+          "concealment_ms": 100,
+          "controls": true
+        },
+        "reboot": {
+          "controls": true
+        }
+      }
+    ]
+  }
+}

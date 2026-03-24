@@ -1,0 +1,21 @@
+#ifndef BUMPERBOT_WEMOS_PRIVATE_CONFIG_H
+#define BUMPERBOT_WEMOS_PRIVATE_CONFIG_H
+
+// --------- Wi-Fi ---------
+static const char *WIFI_SSID = "REPLACE_WIFI_SSID";
+static const char *WIFI_PASS = "REPLACE_WIFI_PASSWORD";
+
+// --------- MQTT ---------
+static const char *MQTT_HOST = "REPLACE_MQTT_HOST";
+static const uint16_t MQTT_PORT = 1883;
+static const char *MQTT_USER = "";
+static const char *MQTT_PASS = "";
+
+// --------- Robot identity ---------
+static const char *SYSTEM_NAME = "pebble";
+static const char *ROBOT_ID = "bumperbot";
+
+// Set to 1 for verbose serial logs; 0 to disable.
+#define DEBUG_LOGS 0
+
+#endif  // BUMPERBOT_WEMOS_PRIVATE_CONFIG_H

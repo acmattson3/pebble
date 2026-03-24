@@ -1,0 +1,32 @@
+#ifndef MINILAMP_PRIVATE_CONFIG_H
+#define MINILAMP_PRIVATE_CONFIG_H
+
+// --------- Wi-Fi ---------
+static const char *WIFI_SSID = "REPLACE_WIFI_SSID";
+static const char *WIFI_PASS = "REPLACE_WIFI_PASSWORD";
+
+// --------- MQTT ---------
+static const char *MQTT_HOST = "REPLACE_MQTT_HOST";
+static const uint16_t MQTT_PORT = 1883;
+static const char *MQTT_USER = "";
+static const char *MQTT_PASS = "";
+
+// --------- MQTT TLS ---------
+// Set to 1 to enable TLS (typically port 8883). Provide a CA cert or set
+// MQTT_TLS_INSECURE to 1 for testing only.
+#define MQTT_USE_TLS 0
+#define MQTT_TLS_INSECURE 0
+static const char *MQTT_CA_CERT = R"EOF(
+-----BEGIN CERTIFICATE-----
+YOUR_CA_CERT_HERE
+-----END CERTIFICATE-----
+)EOF";
+
+// --------- Robot identity ---------
+static const char *SYSTEM_NAME = "pebble";
+static const char *ROBOT_ID = "minilamp";
+
+// Set to 1 for verbose serial logs; 0 to disable.
+#define DEBUG_LOGS 0
+
+#endif  // MINILAMP_PRIVATE_CONFIG_H

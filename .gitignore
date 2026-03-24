@@ -1,0 +1,34 @@
+# Python caches and virtualenvs
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local runtime configs and secrets
+control/configs/config.json
+!control/configs/*.example.json
+control/secrets/
+firmware/*/private_config.h
+
+# Local logs and data captures
+*.log
+replay_pid*
+web-interface/logs/
+autonomy/**/logs/
+autonomy/**/sample_images/
+autonomy/wheel-odometry/*.csv
+autonomy/wheel-odometry/*.json
+wheel_odometry_capture.csv
+
+# Exported docs and other disposable artifacts
+*.pdf
+*.docx
+*.txt
+!requirements.txt
+!**/requirements.txt
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

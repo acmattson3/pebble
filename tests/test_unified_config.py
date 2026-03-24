@@ -1,0 +1,434 @@
+from __future__ import annotations
+
+import importlib.util
+import json
+import tempfile
+import types
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from audio import audio_publisher as audio_pub
+from audio import audio_receiver as audio_rx
+from video.camera_config import load_profile
+
+
+class UnifiedConfigTests(unittest.TestCase):
+    @staticmethod
+    def _fake_flask_module() -> types.ModuleType:
+        fake_flask = types.ModuleType("flask")
+
+        class _FakeFlask:
+            def __init__(self, *_args, **_kwargs):
+                pass
+
+            def route(self, *_args, **_kwargs):
+                def _deco(func):
+                    return func
+
+                return _deco
+
+        fake_flask.Flask = _FakeFlask
+        fake_flask.Response = object
+        fake_flask.abort = lambda *_a, **_k: None
+        fake_flask.jsonify = lambda *_a, **_k: {}
+        fake_flask.request = types.SimpleNamespace(get_json=lambda *_a, **_k: {}, args={})
+        fake_flask.stream_with_context = lambda f: f
+        return fake_flask
+
+    def _load_web_module(self, cfg_path: Path):
+        module_path = Path("web-interface/web-control.py").resolve()
+        spec = importlib.util.spec_from_file_location("web_control_under_test", module_path)
+        self.assertIsNotNone(spec)
+        module = importlib.util.module_from_spec(spec)
+
+        fake_cv2 = types.ModuleType("cv2")
+        fake_np = types.ModuleType("numpy")
+
+        with mock.patch.dict(
+            "os.environ",
+            {"PEBBLE_CONFIG": str(cfg_path)},
+        ), mock.patch.dict(
+            "sys.modules",
+            {
+                "flask": self._fake_flask_module(),
+                "cv2": fake_cv2,
+                "numpy": fake_np,
+            },
+        ):
+            assert spec is not None and spec.loader is not None
+            spec.loader.exec_module(module)
+        return module
+
+    def _runtime_cfg(self) -> dict:
+        return {
+            "log_level": "INFO",
+            "robot": {
+                "system": "pebble",
+                "type": "robots",
+                "id": "testbot",
+            },
+            "local_mqtt": {
+                "host": "127.0.0.1",
+                "port": 1883,
+                "keepalive": 60,
+                "username": "",
+                "password": "",
+                "tls": {"enabled": False},
+            },
+            "services": {
+                "av_daemon": {
+                    "video": {
+                        "width": 800,
+                        "height": 600,
+                        "fps": 20,
+                        "socket_path": "/tmp/test-video.sock",
+                        "rotate_degrees": 180,
+                    }
+                },
+                "mqtt_bridge": {
+                    "remote_mqtt": {
+                        "host": "remote-broker",
+                        "port": 1883,
+                        "keepalive": 45,
+                        "username": "robot",
+                        "password": "secret",
+                        "tls": {"enabled": False},
+                    },
+                    "media": {
+                        "video_publisher": {
+                            "profile": "robot-video",
+                            "topic": "pebble/robots/testbot/outgoing/front-camera",
+                            "input_shm": "/tmp/test-video.sock",
+                            "width": 800,
+                            "height": 600,
+                            "fps": 20,
+                            "publish_width": 400,
+                            "publish_height": 300,
+                            "publish_fps": 12,
+                            "target_fps": 15,
+                            "keyframe_interval": 4,
+                            "jpeg_quality": 11,
+                        },
+                        "audio_publisher": {
+                            "topic": "pebble/robots/testbot/outgoing/audio",
+                            "input_shm": "/tmp/test-audio.sock",
+                            "rate": 16000,
+                            "channels": 1,
+                            "chunk_ms": 20,
+                            "qos": 0,
+                        },
+                        "audio_receiver": {
+                            "topic": "pebble/robots/testbot/incoming/audio-stream",
+                            "device": "default",
+                            "rate": 16000,
+                            "channels": 1,
+                            "queue_limit": 48,
+                            "concealment_ms": 500,
+                            "qos": 0,
+                        },
+                    }
+                },
+            },
+            "web_interface": {
+                "robot_discovery": {"seed_configured": True},
+                "robots": [{"id": "testbot", "name": "Test Bot"}],
+            },
+        }
+
+    def test_video_profile_derived_from_runtime_config(self):
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(self._runtime_cfg()))
+            profile = load_profile("robot-video", str(cfg_path))
+
+        self.assertEqual(profile["mqtt"]["topic"], "pebble/robots/testbot/outgoing/front-camera")
+        self.assertEqual(profile["mqtt"]["broker"], "remote-broker")
+        self.assertEqual(profile["mqtt"]["keepalive"], 45)
+        self.assertEqual(profile["source"]["socket_path"], "/tmp/test-video.sock")
+        self.assertEqual(profile["source"]["width"], 800)
+        self.assertEqual(profile["source"]["height"], 600)
+        self.assertEqual(profile["encoding"]["publish_width"], 400)
+        self.assertEqual(profile["encoding"]["publish_height"], 300)
+        self.assertEqual(profile["encoding"]["target_fps"], 12)
+        self.assertEqual(profile["encoding"]["keyframe_interval"], 4)
+        self.assertEqual(profile["encoding"]["jpeg_quality"], 11)
+        self.assertEqual(profile["frame_transform"]["rotate_degrees"], 180)
+
+    def test_video_profile_allows_zero_rotate_override(self):
+        cfg = self._runtime_cfg()
+        cfg["services"]["mqtt_bridge"]["media"]["video_publisher"]["rotate_degrees"] = 0
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            profile = load_profile("robot-video", str(cfg_path))
+
+        self.assertEqual(profile["frame_transform"]["rotate_degrees"], 0)
+
+    def test_audio_runtime_config_extractors(self):
+        cfg = self._runtime_cfg()
+        pub = audio_pub._runtime_audio_config(cfg)
+        rx = audio_rx._runtime_audio_config(cfg)
+
+        assert pub is not None
+        assert rx is not None
+
+        self.assertEqual(pub["host"], "remote-broker")
+        self.assertEqual(pub["publisher"]["topic"], "pebble/robots/testbot/outgoing/audio")
+        self.assertEqual(pub["publisher"]["input_shm"], "/tmp/test-audio.sock")
+
+        self.assertEqual(rx["host"], "remote-broker")
+        self.assertEqual(rx["receiver"]["topic"], "pebble/robots/testbot/incoming/audio-stream")
+        self.assertEqual(rx["receiver"]["device"], "default")
+
+    def test_web_normalize_runtime_config(self):
+        cfg = self._runtime_cfg()
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            module = self._load_web_module(cfg_path)
+
+            normalized = module._normalize_config(cfg)
+
+        self.assertIn("mqtt", normalized)
+        self.assertEqual(normalized["mqtt"]["host"], "127.0.0.1")
+        self.assertEqual(len(normalized["robots"]), 1)
+        self.assertEqual(normalized["robots"][0]["id"], "testbot")
+        self.assertEqual(
+            normalized["robots"][0]["video"]["topic"],
+            "pebble/robots/testbot/outgoing/front-camera",
+        )
+
+    def test_web_capabilities_payload_updates_robot_features(self):
+        cfg = self._runtime_cfg()
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            module = self._load_web_module(cfg_path)
+
+            payload = {
+                "schema": "pebble-capabilities/v1",
+                "value": {
+                    "video": {"available": True, "controls": False},
+                    "audio": {"available": True, "controls": True},
+                    "soundboard": {"available": False, "controls": False},
+                    "autonomy": {"available": True, "controls": True},
+                },
+            }
+            module._handle_capabilities_payload("testbot", payload, "robots")
+            robot = module._get_robot("testbot")
+
+        self.assertIsNotNone(robot)
+        assert robot is not None
+        self.assertTrue(robot.get("hasVideo"))
+        self.assertFalse(robot.get("videoControls"))
+        self.assertTrue(robot.get("hasAudio"))
+        self.assertTrue(robot.get("audioControls"))
+        self.assertFalse(robot.get("hasSoundboard"))
+        self.assertFalse(robot.get("soundboardControls"))
+        self.assertTrue(robot.get("hasAutonomy"))
+        self.assertTrue(robot.get("autonomyControls"))
+
+    def test_web_capability_values_are_not_overridden_by_config_hints(self):
+        cfg = self._runtime_cfg()
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            module = self._load_web_module(cfg_path)
+
+            payload = {
+                "schema": "pebble-capabilities/v1",
+                "value": {
+                    "video": {"available": False, "controls": False},
+                    "audio": {"available": False, "controls": False},
+                },
+            }
+            module._handle_capabilities_payload("testbot", payload, "robots")
+            module._ensure_robot_placeholder("testbot", "robots")
+            robot = module._get_robot("testbot")
+            assert robot is not None
+            self.assertFalse(robot.get("hasVideo"))
+            self.assertFalse(robot.get("videoControls"))
+            self.assertFalse(robot.get("hasAudio"))
+            self.assertFalse(robot.get("audioControls"))
+
+            module._mark_robot_video_capable("testbot", True)
+            module._mark_robot_audio_capable("testbot", True)
+            robot = module._get_robot("testbot")
+
+        self.assertIsNotNone(robot)
+        assert robot is not None
+        self.assertTrue(robot.get("hasVideo"))
+        self.assertFalse(robot.get("videoControls"))
+        self.assertTrue(robot.get("hasAudio"))
+        self.assertFalse(robot.get("audioControls"))
+
+    def test_web_capabilities_command_and_flag_topics_are_used(self):
+        cfg = self._runtime_cfg()
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            module = self._load_web_module(cfg_path)
+
+            payload = {
+                "schema": "pebble-capabilities/v1",
+                "value": {
+                    "video": {
+                        "available": True,
+                        "controls": True,
+                        "command_topic": "pebble/robots/testbot/incoming/front-camera-custom",
+                        "flag_topic": "pebble/robots/testbot/incoming/flags/mqtt-video-custom",
+                        "overlays_topic": "pebble/robots/testbot/outgoing/video-overlays-custom",
+                    },
+                    "audio": {
+                        "available": True,
+                        "controls": True,
+                        "command_topic": "pebble/robots/testbot/incoming/audio-custom",
+                        "flag_topic": "pebble/robots/testbot/incoming/flags/mqtt-audio-custom",
+                    },
+                    "autonomy": {
+                        "available": True,
+                        "controls": True,
+                        "command_topic": "pebble/robots/testbot/incoming/autonomy-command-custom",
+                        "files_topic": "pebble/robots/testbot/outgoing/autonomy-files-custom",
+                        "status_topic": "pebble/robots/testbot/outgoing/autonomy-status-custom",
+                    },
+                },
+            }
+            module._handle_capabilities_payload("testbot", payload, "robots")
+
+            self.assertEqual(
+                module._video_command_topic_for_robot("testbot"),
+                "pebble/robots/testbot/incoming/front-camera-custom",
+            )
+            self.assertEqual(
+                module._video_flag_topic_for_robot("testbot"),
+                "pebble/robots/testbot/incoming/flags/mqtt-video-custom",
+            )
+            self.assertEqual(
+                module._video_overlays_topic_for_robot("testbot"),
+                "pebble/robots/testbot/outgoing/video-overlays-custom",
+            )
+            self.assertEqual(
+                module._audio_command_topic_for_robot("testbot"),
+                "pebble/robots/testbot/incoming/audio-custom",
+            )
+            self.assertEqual(
+                module._audio_flag_topic_for_robot("testbot"),
+                "pebble/robots/testbot/incoming/flags/mqtt-audio-custom",
+            )
+            self.assertEqual(
+                module._autonomy_command_topic_for_robot("testbot"),
+                "pebble/robots/testbot/incoming/autonomy-command-custom",
+            )
+            self.assertEqual(
+                module._autonomy_files_topic_for_robot("testbot"),
+                "pebble/robots/testbot/outgoing/autonomy-files-custom",
+            )
+            self.assertEqual(
+                module._autonomy_status_topic_for_robot("testbot"),
+                "pebble/robots/testbot/outgoing/autonomy-status-custom",
+            )
+
+    def test_web_audio_buffer_resets_on_sequence_rewind(self):
+        cfg = self._runtime_cfg()
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            module = self._load_web_module(cfg_path)
+
+            pcm = bytes(320)
+            first = module._encode_audio_packet(100, 16000, 1, pcm)
+            second = module._encode_audio_packet(1, 16000, 1, pcm)
+            assert first is not None and second is not None
+
+            module._handle_audio_payload("testbot", first)
+            module._handle_audio_payload("testbot", second)
+
+            with module.audio_cache_lock:
+                cache = module.audio_cache.get("testbot") or {}
+                buffer = list(module.audio_buffers.get("testbot", []))
+
+        self.assertEqual(cache.get("seq"), 1)
+        self.assertEqual(cache.get("generation"), 1)
+        self.assertEqual(len(buffer), 1)
+        self.assertEqual(buffer[0].get("seq"), 1)
+
+    def test_web_autonomy_payload_handlers(self):
+        cfg = self._runtime_cfg()
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            module = self._load_web_module(cfg_path)
+
+            module._handle_autonomy_files_payload(
+                "testbot",
+                {
+                    "files": [
+                        {
+                            "file": "apriltag-follow",
+                            "label": "AprilTag Follow",
+                            "configs": [
+                                {"key": "tag_id", "type": "int", "default": 13},
+                                {"key": "tag_size_m", "type": "float", "default": 0.25},
+                            ],
+                        }
+                    ],
+                    "controls": True,
+                },
+            )
+            module._handle_autonomy_status_payload(
+                "testbot",
+                {"running": True, "file": "apriltag-follow", "pid": 4321, "config": {"tag_id": 13}},
+            )
+
+            files_payload = module._autonomy_files_payload("testbot")
+            status_payload = module._autonomy_status_payload("testbot")
+
+        self.assertTrue(files_payload.get("enabled"))
+        self.assertTrue(files_payload.get("controls"))
+        self.assertEqual(files_payload.get("files")[0].get("file"), "apriltag-follow")
+        self.assertTrue(status_payload.get("running"))
+        self.assertEqual(status_payload.get("file"), "apriltag-follow")
+        self.assertEqual(status_payload.get("pid"), 4321)
+
+    def test_web_video_overlay_payload_handlers(self):
+        cfg = self._runtime_cfg()
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            module = self._load_web_module(cfg_path)
+
+            module._handle_video_overlays_payload(
+                "testbot",
+                {
+                    "source": "apriltag-follow",
+                    "frame_width": 1280,
+                    "frame_height": 720,
+                    "shapes": [
+                        [[0.1, 0.2], [0.8, 0.2], [0.8, 0.7], [0.1, 0.7]],
+                        [[-1, 0.5], [2, 0.5]],  # clamped
+                    ],
+                },
+            )
+            payload = module._video_overlays_payload("testbot")
+
+        self.assertTrue(payload.get("enabled"))
+        self.assertEqual(payload.get("source"), "apriltag-follow")
+        self.assertEqual(payload.get("frameWidth"), 1280)
+        self.assertEqual(payload.get("frameHeight"), 720)
+        self.assertEqual(len(payload.get("shapes") or []), 2)
+        first_point = payload["shapes"][1][0]
+        self.assertEqual(first_point, [0.0, 0.5])
+
+
+if __name__ == "__main__":
+    unittest.main()

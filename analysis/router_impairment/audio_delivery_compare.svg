@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1480" height="840" viewBox="0 0 1480 840">
+<rect x="0" y="0" width="1480" height="840" fill="white"/>
+<line x1="90" y1="55" x2="90" y2="670" stroke="#222"/>
+<line x1="90" y1="670" x2="1440" y2="670" stroke="#222"/>
+<text x="740.0" y="28" text-anchor="middle" font-size="22" font-family="sans-serif">Router Impairment Audio Delivery Ratio: Fred vs Goob</text>
+<text x="30" y="420.0" transform="rotate(-90 30 420.0)" text-anchor="middle" font-size="14" font-family="sans-serif">delivery ratio</text>
+<line x1="90" y1="670.0" x2="1440" y2="670.0" stroke="#ddd"/>
+<text x="80" y="674.0" text-anchor="end" font-size="12" font-family="sans-serif">0</text>
+<line x1="90" y1="547.0" x2="1440" y2="547.0" stroke="#ddd"/>
+<text x="80" y="551.0" text-anchor="end" font-size="12" font-family="sans-serif">0.2</text>
+<line x1="90" y1="424.0" x2="1440" y2="424.0" stroke="#ddd"/>
+<text x="80" y="428.0" text-anchor="end" font-size="12" font-family="sans-serif">0.4</text>
+<line x1="90" y1="301.0" x2="1440" y2="301.0" stroke="#ddd"/>
+<text x="80" y="305.0" text-anchor="end" font-size="12" font-family="sans-serif">0.6</text>
+<line x1="90" y1="178.0" x2="1440" y2="178.0" stroke="#ddd"/>
+<text x="80" y="182.0" text-anchor="end" font-size="12" font-family="sans-serif">0.8</text>
+<line x1="90" y1="55.0" x2="1440" y2="55.0" stroke="#ddd"/>
+<text x="80" y="59.0" text-anchor="end" font-size="12" font-family="sans-serif">1</text>
+<text x="138.2" y="688.0" transform="rotate(45 138.2 688.0)" text-anchor="start" font-size="11" font-family="sans-serif">base-start</text>
+<text x="234.6" y="688.0" transform="rotate(45 234.6 688.0)" text-anchor="start" font-size="11" font-family="sans-serif">1024k</text>
+<text x="331.1" y="688.0" transform="rotate(45 331.1 688.0)" text-anchor="start" font-size="11" font-family="sans-serif">512k</text>
+<text x="427.5" y="688.0" transform="rotate(45 427.5 688.0)" text-anchor="start" font-size="11" font-family="sans-serif">256k</text>
+<text x="523.9" y="688.0" transform="rotate(45 523.9 688.0)" text-anchor="start" font-size="11" font-family="sans-serif">128k</text>
+<text x="620.4" y="688.0" transform="rotate(45 620.4 688.0)" text-anchor="start" font-size="11" font-family="sans-serif">64k</text>
+<text x="716.8" y="688.0" transform="rotate(45 716.8 688.0)" text-anchor="start" font-size="11" font-family="sans-serif">loss 1%</text>
+<text x="813.2" y="688.0" transform="rotate(45 813.2 688.0)" text-anchor="start" font-size="11" font-family="sans-serif">loss 2%</text>
+<text x="909.6" y="688.0" transform="rotate(45 909.6 688.0)" text-anchor="start" font-size="11" font-family="sans-serif">loss 5%</text>
+<text x="1006.1" y="688.0" transform="rotate(45 1006.1 688.0)" text-anchor="start" font-size="11" font-family="sans-serif">loss 10%</text>
+<text x="1102.5" y="688.0" transform="rotate(45 1102.5 688.0)" text-anchor="start" font-size="11" font-family="sans-serif">256k+1%</text>
+<text x="1198.9" y="688.0" transform="rotate(45 1198.9 688.0)" text-anchor="start" font-size="11" font-family="sans-serif">128k+2%</text>
+<text x="1295.4" y="688.0" transform="rotate(45 1295.4 688.0)" text-anchor="start" font-size="11" font-family="sans-serif">64k+5%</text>
+<text x="1391.8" y="688.0" transform="rotate(45 1391.8 688.0)" text-anchor="start" font-size="11" font-family="sans-serif">base-end</text>
+<circle cx="138.2" cy="163.7" r="4" fill="#1f77b4"/>
+<circle cx="234.6" cy="163.7" r="4" fill="#1f77b4"/>
+<circle cx="331.1" cy="217.8" r="4" fill="#1f77b4"/>
+<circle cx="427.5" cy="441.4" r="4" fill="#1f77b4"/>
+<circle cx="523.9" cy="556.9" r="4" fill="#1f77b4"/>
+<circle cx="620.4" cy="628.2" r="4" fill="#1f77b4"/>
+<circle cx="716.8" cy="163.8" r="4" fill="#1f77b4"/>
+<circle cx="813.2" cy="163.8" r="4" fill="#1f77b4"/>
+<circle cx="909.6" cy="148.8" r="4" fill="#1f77b4"/>
+<circle cx="1006.1" cy="148.9" r="4" fill="#1f77b4"/>
+<circle cx="1102.5" cy="443.9" r="4" fill="#1f77b4"/>
+<circle cx="1198.9" cy="608.5" r="4" fill="#1f77b4"/>
+<circle cx="1295.4" cy="613.5" r="4" fill="#1f77b4"/>
+<circle cx="1391.8" cy="163.7" r="4" fill="#1f77b4"/>
+<polyline fill="none" stroke="#1f77b4" stroke-width="2.5" points="138.2,163.7 234.6,163.7 331.1,217.8 427.5,441.4 523.9,556.9 620.4,628.2 716.8,163.8 813.2,163.8 909.6,148.8 1006.1,148.9 1102.5,443.9 1198.9,608.5 1295.4,613.5 1391.8,163.7"/>
+<rect x="100" y="63" width="12" height="12" fill="#1f77b4"/>
+<text x="118" y="74" font-size="12" font-family="sans-serif">fred</text>
+<circle cx="138.2" cy="154.0" r="4" fill="#ff7f0e"/>
+<circle cx="234.6" cy="126.9" r="4" fill="#ff7f0e"/>
+<circle cx="331.1" cy="178.5" r="4" fill="#ff7f0e"/>
+<circle cx="427.5" cy="424.2" r="4" fill="#ff7f0e"/>
+<circle cx="523.9" cy="544.6" r="4" fill="#ff7f0e"/>
+<circle cx="620.4" cy="611.0" r="4" fill="#ff7f0e"/>
+<circle cx="716.8" cy="136.7" r="4" fill="#ff7f0e"/>
+<circle cx="813.2" cy="131.8" r="4" fill="#ff7f0e"/>
+<circle cx="909.6" cy="126.9" r="4" fill="#ff7f0e"/>
+<circle cx="1006.1" cy="136.7" r="4" fill="#ff7f0e"/>
+<circle cx="1102.5" cy="431.7" r="4" fill="#ff7f0e"/>
+<circle cx="1198.9" cy="576.6" r="4" fill="#ff7f0e"/>
+<circle cx="1295.4" cy="662.6" r="4" fill="#ff7f0e"/>
+<circle cx="1391.8" cy="134.4" r="4" fill="#ff7f0e"/>
+<polyline fill="none" stroke="#ff7f0e" stroke-width="2.5" points="138.2,154.0 234.6,126.9 331.1,178.5 427.5,424.2 523.9,544.6 620.4,611.0 716.8,136.7 813.2,131.8 909.6,126.9 1006.1,136.7 1102.5,431.7 1198.9,576.6 1295.4,662.6 1391.8,134.4"/>
+<rect x="270" y="63" width="12" height="12" fill="#ff7f0e"/>
+<text x="288" y="74" font-size="12" font-family="sans-serif">goob</text>
+</svg>
