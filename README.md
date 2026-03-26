@@ -2,6 +2,8 @@
 
 Pebble is a local-first MQTT communication stack for distributed components.
 
+Robots at minimum have to implement the MQTT standard contract, but may be more complicated. Below is an example of a full-Linux architecture, the one present on Goob.
+
 ![Pebble architecture overview](pebble-full-diagram.png)
 
 ## Included Reference Platforms
