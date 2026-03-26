@@ -194,6 +194,111 @@
         "env": {}
       }
     },
+    "ros1_bridge": {
+      "enabled": false,
+      "log_level": "INFO",
+      "topics": {
+        "drive_values": "pebble/robots/my-robot/incoming/drive-values",
+        "wheel_odometry": "pebble/robots/my-robot/outgoing/wheel-odometry",
+        "charging_status": "pebble/robots/my-robot/outgoing/charging-status",
+        "charging_level": "pebble/robots/my-robot/outgoing/charging-level",
+        "localization_pose": "pebble/robots/my-robot/outgoing/localization-pose",
+        "navigation_status": "pebble/robots/my-robot/outgoing/navigation-status",
+        "navigation_goal": "pebble/robots/my-robot/outgoing/navigation-goal",
+        "navigation_local_plan": "pebble/robots/my-robot/outgoing/navigation/local-plan",
+        "navigation_global_plan": "pebble/robots/my-robot/outgoing/navigation/global-plan",
+        "diagnostics": "pebble/robots/my-robot/outgoing/diagnostics"
+      },
+      "heartbeat": {
+        "enabled": true,
+        "topic": "pebble/robots/my-robot/outgoing/online",
+        "interval_seconds": 0.25,
+        "qos": 1,
+        "retain": true
+      },
+      "ros": {
+        "node_name": "pebble_ros1_bridge",
+        "cmd_vel_topic": "/cmd_vel",
+        "cmd_vel_publish_interval_seconds": 0.05,
+        "odometry_topic": "/odometry/filtered",
+        "navigation_status_topic": "/move_base/status",
+        "navigation_goal_topic": "/move_base/current_goal",
+        "navigation_local_plan_topic": "/move_base/TrajectoryPlannerROS/local_plan",
+        "navigation_global_plan_topic": "/move_base/NavfnROS/plan",
+        "diagnostics_topic": "/diagnostics_agg"
+      },
+      "motion": {
+        "max_linear_speed_mps": 0.6,
+        "max_angular_speed_radps": 1.2
+      },
+      "telemetry": {
+        "wheel_odometry": {
+          "enabled": true,
+          "interval_seconds": 0.25,
+          "qos": 0,
+          "retain": false
+        },
+        "localization_pose": {
+          "enabled": true,
+          "interval_seconds": 0.25,
+          "qos": 0,
+          "retain": false
+        },
+        "navigation_status": {
+          "enabled": true,
+          "interval_seconds": 0.5,
+          "qos": 1,
+          "retain": true
+        },
+        "navigation_goal": {
+          "enabled": true,
+          "qos": 1,
+          "retain": true
+        },
+        "navigation_local_plan": {
+          "enabled": false,
+          "interval_seconds": 1.0,
+          "qos": 0,
+          "retain": false,
+          "max_points": 40
+        },
+        "navigation_global_plan": {
+          "enabled": false,
+          "interval_seconds": 1.0,
+          "qos": 0,
+          "retain": false,
+          "max_points": 60
+        },
+        "diagnostics": {
+          "enabled": true,
+          "interval_seconds": 1.0,
+          "qos": 1,
+          "retain": true,
+          "max_items": 8
+        },
+        "charging_level": {
+          "enabled": true,
+          "qos": 1,
+          "retain": true,
+          "status_name": "/Jackal Base/General/Battery",
+          "key": "Battery Voltage (V)"
+        },
+        "charging_status": {
+          "enabled": false,
+          "qos": 1,
+          "retain": true,
+          "status_name": "",
+          "key": "",
+          "truthy_values": ["true", "charging", "yes", "1"],
+          "falsey_values": ["false", "not charging", "no", "0"]
+        }
+      },
+      "safety": {
+        "drive_timeout_seconds": 0.75,
+        "ignore_retained_drive": true,
+        "stop_on_shutdown": true
+      }
+    },
     "serial_mcu_bridge": {
       "enabled": true,
       "log_level": "INFO",

@@ -17,6 +17,12 @@
   - Publishes remote `online` heartbeat.
   - Handles MQTT media subprocess controls (audio/video) behind flags.
   - MQTT media scripts consume AV-daemon shared streams and do not access hardware directly.
+- `services/ros1_bridge.py`
+  - Bridges local MQTT `incoming/drive-values` into a ROS 1 `cmd_vel` publisher.
+  - Re-publishes the last commanded `cmd_vel` at a configurable ROS-side cadence so stacks like Jackal `twist_mux` keep receiving a live velocity stream between MQTT updates.
+  - Can publish low-bandwidth ROS telemetry back into local MQTT, including wheel-odometry, localization pose, navigation state, diagnostics, and battery voltage.
+  - Can publish local `outgoing/online` heartbeat for ROS-backed robots that do not use the MCU bridge path, though normal dual-bridge deployments should leave heartbeat ownership in `mqtt_bridge`.
+  - Applies the same Pebble drive topic location and watchdog semantics to a ROS 1 stack.
 - `services/serial_mcu_bridge.py`
   - Bridges local MQTT command topics with MCU serial commands.
   - Keeps high-rate touch telemetry (`a0/a1/a2`) local by default (`services.serial_mcu_bridge.telemetry.publish_touch_sensors=false`).
@@ -53,6 +59,14 @@ Reference schema:
 - `control/configs/config.json.example`
 - Shared retained-topic default interval:
   - `services.defaults.retained_publish_interval_seconds` (default `3600`).
+- ROS 1 drive bridge config:
+  - `services.ros1_bridge.topics.drive_values`
+  - `services.ros1_bridge.topics.wheel_odometry|charging_status|charging_level|localization_pose|navigation_status|navigation_goal|navigation_local_plan|navigation_global_plan|diagnostics`
+  - `services.ros1_bridge.heartbeat.*`
+  - `services.ros1_bridge.ros.cmd_vel_topic|cmd_vel_publish_interval_seconds|odometry_topic|navigation_*_topic|diagnostics_topic`
+  - `services.ros1_bridge.telemetry.*`
+  - `services.ros1_bridge.motion.max_linear_speed_mps|max_angular_speed_radps`
+  - `services.ros1_bridge.safety.*`
 - Autonomy manager config:
   - `services.autonomy_manager.topics.command|files|status`
   - `services.autonomy_manager.scripts.<name>.args[]` (web-editable runtime fields mapped to script CLI args)

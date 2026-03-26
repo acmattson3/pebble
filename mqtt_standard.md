@@ -291,7 +291,7 @@ Here `{base}` means `{system}/{type}/{id}` in the current repository.
 
 | Example topic | Current producer(s) | Current consumer(s) | Notes |
 | --- | --- | --- | --- |
-| `{base}/incoming/drive-values` | web UI, teleop, autonomy scripts | serial MCU bridge, wheel-odometry direction tracker | Optional; only meaningful for drive-capable components. |
+| `{base}/incoming/drive-values` | web UI, teleop, autonomy scripts | serial MCU bridge, ROS 1 bridge, wheel-odometry direction tracker | Optional; only meaningful for drive-capable components. |
 | `{base}/incoming/lights-solid` | web UI | serial MCU bridge | Optional visual-control topic. |
 | `{base}/incoming/lights-flash` | web UI | serial MCU bridge | Optional visual-control topic. |
 | `{base}/incoming/front-camera` | web UI | MQTT bridge | Optional video start/stop request. |
@@ -309,19 +309,25 @@ Here `{base}` means `{system}/{type}/{id}` in the current repository.
 
 | Example topic | Current producer(s) | Current consumer(s) | Notes |
 | --- | --- | --- | --- |
-| `{base}/outgoing/online` | MQTT bridge; some firmware components may publish directly | web UI, replay, analysis | Current heartbeat topic in this repository. |
+| `{base}/outgoing/online` | MQTT bridge, ROS 1 bridge; some firmware components may publish directly | web UI, replay, analysis | Current heartbeat topic in this repository. |
 | `{base}/outgoing/capabilities` | launcher | web UI, replay, tooling | Retained capability advertisement. |
 | `{base}/outgoing/logs` | launcher | web UI, replay, analysis | Structured runtime diagnostics. |
 | `{base}/outgoing/touch-sensors` | serial MCU bridge when enabled | web UI, analysis | Optional ADC touch telemetry. |
 | `{base}/outgoing/charging-status` | serial MCU bridge; some MCU firmware | web UI, replay | Optional charging boolean. |
-| `{base}/outgoing/charging-level` | some MCU firmware | web UI, replay | Optional battery/voltage metric. |
+| `{base}/outgoing/charging-level` | some MCU firmware; ROS 1 bridge | web UI, replay | Optional battery/voltage metric. |
+| `{base}/outgoing/localization-pose` | ROS 1 bridge | replay, tooling | Optional low-rate localization estimate. |
+| `{base}/outgoing/navigation-status` | ROS 1 bridge | replay, tooling | Optional low-rate navigation state summary. |
+| `{base}/outgoing/navigation-goal` | ROS 1 bridge | replay, tooling | Optional current navigation goal. |
+| `{base}/outgoing/navigation/local-plan` | ROS 1 bridge | replay, tooling | Optional sampled local plan. |
+| `{base}/outgoing/navigation/global-plan` | ROS 1 bridge | replay, tooling | Optional sampled global plan. |
+| `{base}/outgoing/diagnostics` | ROS 1 bridge | replay, tooling | Optional low-rate diagnostics summary. |
 | `{base}/outgoing/front-camera` | camera publisher | web UI, replay, receivers | Optional video stream. |
 | `{base}/outgoing/audio` | audio publisher | web UI, replay, receivers | Optional uplink audio stream. |
 | `{base}/outgoing/soundboard-files` | soundboard handler | web UI | Optional sound catalog. |
 | `{base}/outgoing/soundboard-status` | soundboard handler | web UI, replay | Optional sound playback state. |
 | `{base}/outgoing/autonomy-files` | autonomy manager | web UI | Optional script catalog. |
 | `{base}/outgoing/autonomy-status` | autonomy manager | web UI, replay | Optional autonomy process state. |
-| `{base}/outgoing/wheel-odometry` | wheel-odometry script | web UI, replay, follow logic | Optional odometry estimate. |
+| `{base}/outgoing/wheel-odometry` | wheel-odometry script; ROS 1 bridge | web UI, replay, follow logic | Optional odometry estimate. |
 | `{base}/outgoing/apriltag-locations` | AprilTag location script | follow logic, web UI, replay | Optional perception topic. |
 | `{base}/outgoing/apriltag-data` | AprilTag follow scripts | web UI, replay | Optional target-tag estimate topic. |
 | `{base}/outgoing/video-overlays` | perception/autonomy publishers | web UI, replay | Optional overlay geometry topic. |

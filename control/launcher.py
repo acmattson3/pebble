@@ -30,6 +30,7 @@ from control.common.topics import identity_from_config
 SERVICE_MODULES = {
     "av_daemon": "control.services.av_daemon",
     "mqtt_bridge": "control.services.mqtt_bridge",
+    "ros1_bridge": "control.services.ros1_bridge",
     "serial_mcu_bridge": "control.services.serial_mcu_bridge",
     "soundboard_handler": "control.services.soundboard_handler",
     "autonomy_manager": "control.services.autonomy_manager",

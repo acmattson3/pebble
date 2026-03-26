@@ -37,6 +37,7 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
 
     av_cfg = service_cfg(config, "av_daemon")
     mqtt_bridge_cfg = service_cfg(config, "mqtt_bridge")
+    ros1_bridge_cfg = service_cfg(config, "ros1_bridge")
     serial_cfg = service_cfg(config, "serial_mcu_bridge")
     soundboard_cfg = service_cfg(config, "soundboard_handler")
     autonomy_cfg = service_cfg(config, "autonomy_manager")
@@ -45,6 +46,11 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
     av_audio_cfg = av_cfg.get("audio") if isinstance(av_cfg.get("audio"), dict) else {}
 
     bridge_topics = mqtt_bridge_cfg.get("topics") if isinstance(mqtt_bridge_cfg.get("topics"), dict) else {}
+    ros1_topics = ros1_bridge_cfg.get("topics") if isinstance(ros1_bridge_cfg.get("topics"), dict) else {}
+    ros1_telemetry_cfg = ros1_bridge_cfg.get("telemetry") if isinstance(ros1_bridge_cfg.get("telemetry"), dict) else {}
+    ros1_charge_status_cfg = (
+        ros1_telemetry_cfg.get("charging_status") if isinstance(ros1_telemetry_cfg.get("charging_status"), dict) else {}
+    )
     media_cfg = mqtt_bridge_cfg.get("media") if isinstance(mqtt_bridge_cfg.get("media"), dict) else {}
     video_pub_cfg = media_cfg.get("video_publisher") if isinstance(media_cfg.get("video_publisher"), dict) else {}
     audio_pub_cfg = media_cfg.get("audio_publisher") if isinstance(media_cfg.get("audio_publisher"), dict) else {}
@@ -62,7 +68,9 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
     autonomy_topics = autonomy_cfg.get("topics") if isinstance(autonomy_cfg.get("topics"), dict) else {}
 
     mqtt_bridge_enabled = _truthy(mqtt_bridge_cfg.get("enabled"), False)
+    ros1_bridge_enabled = _truthy(ros1_bridge_cfg.get("enabled"), False)
     serial_enabled = _truthy(serial_cfg.get("enabled"), False)
+    ros1_charging_status_enabled = ros1_bridge_enabled and _truthy(ros1_charge_status_cfg.get("enabled"), False)
     touch_publish_enabled = _truthy(serial_telemetry_cfg.get("publish_touch_sensors"), False)
     soundboard_enabled = _truthy(soundboard_cfg.get("enabled"), False)
     autonomy_enabled = _truthy(autonomy_cfg.get("enabled"), False)
@@ -139,8 +147,12 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
             },
         },
         "drive": {
-            "available": serial_enabled,
-            "topic": str(serial_topics.get("drive_values") or identity.topic("incoming", "drive-values")),
+            "available": bool(serial_enabled or ros1_bridge_enabled),
+            "topic": str(
+                serial_topics.get("drive_values")
+                or ros1_topics.get("drive_values")
+                or identity.topic("incoming", "drive-values")
+            ),
         },
         "lights": {
             "solid": serial_enabled,
@@ -150,9 +162,13 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
         },
         "telemetry": {
             "touch_sensors": bool(serial_enabled and touch_publish_enabled),
-            "charging_status": serial_enabled,
+            "charging_status": bool(serial_enabled or ros1_charging_status_enabled),
             "touch_topic": str(serial_topics.get("touch_sensors") or identity.topic("outgoing", "touch-sensors")),
-            "charging_topic": str(serial_topics.get("charging_status") or identity.topic("outgoing", "charging-status")),
+            "charging_topic": str(
+                serial_topics.get("charging_status")
+                or (ros1_topics.get("charging_status") if ros1_charging_status_enabled else "")
+                or identity.topic("outgoing", "charging-status")
+            ),
         },
     }
     return value

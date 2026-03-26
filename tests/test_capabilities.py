@@ -44,6 +44,7 @@ class CapabilitiesTests(unittest.TestCase):
     def test_build_capabilities_value_disabled_services(self):
         config = make_base_config("capbot")
         config["services"]["av_daemon"]["enabled"] = False
+        config["services"]["ros1_bridge"]["enabled"] = False
         config["services"]["serial_mcu_bridge"]["enabled"] = False
         config["services"]["soundboard_handler"]["enabled"] = False
         config["services"]["autonomy_manager"]["enabled"] = False
@@ -57,6 +58,27 @@ class CapabilitiesTests(unittest.TestCase):
         self.assertFalse(value["soundboard"]["available"])
         self.assertFalse(value["autonomy"]["available"])
         self.assertFalse(value["system"]["git_pull"]["controls"])
+
+    def test_drive_capability_can_come_from_ros1_bridge(self):
+        config = make_base_config("capbot")
+        config["services"]["serial_mcu_bridge"]["enabled"] = False
+        config["services"]["ros1_bridge"]["enabled"] = True
+        config["services"]["ros1_bridge"]["topics"] = {"drive_values": "custom/drive"}
+
+        value = build_capabilities_value(config)
+        self.assertTrue(value["drive"]["available"])
+        self.assertEqual("custom/drive", value["drive"]["topic"])
+
+    def test_charging_status_capability_can_come_from_ros1_bridge(self):
+        config = make_base_config("capbot")
+        config["services"]["serial_mcu_bridge"]["enabled"] = False
+        config["services"]["ros1_bridge"]["enabled"] = True
+        config["services"]["ros1_bridge"]["topics"]["charging_status"] = "custom/charging-status"
+        config["services"]["ros1_bridge"]["telemetry"]["charging_status"]["enabled"] = True
+
+        value = build_capabilities_value(config)
+        self.assertTrue(value["telemetry"]["charging_status"])
+        self.assertEqual("custom/charging-status", value["telemetry"]["charging_topic"])
 
     def test_build_capabilities_value_prefers_publish_video_shape(self):
         config = make_base_config("capbot")

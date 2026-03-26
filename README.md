@@ -14,7 +14,7 @@ These platform directories are preserved as repository examples:
 
 ## Repository Layout
 
-- `control/` - local runtime services (`launcher`, `av_daemon`, `mqtt_bridge`, `serial_mcu_bridge`, `soundboard_handler`, `autonomy_manager`)
+- `control/` - local runtime services (`launcher`, `av_daemon`, `mqtt_bridge`, `ros1_bridge`, `serial_mcu_bridge`, `soundboard_handler`, `autonomy_manager`)
 - `web-interface/` - web UI service and Docker runtime files
 - `autonomy/apriltag-follow/` - AprilTag/autonomy utilities
 - `audio/` - MQTT audio publisher/receiver scripts
