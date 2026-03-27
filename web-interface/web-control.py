@@ -176,6 +176,23 @@ def _topic_from_identity(system: str, component_type: str, component_id: str, di
     return f"{system}/{component_type}/{component_id}/{direction}/{metric}"
 
 
+def _component_key(system: str, component_type: str, component_id: str) -> str:
+    return f"{system}:{component_type}:{component_id}"
+
+
+def _identity_hint_from_topic(topic: Any) -> Optional[Dict[str, str]]:
+    if not isinstance(topic, str):
+        return None
+    parts = [part for part in topic.strip().split("/") if part]
+    if len(parts) < 3:
+        return None
+    return {
+        "system": parts[0],
+        "type": parts[1],
+        "id": parts[2],
+    }
+
+
 def _normalize_web_robot(
     robot: Dict[str, Any],
     *,
@@ -188,19 +205,28 @@ def _normalize_web_robot(
     robot_id = str(robot.get("id") or "").strip()
     if not robot_id:
         return None
-    robot_type = str(robot.get("type") or component_type)
-    base_video_topic = _topic_from_identity(system, robot_type, robot_id, "outgoing", "front-camera")
-    base_audio_topic = _topic_from_identity(system, robot_type, robot_id, "outgoing", "audio")
-    base_audio_uplink = _topic_from_identity(system, robot_type, robot_id, "incoming", "audio-stream")
-
     video_cfg = robot.get("video") if isinstance(robot.get("video"), dict) else {}
     audio_cfg = robot.get("audio") if isinstance(robot.get("audio"), dict) else {}
     autonomy_cfg = robot.get("autonomy") if isinstance(robot.get("autonomy"), dict) else {}
     reboot_cfg = robot.get("reboot") if isinstance(robot.get("reboot"), dict) else {}
     git_pull_cfg = robot.get("git_pull") if isinstance(robot.get("git_pull"), dict) else {}
 
+    identity_hint = (
+        _identity_hint_from_topic(video_cfg.get("topic"))
+        or _identity_hint_from_topic(audio_cfg.get("topic"))
+        or _identity_hint_from_topic(audio_cfg.get("uplink_topic"))
+    )
+    robot_system = str(robot.get("system") or (identity_hint or {}).get("system") or system)
+    robot_type = str(robot.get("type") or (identity_hint or {}).get("type") or component_type)
+    robot_key = _component_key(robot_system, robot_type, robot_id)
+    base_video_topic = _topic_from_identity(robot_system, robot_type, robot_id, "outgoing", "front-camera")
+    base_audio_topic = _topic_from_identity(robot_system, robot_type, robot_id, "outgoing", "audio")
+    base_audio_uplink = _topic_from_identity(robot_system, robot_type, robot_id, "incoming", "audio-stream")
+
     normalized = {
+        "key": robot_key,
         "id": robot_id,
+        "system": robot_system,
         "name": str(robot.get("name") or robot_id),
         "type": robot_type,
         "model": robot.get("model"),
@@ -233,7 +259,25 @@ def _normalize_web_robot(
 def _normalize_config(raw: Dict[str, Any]) -> Dict[str, Any]:
     # Already in web-interface-specific schema.
     if isinstance(raw.get("mqtt"), dict) and isinstance(raw.get("robots"), list):
+        robots_cfg = raw.get("robots") if isinstance(raw.get("robots"), list) else []
+        default_system = str(raw.get("system") or "pebble")
+        default_component_type = str(raw.get("component_type") or "robots")
+        normalized_robots = []
+        for robot in robots_cfg:
+            if not isinstance(robot, dict):
+                continue
+            normalized_robot = _normalize_web_robot(
+                robot,
+                system=default_system,
+                component_type=default_component_type,
+                default_video_topic="",
+                default_audio_topic="",
+                default_audio_uplink_topic="",
+            )
+            if normalized_robot:
+                normalized_robots.append(normalized_robot)
         normalized = dict(raw)
+        normalized["robots"] = normalized_robots
         normalized["mqtt_history"] = _normalize_mqtt_history_config(raw.get("mqtt_history"))
         normalized["log_level"] = str(raw.get("log_level") or "INFO")
         return normalized
@@ -341,7 +385,8 @@ REPLAY_ARCHIVE = ReplayArchive(MQTT_HISTORY_CFG) if ReplayArchive is not None el
 ROBOT_DISCOVERY = CONFIG.get("robot_discovery", {}) if isinstance(CONFIG.get("robot_discovery"), dict) else {}
 SEED_CONFIGURED_ROBOTS = bool(ROBOT_DISCOVERY.get("seed_configured", True))
 CONFIG_ROBOTS = CONFIG.get("robots", []) or []
-CONFIG_ROBOT_MAP = {robot["id"]: robot for robot in CONFIG_ROBOTS if robot.get("id")}
+CONFIG_ROBOT_MAP = {robot["key"]: robot for robot in CONFIG_ROBOTS if robot.get("key")}
+CONFIG_ROBOT_KEYS_BY_ID: Dict[str, list[str]] = {}
 
 CONFIG_VIDEO_HINTS: Dict[str, Dict[str, Any]] = {}
 CONFIG_VIDEO_TOPICS: Dict[str, str] = {}
@@ -353,21 +398,23 @@ CONFIG_AUTONOMY_HINTS: Dict[str, Dict[str, Any]] = {}
 CONFIG_REBOOT_HINTS: Dict[str, Dict[str, Any]] = {}
 CONFIG_GIT_PULL_HINTS: Dict[str, Dict[str, Any]] = {}
 for robot in CONFIG_ROBOTS:
+    robot_key = str(robot.get("key") or "").strip()
     robot_id = robot.get("id")
-    if not robot_id:
+    if not robot_id or not robot_key:
         continue
+    CONFIG_ROBOT_KEYS_BY_ID.setdefault(str(robot_id), []).append(robot_key)
     video_cfg = robot.get("video")
     if isinstance(video_cfg, dict):
         if video_cfg.get("topic"):
-            CONFIG_VIDEO_TOPICS[video_cfg["topic"]] = robot_id
-        CONFIG_VIDEO_HINTS[robot_id] = {
+            CONFIG_VIDEO_TOPICS[video_cfg["topic"]] = robot_key
+        CONFIG_VIDEO_HINTS[robot_key] = {
             "controls": bool(video_cfg.get("controls", True)),
         }
     audio_cfg = robot.get("audio")
     if isinstance(audio_cfg, dict):
         if audio_cfg.get("topic"):
-            CONFIG_AUDIO_TOPICS[audio_cfg["topic"]] = robot_id
-        CONFIG_AUDIO_HINTS[robot_id] = {
+            CONFIG_AUDIO_TOPICS[audio_cfg["topic"]] = robot_key
+        CONFIG_AUDIO_HINTS[robot_key] = {
             "rate": _coerce_int(audio_cfg.get("rate"), 16000),
             "channels": _coerce_int(audio_cfg.get("channels"), 1),
             "chunk_ms": _coerce_int(audio_cfg.get("chunk_ms"), 20),
@@ -376,8 +423,8 @@ for robot in CONFIG_ROBOTS:
         }
         uplink_topic = audio_cfg.get("uplink_topic")
         if uplink_topic:
-            CONFIG_AUDIO_UPLINK_TOPICS[robot_id] = str(uplink_topic)
-        CONFIG_AUDIO_UPLINK_HINTS[robot_id] = {
+            CONFIG_AUDIO_UPLINK_TOPICS[robot_key] = str(uplink_topic)
+        CONFIG_AUDIO_UPLINK_HINTS[robot_key] = {
             "topic": uplink_topic,
             "rate": _coerce_int(audio_cfg.get("uplink_rate"), _coerce_int(audio_cfg.get("rate"), 16000)),
             "channels": _coerce_int(audio_cfg.get("uplink_channels"), _coerce_int(audio_cfg.get("channels"), 1)),
@@ -386,17 +433,17 @@ for robot in CONFIG_ROBOTS:
         }
     autonomy_cfg = robot.get("autonomy")
     if isinstance(autonomy_cfg, dict):
-        CONFIG_AUTONOMY_HINTS[robot_id] = {
+        CONFIG_AUTONOMY_HINTS[robot_key] = {
             "controls": bool(autonomy_cfg.get("controls", True)),
         }
     reboot_cfg = robot.get("reboot")
     if isinstance(reboot_cfg, dict):
-        CONFIG_REBOOT_HINTS[robot_id] = {
+        CONFIG_REBOOT_HINTS[robot_key] = {
             "controls": bool(reboot_cfg.get("controls", True)),
         }
     git_pull_cfg = robot.get("git_pull")
     if isinstance(git_pull_cfg, dict):
-        CONFIG_GIT_PULL_HINTS[robot_id] = {
+        CONFIG_GIT_PULL_HINTS[robot_key] = {
             "controls": bool(git_pull_cfg.get("controls", True)),
         }
 
@@ -634,21 +681,89 @@ def clamp(value: float, min_value: float, max_value: float) -> float:
     return max(min_value, min(max_value, value))
 
 
+def _configured_robot_candidates(robot_ref: str) -> list[Dict[str, Any]]:
+    if not robot_ref:
+        return []
+    configured = CONFIG_ROBOT_MAP.get(robot_ref)
+    if configured:
+        return [configured]
+    return [CONFIG_ROBOT_MAP[key] for key in CONFIG_ROBOT_KEYS_BY_ID.get(robot_ref, []) if key in CONFIG_ROBOT_MAP]
+
+
+def _configured_robot(robot_ref: str) -> Optional[Dict[str, Any]]:
+    candidates = _configured_robot_candidates(robot_ref)
+    if len(candidates) == 1:
+        return candidates[0]
+    return None
+
+
+def _robot_entry_identity(robot: Dict[str, Any]) -> Dict[str, str]:
+    component_id = str(robot.get("id") or "").strip()
+    component_type = str(robot.get("type") or "robots").strip() or "robots"
+    system = str(robot.get("system") or "").strip()
+    key = str(robot.get("key") or _component_key(system or "pebble", component_type, component_id))
+    return {
+        "key": key,
+        "system": system,
+        "type": component_type,
+        "id": component_id,
+    }
+
+
+def _get_robot(robot_ref: str) -> Optional[Dict[str, Any]]:
+    with robots_lock:
+        exact = discovered_robots.get(robot_ref)
+        if exact:
+            return exact
+        matches = [entry for entry in discovered_robots.values() if entry.get("id") == robot_ref]
+        if len(matches) == 1:
+            return matches[0]
+    return None
+
+
+def _robot_key(robot_ref: str) -> str:
+    robot = _get_robot(robot_ref)
+    if robot:
+        return _robot_entry_identity(robot)["key"]
+    configured = _configured_robot(robot_ref)
+    if configured:
+        return _robot_entry_identity(configured)["key"]
+    return str(robot_ref)
+
+
+def _config_hint(hints: Dict[str, Dict[str, Any]], robot_ref: str) -> Dict[str, Any]:
+    return hints.get(_robot_key(robot_ref), {})
+
+
+def _component_identity(robot_ref: str) -> Optional[Dict[str, str]]:
+    robot = _get_robot(robot_ref)
+    if robot:
+        return _robot_entry_identity(robot)
+    configured = _configured_robot(robot_ref)
+    if configured:
+        return _robot_entry_identity(configured)
+    return None
+
+
 def _component_type(component_id: str) -> str:
-    entry = _get_robot(component_id)
-    if entry and entry.get("type"):
-        return str(entry.get("type"))
+    identity = _component_identity(component_id)
+    if identity:
+        return identity["type"]
     return "robots"
 
 
 def _topic(robot_id: str, direction: str, metric: str) -> str:
+    identity = _component_identity(robot_id)
+    if identity and identity.get("system") and identity.get("id"):
+        return _topic_from_identity(identity["system"], identity["type"], identity["id"], direction, metric)
     component_type = _component_type(robot_id)
-    return f"pebble/{component_type}/{robot_id}/{direction}/{metric}"
+    return _topic_from_identity("pebble", component_type, str(robot_id), direction, metric)
 
 
 def _video_topic_for_robot(robot_id: str) -> str:
+    robot_key = _robot_key(robot_id)
     for topic, rid in CONFIG_VIDEO_TOPICS.items():
-        if rid == robot_id:
+        if rid == robot_key:
             return topic
     return _topic(robot_id, "outgoing", "front-camera")
 
@@ -661,14 +776,15 @@ def _video_overlays_topic_for_robot(robot_id: str) -> str:
 
 
 def _audio_topic_for_robot(robot_id: str) -> str:
+    robot_key = _robot_key(robot_id)
     for topic, rid in CONFIG_AUDIO_TOPICS.items():
-        if rid == robot_id:
+        if rid == robot_key:
             return topic
     return _topic(robot_id, "outgoing", "audio")
 
 
 def _audio_uplink_topic_for_robot(robot_id: str) -> str:
-    hint = CONFIG_AUDIO_UPLINK_HINTS.get(robot_id, {})
+    hint = _config_hint(CONFIG_AUDIO_UPLINK_HINTS, robot_id)
     if hint.get("topic"):
         return str(hint["topic"])
     return _topic(robot_id, "incoming", "audio-stream")
@@ -751,11 +867,6 @@ def _autonomy_command_topic_for_robot(robot_id: str) -> str:
     if robot and robot.get("autonomyCommandTopic"):
         return str(robot.get("autonomyCommandTopic"))
     return _topic(robot_id, "incoming", "autonomy-command")
-
-
-def _get_robot(robot_id: str) -> Optional[Dict[str, Any]]:
-    with robots_lock:
-        return discovered_robots.get(robot_id)
 
 
 def _ensure_robot(robot_id: str) -> Dict[str, Any]:
@@ -878,116 +989,152 @@ def _robot_has_git_pull_controls(robot_id: str) -> bool:
     return _default_capabilities_enabled(robot)
 
 
-def _ensure_robot_placeholder(robot_id: str, component_type: Optional[str] = None) -> Dict[str, Any]:
+def _ensure_robot_placeholder(
+    robot_id: str,
+    component_type: Optional[str] = None,
+    *,
+    system: Optional[str] = None,
+    component_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    identity = _component_identity(robot_id)
+    resolved_system = str(system or (identity or {}).get("system") or "pebble").strip()
+    resolved_type = str(component_type or (identity or {}).get("type") or "robots").strip() or "robots"
+    resolved_id = str(component_id or (identity or {}).get("id") or robot_id).strip()
+    robot_key = _component_key(resolved_system, resolved_type, resolved_id)
     with robots_lock:
-        entry = discovered_robots.setdefault(robot_id, {"id": robot_id})
-        entry.setdefault("name", robot_id)
-        if component_type:
-            entry["type"] = component_type
-        if component_type == "cameras":
+        entry = discovered_robots.setdefault(robot_key, {"key": robot_key})
+        entry["key"] = robot_key
+        entry["system"] = resolved_system
+        entry["id"] = resolved_id
+        entry.setdefault("name", resolved_id)
+        entry["type"] = resolved_type
+        if resolved_type == "cameras":
             entry.setdefault("hasVideo", True)
             entry.setdefault("videoControls", True)
         entry["lastSeen"] = time.time()
-        _apply_robot_hints(robot_id, entry)
+        _apply_robot_hints(robot_key, entry)
         return entry
 
 
 def _get_video_condition(robot_id: str) -> threading.Condition:
+    robot_key = _robot_key(robot_id)
     with video_cache_lock:
-        condition = video_conditions.get(robot_id)
+        condition = video_conditions.get(robot_key)
         if condition is None:
             condition = threading.Condition()
-            video_conditions[robot_id] = condition
-        video_cache.setdefault(robot_id, {"jpeg": None, "timestamp": None, "metadata": {}})
-        video_last_frames.setdefault(robot_id, None)
+            video_conditions[robot_key] = condition
+        video_cache.setdefault(robot_key, {"jpeg": None, "timestamp": None, "metadata": {}})
+        video_last_frames.setdefault(robot_key, None)
     return condition
 
 
 def _clear_video_state(robot_id: str) -> None:
+    robot_key = _robot_key(robot_id)
     with video_cache_lock:
-        video_cache.pop(robot_id, None)
-        video_last_frames.pop(robot_id, None)
-        condition = video_conditions.pop(robot_id, None)
+        video_cache.pop(robot_key, None)
+        video_last_frames.pop(robot_key, None)
+        condition = video_conditions.pop(robot_key, None)
     if condition:
         with condition:
             condition.notify_all()
-    _clear_video_overlay_state(robot_id)
+    _clear_video_overlay_state(robot_key)
 
 
 def _mark_robot_video_capable(robot_id: str, controls: Optional[bool] = None) -> None:
     if not VIDEO_SUPPORT:
         return
-    _get_video_condition(robot_id)
+    entry = _ensure_robot_placeholder(robot_id)
+    robot_key = str(entry.get("key") or _robot_key(robot_id))
+    _get_video_condition(robot_key)
     with robots_lock:
-        entry = discovered_robots.setdefault(robot_id, {"id": robot_id, "name": robot_id})
-        entry["hasVideo"] = True
-        if controls is not None and "videoControls" not in entry:
-            entry["videoControls"] = bool(controls)
+        current = discovered_robots.get(robot_key)
+        if current is None:
+            return
+        current["hasVideo"] = True
+        if controls is not None and "videoControls" not in current:
+            current["videoControls"] = bool(controls)
 
 
 def _clear_video_overlay_state(robot_id: str) -> None:
+    robot_key = _robot_key(robot_id)
     with video_overlays_cache_lock:
-        video_overlays_cache.pop(robot_id, None)
+        video_overlays_cache.pop(robot_key, None)
 
 
 def _get_audio_condition(robot_id: str) -> threading.Condition:
+    robot_key = _robot_key(robot_id)
     with audio_cache_lock:
-        condition = audio_conditions.get(robot_id)
+        condition = audio_conditions.get(robot_key)
         if condition is None:
             condition = threading.Condition()
-            audio_conditions[robot_id] = condition
-        audio_buffers.setdefault(robot_id, deque(maxlen=AUDIO_STREAM_BUFFER_PACKETS))
-        audio_cache.setdefault(robot_id, {"seq": 0})
+            audio_conditions[robot_key] = condition
+        audio_buffers.setdefault(robot_key, deque(maxlen=AUDIO_STREAM_BUFFER_PACKETS))
+        audio_cache.setdefault(robot_key, {"seq": 0})
     return condition
 
 
 def _clear_audio_state(robot_id: str) -> None:
+    robot_key = _robot_key(robot_id)
     with audio_cache_lock:
-        audio_cache.pop(robot_id, None)
-        audio_buffers.pop(robot_id, None)
-        condition = audio_conditions.pop(robot_id, None)
+        audio_cache.pop(robot_key, None)
+        audio_buffers.pop(robot_key, None)
+        condition = audio_conditions.pop(robot_key, None)
     if condition:
         with condition:
             condition.notify_all()
 
 
 def _mark_robot_audio_capable(robot_id: str, controls: Optional[bool] = None) -> None:
+    entry = _ensure_robot_placeholder(robot_id)
+    robot_key = str(entry.get("key") or _robot_key(robot_id))
     with robots_lock:
-        entry = discovered_robots.setdefault(robot_id, {"id": robot_id, "name": robot_id})
-        entry["hasAudio"] = True
-        entry["lastSeen"] = time.time()
-        if controls is not None and "audioControls" not in entry:
-            entry["audioControls"] = bool(controls)
+        current = discovered_robots.get(robot_key)
+        if current is None:
+            return
+        current["hasAudio"] = True
+        current["lastSeen"] = time.time()
+        if controls is not None and "audioControls" not in current:
+            current["audioControls"] = bool(controls)
 
 
 def _clear_soundboard_state(robot_id: str) -> None:
+    robot_key = _robot_key(robot_id)
     with soundboard_cache_lock:
-        soundboard_files_cache.pop(robot_id, None)
-        soundboard_status_cache.pop(robot_id, None)
+        soundboard_files_cache.pop(robot_key, None)
+        soundboard_status_cache.pop(robot_key, None)
 
 
 def _mark_robot_soundboard_capable(robot_id: str, controls: Optional[bool] = None) -> None:
+    entry = _ensure_robot_placeholder(robot_id)
+    robot_key = str(entry.get("key") or _robot_key(robot_id))
     with robots_lock:
-        entry = discovered_robots.setdefault(robot_id, {"id": robot_id, "name": robot_id})
-        entry["hasSoundboard"] = True
-        entry["lastSeen"] = time.time()
-        if controls is not None and "soundboardControls" not in entry:
-            entry["soundboardControls"] = bool(controls)
+        current = discovered_robots.get(robot_key)
+        if current is None:
+            return
+        current["hasSoundboard"] = True
+        current["lastSeen"] = time.time()
+        if controls is not None and "soundboardControls" not in current:
+            current["soundboardControls"] = bool(controls)
 
 
 def _clear_autonomy_state(robot_id: str) -> None:
+    robot_key = _robot_key(robot_id)
     with autonomy_cache_lock:
-        autonomy_files_cache.pop(robot_id, None)
-        autonomy_status_cache.pop(robot_id, None)
+        autonomy_files_cache.pop(robot_key, None)
+        autonomy_status_cache.pop(robot_key, None)
 
 
 def _mark_robot_autonomy_capable(robot_id: str, controls: Optional[bool] = None) -> None:
+    entry = _ensure_robot_placeholder(robot_id)
+    robot_key = str(entry.get("key") or _robot_key(robot_id))
     with robots_lock:
-        entry = discovered_robots.setdefault(robot_id, {"id": robot_id, "name": robot_id})
-        entry["hasAutonomy"] = True
-        entry["lastSeen"] = time.time()
-        if controls is not None and "autonomyControls" not in entry:
-            entry["autonomyControls"] = bool(controls)
+        current = discovered_robots.get(robot_key)
+        if current is None:
+            return
+        current["hasAutonomy"] = True
+        current["lastSeen"] = time.time()
+        if controls is not None and "autonomyControls" not in current:
+            current["autonomyControls"] = bool(controls)
 
 
 def _publish_command(topic: str, payload: Any, qos: int = 1, retain: bool = False) -> bool:
@@ -1093,13 +1240,14 @@ def _encode_audio_packet(seq: int, rate: int, channels: int, pcm_bytes: bytes) -
 
 
 def _video_frame_generator(robot_id: str):
+    robot_key = _robot_key(robot_id)
     condition = _get_video_condition(robot_id)
     last_timestamp = None
     boundary = b"--frame\r\n"
     try:
         while True:
             with video_cache_lock:
-                entry = video_cache.get(robot_id) or {}
+                entry = video_cache.get(robot_key) or {}
                 frame = entry.get("jpeg")
                 timestamp = entry.get("timestamp")
             if frame is not None and timestamp != last_timestamp:
@@ -1122,18 +1270,19 @@ def _video_frame_generator(robot_id: str):
 
 
 def _audio_stream_generator(robot_id: str):
+    robot_key = _robot_key(robot_id)
     condition = _get_audio_condition(robot_id)
     with audio_cache_lock:
-        snapshot = audio_cache.get(robot_id) or {}
+        snapshot = audio_cache.get(robot_key) or {}
         last_seq = max(0, _coerce_int(snapshot.get("seq"), 0))
         last_generation = max(0, _coerce_int(snapshot.get("generation"), 0))
     keepalive_at = time.time()
     try:
         while True:
             with audio_cache_lock:
-                cache = audio_cache.get(robot_id) or {}
+                cache = audio_cache.get(robot_key) or {}
                 generation = int(cache.get("generation", 0))
-                buffer = list(audio_buffers.get(robot_id, []))
+                buffer = list(audio_buffers.get(robot_key, []))
             if generation != last_generation:
                 last_generation = generation
                 last_seq = 0
@@ -1163,7 +1312,13 @@ def _audio_stream_generator(robot_id: str):
         return
 
 
-def _handle_touch_payload(robot_id: str, payload: Dict[str, Any], component_type: Optional[str] = None) -> None:
+def _handle_touch_payload(
+    robot_id: str,
+    payload: Dict[str, Any],
+    component_type: Optional[str] = None,
+    system: Optional[str] = None,
+) -> None:
+    robot_key = _robot_key(robot_id)
     values = payload.get("value") if isinstance(payload.get("value"), dict) else payload
     try:
         t0 = int(values.get("a0", values.get("t0")))
@@ -1173,31 +1328,67 @@ def _handle_touch_payload(robot_id: str, payload: Dict[str, Any], component_type
         logging.debug("Invalid touch payload for %s: %s", robot_id, payload)
         return
     with telemetry_lock:
-        entry = telemetry_cache.setdefault(robot_id, {})
+        entry = telemetry_cache.setdefault(robot_key, {})
         entry.update({"t0": t0, "t1": t1, "t2": t2})
-    _record_heartbeat_sample(robot_id, component_type=component_type, sent_at=_heartbeat_timestamp_seconds(payload), explicit=False)
+    _record_heartbeat_sample(
+        robot_key,
+        component_type=component_type,
+        sent_at=_heartbeat_timestamp_seconds(payload),
+        explicit=False,
+        system=system,
+    )
 
 
-def _handle_charge_payload(robot_id: str, payload: Dict[str, Any], component_type: Optional[str] = None) -> None:
+def _handle_charge_payload(
+    robot_id: str,
+    payload: Dict[str, Any],
+    component_type: Optional[str] = None,
+    system: Optional[str] = None,
+) -> None:
+    robot_key = _robot_key(robot_id)
     value = payload.get("value")
     charging = bool(value) if isinstance(value, (bool, int)) else None
     with telemetry_lock:
-        entry = telemetry_cache.setdefault(robot_id, {})
+        entry = telemetry_cache.setdefault(robot_key, {})
         entry.update({"charging": charging})
-    _record_heartbeat_sample(robot_id, component_type=component_type, sent_at=_heartbeat_timestamp_seconds(payload), explicit=False)
+    _record_heartbeat_sample(
+        robot_key,
+        component_type=component_type,
+        sent_at=_heartbeat_timestamp_seconds(payload),
+        explicit=False,
+        system=system,
+    )
 
 
-def _handle_charge_level_payload(robot_id: str, payload: Dict[str, Any], component_type: Optional[str] = None) -> None:
+def _handle_charge_level_payload(
+    robot_id: str,
+    payload: Dict[str, Any],
+    component_type: Optional[str] = None,
+    system: Optional[str] = None,
+) -> None:
+    robot_key = _robot_key(robot_id)
     value = payload.get("value")
     if not isinstance(value, (int, float)):
         return
     with telemetry_lock:
-        entry = telemetry_cache.setdefault(robot_id, {})
+        entry = telemetry_cache.setdefault(robot_key, {})
         entry.update({"battery_voltage": float(value)})
-    _record_heartbeat_sample(robot_id, component_type=component_type, sent_at=_heartbeat_timestamp_seconds(payload), explicit=False)
+    _record_heartbeat_sample(
+        robot_key,
+        component_type=component_type,
+        sent_at=_heartbeat_timestamp_seconds(payload),
+        explicit=False,
+        system=system,
+    )
 
 
-def _handle_wheel_odometry_payload(robot_id: str, payload: Dict[str, Any], component_type: Optional[str] = None) -> None:
+def _handle_wheel_odometry_payload(
+    robot_id: str,
+    payload: Dict[str, Any],
+    component_type: Optional[str] = None,
+    system: Optional[str] = None,
+) -> None:
+    robot_key = _robot_key(robot_id)
     values = payload.get("value") if isinstance(payload.get("value"), dict) else payload
     if not isinstance(values, dict):
         return
@@ -1226,30 +1417,45 @@ def _handle_wheel_odometry_payload(robot_id: str, payload: Dict[str, Any], compo
         "timestamp": float(payload.get("timestamp")) if isinstance(payload.get("timestamp"), (int, float)) else time.time(),
     }
     with telemetry_lock:
-        entry = telemetry_cache.setdefault(robot_id, {})
+        entry = telemetry_cache.setdefault(robot_key, {})
         entry["odometry"] = odom
-    _record_heartbeat_sample(robot_id, component_type=component_type, sent_at=_heartbeat_timestamp_seconds(payload), explicit=False)
+    _record_heartbeat_sample(
+        robot_key,
+        component_type=component_type,
+        sent_at=_heartbeat_timestamp_seconds(payload),
+        explicit=False,
+        system=system,
+    )
 
 
-def _handle_status_payload(component_id: str, payload: Dict[str, Any], component_type: Optional[str] = None) -> None:
+def _handle_status_payload(
+    component_id: str,
+    payload: Dict[str, Any],
+    component_type: Optional[str] = None,
+    system: Optional[str] = None,
+) -> None:
     value = payload.get("value")
     if not isinstance(value, dict):
         return
     webrtc_url = value.get("webrtc_url") or value.get("webrtcUrl") or value.get("url")
     if not isinstance(webrtc_url, str) or not webrtc_url.strip():
         return
+    placeholder = _ensure_robot_placeholder(component_id, component_type, system=system)
+    robot_key = str(placeholder.get("key") or _robot_key(component_id))
     with robots_lock:
-        entry = discovered_robots.setdefault(component_id, {"id": component_id})
-        if component_type:
-            entry["type"] = component_type
-        if component_type == "cameras":
-            entry.setdefault("hasVideo", True)
-            entry.setdefault("videoControls", True)
+        entry = discovered_robots.get(robot_key)
+        if entry is None:
+            return
         entry["webrtcUrl"] = webrtc_url.strip()
         entry["lastSeen"] = time.time()
 
 
-def _handle_capabilities_payload(component_id: str, payload: Dict[str, Any], component_type: Optional[str] = None) -> None:
+def _handle_capabilities_payload(
+    component_id: str,
+    payload: Dict[str, Any],
+    component_type: Optional[str] = None,
+    system: Optional[str] = None,
+) -> None:
     value = payload.get("value") if isinstance(payload.get("value"), dict) else payload
     if not isinstance(value, dict):
         return
@@ -1259,13 +1465,15 @@ def _handle_capabilities_payload(component_id: str, payload: Dict[str, Any], com
     clear_soundboard = False
     clear_autonomy = False
     now = time.time()
+    placeholder = _ensure_robot_placeholder(component_id, component_type, system=system)
+    robot_key = str(placeholder.get("key") or _robot_key(component_id))
     with robots_lock:
-        entry = discovered_robots.setdefault(component_id, {"id": component_id})
-        if component_type:
-            entry["type"] = component_type
+        entry = discovered_robots.get(robot_key)
+        if entry is None:
+            return
         entry["lastSeen"] = now
         entry["capabilitiesSeen"] = True
-        _apply_robot_hints(component_id, entry)
+        _apply_robot_hints(robot_key, entry)
 
         video = value.get("video") if isinstance(value.get("video"), dict) else None
         if video is not None:
@@ -1363,13 +1571,13 @@ def _handle_capabilities_payload(component_id: str, payload: Dict[str, Any], com
                 entry["gitPullFlagTopic"] = git_pull_flag_topic.strip()
 
     if clear_video:
-        _clear_video_state(component_id)
+        _clear_video_state(robot_key)
     if clear_audio:
-        _clear_audio_state(component_id)
+        _clear_audio_state(robot_key)
     if clear_soundboard:
-        _clear_soundboard_state(component_id)
+        _clear_soundboard_state(robot_key)
     if clear_autonomy:
-        _clear_autonomy_state(component_id)
+        _clear_autonomy_state(robot_key)
 
 
 def _heartbeat_timestamp_seconds(payload: Dict[str, Any]) -> Optional[float]:
@@ -1407,7 +1615,9 @@ def _record_heartbeat_sample(
     component_type: Optional[str],
     sent_at: Optional[float],
     explicit: bool,
+    system: Optional[str] = None,
 ) -> None:
+    robot_key = _robot_key(robot_id)
     received_at = time.time()
     latency_ms: Optional[float] = None
     if sent_at is not None:
@@ -1416,7 +1626,7 @@ def _record_heartbeat_sample(
             latency_ms = max(0.0, raw_latency * 1000.0)
 
     with telemetry_lock:
-        entry = telemetry_cache.setdefault(robot_id, {})
+        entry = telemetry_cache.setdefault(robot_key, {})
         explicit_received_at = _coerce_float(entry.get("heartbeat_topic_received_at"))
         if explicit:
             entry["heartbeat_topic_received_at"] = received_at
@@ -1448,15 +1658,14 @@ def _record_heartbeat_sample(
             entry["heartbeat_latency_ms"] = latency_ms
             entry["heartbeat_latency_avg_ms"] = sum(samples) / len(samples)
 
+    placeholder = _ensure_robot_placeholder(robot_key, component_type, system=system)
+    resolved_key = str(placeholder.get("key") or robot_key)
     with robots_lock:
-        entry = discovered_robots.setdefault(robot_id, {"id": robot_id})
-        if component_type:
-            entry["type"] = component_type
-        if component_type == "cameras":
-            entry.setdefault("hasVideo", True)
-            entry.setdefault("videoControls", True)
+        entry = discovered_robots.get(resolved_key)
+        if entry is None:
+            return
         entry["lastSeen"] = received_at
-        _apply_robot_hints(robot_id, entry)
+        _apply_robot_hints(resolved_key, entry)
 
 
 def _heartbeat_window_seconds(avg_latency_ms: Optional[float], avg_interval_s: Optional[float]) -> Optional[float]:
@@ -1511,34 +1720,40 @@ def _heartbeat_connection_state(entry: Dict[str, Any], now: Optional[float] = No
     }
 
 
-def _handle_heartbeat_payload(robot_id: str, payload: Dict[str, Any], component_type: Optional[str] = None) -> None:
+def _handle_heartbeat_payload(
+    robot_id: str,
+    payload: Dict[str, Any],
+    component_type: Optional[str] = None,
+    system: Optional[str] = None,
+) -> None:
     # Backward compatibility: accept legacy payloads, but only treat messages
     # with a real timestamp as heartbeats. This ignores old online/offline tags.
     if not _heartbeat_has_nonzero_timestamp(payload):
         return
     sent_at = _heartbeat_timestamp_seconds(payload)
-    _record_heartbeat_sample(robot_id, component_type=component_type, sent_at=sent_at, explicit=True)
+    _record_heartbeat_sample(robot_id, component_type=component_type, sent_at=sent_at, explicit=True, system=system)
 
 
 def _apply_robot_hints(robot_id: str, entry: Dict[str, Any]) -> None:
     if entry.get("type") and entry.get("type") != "robots":
         return
-    hint = CONFIG_ROBOT_MAP.get(robot_id) or {}
+    entry_key = str(entry.get("key") or _robot_key(robot_id))
+    hint = CONFIG_ROBOT_MAP.get(entry_key) or _configured_robot(str(entry.get("id") or robot_id)) or {}
     if hint.get("name") and not entry.get("name"):
         entry["name"] = hint["name"]
-    if robot_id in CONFIG_VIDEO_HINTS:
+    if entry_key in CONFIG_VIDEO_HINTS:
         entry.setdefault("hasVideo", True)
-        entry.setdefault("videoControls", CONFIG_VIDEO_HINTS[robot_id].get("controls", True))
-    if robot_id in CONFIG_AUDIO_HINTS:
+        entry.setdefault("videoControls", CONFIG_VIDEO_HINTS[entry_key].get("controls", True))
+    if entry_key in CONFIG_AUDIO_HINTS:
         entry.setdefault("hasAudio", True)
-        entry.setdefault("audioControls", CONFIG_AUDIO_HINTS[robot_id].get("controls", True))
-    if robot_id in CONFIG_AUTONOMY_HINTS:
+        entry.setdefault("audioControls", CONFIG_AUDIO_HINTS[entry_key].get("controls", True))
+    if entry_key in CONFIG_AUTONOMY_HINTS:
         entry.setdefault("hasAutonomy", True)
-        entry.setdefault("autonomyControls", CONFIG_AUTONOMY_HINTS[robot_id].get("controls", True))
-    if robot_id in CONFIG_REBOOT_HINTS:
-        entry.setdefault("rebootControls", CONFIG_REBOOT_HINTS[robot_id].get("controls", True))
-    if robot_id in CONFIG_GIT_PULL_HINTS:
-        entry.setdefault("gitPullControls", CONFIG_GIT_PULL_HINTS[robot_id].get("controls", True))
+        entry.setdefault("autonomyControls", CONFIG_AUTONOMY_HINTS[entry_key].get("controls", True))
+    if entry_key in CONFIG_REBOOT_HINTS:
+        entry.setdefault("rebootControls", CONFIG_REBOOT_HINTS[entry_key].get("controls", True))
+    if entry_key in CONFIG_GIT_PULL_HINTS:
+        entry.setdefault("gitPullControls", CONFIG_GIT_PULL_HINTS[entry_key].get("controls", True))
 
 
 def _seed_configured_robots() -> None:
@@ -1550,21 +1765,26 @@ def _seed_configured_robots() -> None:
     with robots_lock:
         for robot in CONFIG_ROBOTS:
             robot_id = robot.get("id")
-            if not robot_id:
+            robot_key = str(robot.get("key") or "").strip()
+            robot_system = str(robot.get("system") or "").strip()
+            robot_type = str(robot.get("type") or "robots").strip() or "robots"
+            if not robot_id or not robot_key or not robot_system:
                 continue
-            entry = discovered_robots.setdefault(robot_id, {"id": robot_id})
+            entry = discovered_robots.setdefault(robot_key, {"key": robot_key})
+            entry["key"] = robot_key
+            entry["system"] = robot_system
             entry["id"] = robot_id
-            entry["type"] = "robots"
+            entry["type"] = robot_type
             entry.setdefault("name", robot.get("name") or robot_id)
             entry.setdefault("model", robot.get("model"))
             entry.setdefault("lastSeen", now)
-            _apply_robot_hints(robot_id, entry)
+            _apply_robot_hints(robot_key, entry)
 
 
 _seed_configured_robots()
 
 
-def _handle_infrastructure_payload(payload_bytes: bytes) -> None:
+def _handle_infrastructure_payload(system: str, payload_bytes: bytes) -> None:
     global infrastructure_last_update
     try:
         payload = json.loads(payload_bytes.decode("utf-8"))
@@ -1587,32 +1807,43 @@ def _handle_infrastructure_payload(payload_bytes: bytes) -> None:
             for component_id, meta in components.items():
                 if not isinstance(meta, dict):
                     meta = {}
-                entry = discovered_robots.get(component_id, {"id": component_id})
+                robot_key = _component_key(system, component_type, component_id)
+                entry = discovered_robots.get(robot_key, {"key": robot_key})
+                entry["key"] = robot_key
+                entry["system"] = system
                 entry["id"] = component_id
                 entry["type"] = component_type
                 entry["model"] = meta.get("model")
-                entry["name"] = meta.get("name") or CONFIG_ROBOT_MAP.get(component_id, {}).get("name") or component_id
+                entry["name"] = meta.get("name") or CONFIG_ROBOT_MAP.get(robot_key, {}).get("name") or component_id
                 entry["lastSeen"] = now
-                _apply_robot_hints(component_id, entry)
+                _apply_robot_hints(robot_key, entry)
                 if entry.get("hasVideo"):
-                    video_capable.append((component_id, entry.get("videoControls")))
-                discovered_robots[component_id] = entry
-                seen.add(component_id)
+                    video_capable.append((robot_key, entry.get("videoControls")))
+                discovered_robots[robot_key] = entry
+                seen.add(robot_key)
             seen_by_type[component_type] = seen
 
         for component_type, seen in seen_by_type.items():
-            removed = {cid for cid, meta in discovered_robots.items() if meta.get("type") == component_type} - seen
+            removed = {
+                key
+                for key, meta in discovered_robots.items()
+                if meta.get("system") == system and meta.get("type") == component_type
+            } - seen
             if component_type == "robots":
-                removed -= set(CONFIG_ROBOT_MAP.keys())
-            for component_id in removed:
-                discovered_robots.pop(component_id, None)
+                removed -= {
+                    key
+                    for key, meta in CONFIG_ROBOT_MAP.items()
+                    if meta.get("system") == system and (meta.get("type") or "robots") == component_type
+                }
+            for robot_key in removed:
+                discovered_robots.pop(robot_key, None)
                 with telemetry_lock:
-                    telemetry_cache.pop(component_id, None)
-                _clear_video_state(component_id)
-                _clear_audio_state(component_id)
-                _clear_soundboard_state(component_id)
-                _clear_autonomy_state(component_id)
-                _clear_component_logs(component_id)
+                    telemetry_cache.pop(robot_key, None)
+                _clear_video_state(robot_key)
+                _clear_audio_state(robot_key)
+                _clear_soundboard_state(robot_key)
+                _clear_autonomy_state(robot_key)
+                _clear_component_logs(robot_key)
 
         infrastructure_last_update = now
 
@@ -1622,30 +1853,36 @@ def _handle_infrastructure_payload(payload_bytes: bytes) -> None:
 
 def _ui_robot_snapshot() -> list[Dict[str, Any]]:
     with robots_lock:
-        robot_items = sorted(discovered_robots.values(), key=lambda r: r.get("name") or r.get("id") or "")
+        robot_items = sorted(
+            discovered_robots.values(),
+            key=lambda r: (r.get("system") or "", r.get("name") or r.get("id") or "", r.get("type") or "robots"),
+        )
     with telemetry_lock:
         telemetry_snapshot = {robot_id: data.copy() for robot_id, data in telemetry_cache.items()}
 
     now = time.time()
     snapshot: list[Dict[str, Any]] = []
     for robot in robot_items:
-        state = _heartbeat_connection_state(telemetry_snapshot.get(robot["id"], {}), now)
+        robot_key = str(robot.get("key") or _robot_key(str(robot.get("id") or "")))
+        state = _heartbeat_connection_state(telemetry_snapshot.get(robot_key, {}), now)
         snapshot.append(
             {
+                "key": robot_key,
                 "id": robot["id"],
+                "system": robot.get("system") or "",
                 "type": robot.get("type") or "robots",
                 "name": robot.get("name") or robot["id"],
                 "model": robot.get("model"),
-                "hasVideo": _robot_has_video(robot["id"]),
-                "hasControls": _robot_has_video_controls(robot["id"]),
-                "hasAudio": _robot_has_audio(robot["id"]),
-                "audioControls": _robot_has_audio_controls(robot["id"]),
-                "hasSoundboard": _robot_has_soundboard(robot["id"]),
-                "soundboardControls": _robot_has_soundboard_controls(robot["id"]),
-                "hasAutonomy": _robot_has_autonomy(robot["id"]),
-                "autonomyControls": _robot_has_autonomy_controls(robot["id"]),
-                "rebootControls": _robot_has_reboot_controls(robot["id"]),
-                "gitPullControls": _robot_has_git_pull_controls(robot["id"]),
+                "hasVideo": _robot_has_video(robot_key),
+                "hasControls": _robot_has_video_controls(robot_key),
+                "hasAudio": _robot_has_audio(robot_key),
+                "audioControls": _robot_has_audio_controls(robot_key),
+                "hasSoundboard": _robot_has_soundboard(robot_key),
+                "soundboardControls": _robot_has_soundboard_controls(robot_key),
+                "hasAutonomy": _robot_has_autonomy(robot_key),
+                "autonomyControls": _robot_has_autonomy_controls(robot_key),
+                "rebootControls": _robot_has_reboot_controls(robot_key),
+                "gitPullControls": _robot_has_git_pull_controls(robot_key),
                 "online": state["online"],
                 "connectionStatus": state["status"],
                 "lastSeen": robot.get("lastSeen"),
@@ -1692,6 +1929,7 @@ def _normalize_soundboard_file_list(raw_list: Any) -> list[str]:
 
 
 def _handle_soundboard_files_payload(robot_id: str, payload: Any) -> None:
+    robot_key = _robot_key(robot_id)
     if isinstance(payload, list):
         payload_dict: Dict[str, Any] = {}
         container: Any = payload
@@ -1720,11 +1958,12 @@ def _handle_soundboard_files_payload(robot_id: str, payload: Any) -> None:
         timestamp = time.time()
 
     with soundboard_cache_lock:
-        soundboard_files_cache[robot_id] = {"files": files, "timestamp": timestamp}
-    _mark_robot_soundboard_capable(robot_id, controls)
+        soundboard_files_cache[robot_key] = {"files": files, "timestamp": timestamp}
+    _mark_robot_soundboard_capable(robot_key, controls)
 
 
 def _handle_soundboard_status_payload(robot_id: str, payload: Any) -> None:
+    robot_key = _robot_key(robot_id)
     if not isinstance(payload, dict):
         return
     value = payload.get("value")
@@ -1762,23 +2001,24 @@ def _handle_soundboard_status_payload(robot_id: str, payload: Any) -> None:
         timestamp = time.time()
 
     with soundboard_cache_lock:
-        existing = soundboard_status_cache.get(robot_id, {})
+        existing = soundboard_status_cache.get(robot_key, {})
         if playing is None:
             playing = bool(existing.get("playing", False))
         if not file_name:
             file_name = existing.get("file")
-        soundboard_status_cache[robot_id] = {
+        soundboard_status_cache[robot_key] = {
             "playing": bool(playing),
             "file": file_name,
             "error": error_message,
             "timestamp": timestamp,
         }
-    _mark_robot_soundboard_capable(robot_id, controls)
+    _mark_robot_soundboard_capable(robot_key, controls)
 
 
 def _soundboard_files_payload(robot_id: str) -> Dict[str, Any]:
+    robot_key = _robot_key(robot_id)
     with soundboard_cache_lock:
-        entry = soundboard_files_cache.get(robot_id) or {}
+        entry = soundboard_files_cache.get(robot_key) or {}
     timestamp = entry.get("timestamp")
     age = time.time() - float(timestamp) if timestamp else None
     return {
@@ -1792,8 +2032,9 @@ def _soundboard_files_payload(robot_id: str) -> Dict[str, Any]:
 
 
 def _soundboard_status_payload(robot_id: str) -> Dict[str, Any]:
+    robot_key = _robot_key(robot_id)
     with soundboard_cache_lock:
-        entry = soundboard_status_cache.get(robot_id) or {}
+        entry = soundboard_status_cache.get(robot_key) or {}
     timestamp = entry.get("timestamp")
     age = time.time() - float(timestamp) if timestamp else None
     return {
@@ -1885,6 +2126,7 @@ def _normalize_autonomy_files(raw_list: Any) -> list[dict[str, Any]]:
 
 
 def _handle_autonomy_files_payload(robot_id: str, payload: Any) -> None:
+    robot_key = _robot_key(robot_id)
     if isinstance(payload, list):
         payload_dict: Dict[str, Any] = {}
         container: Any = payload
@@ -1914,11 +2156,12 @@ def _handle_autonomy_files_payload(robot_id: str, payload: Any) -> None:
         timestamp = time.time()
 
     with autonomy_cache_lock:
-        autonomy_files_cache[robot_id] = {"files": files, "timestamp": timestamp}
-    _mark_robot_autonomy_capable(robot_id, controls)
+        autonomy_files_cache[robot_key] = {"files": files, "timestamp": timestamp}
+    _mark_robot_autonomy_capable(robot_key, controls)
 
 
 def _handle_autonomy_status_payload(robot_id: str, payload: Any) -> None:
+    robot_key = _robot_key(robot_id)
     if not isinstance(payload, dict):
         return
     value = payload.get("value")
@@ -1947,12 +2190,12 @@ def _handle_autonomy_status_payload(robot_id: str, payload: Any) -> None:
         timestamp = time.time()
 
     with autonomy_cache_lock:
-        existing = autonomy_status_cache.get(robot_id, {})
+        existing = autonomy_status_cache.get(robot_key, {})
         if running is None:
             running = bool(existing.get("running", False))
         if file_name is None and running:
             file_name = existing.get("file")
-        autonomy_status_cache[robot_id] = {
+        autonomy_status_cache[robot_key] = {
             "running": bool(running),
             "file": file_name if running else None,
             "pid": pid,
@@ -1960,12 +2203,13 @@ def _handle_autonomy_status_payload(robot_id: str, payload: Any) -> None:
             "config": config if isinstance(config, dict) else existing.get("config"),
             "timestamp": timestamp,
         }
-    _mark_robot_autonomy_capable(robot_id, controls)
+    _mark_robot_autonomy_capable(robot_key, controls)
 
 
 def _autonomy_files_payload(robot_id: str) -> Dict[str, Any]:
+    robot_key = _robot_key(robot_id)
     with autonomy_cache_lock:
-        entry = autonomy_files_cache.get(robot_id) or {}
+        entry = autonomy_files_cache.get(robot_key) or {}
     timestamp = entry.get("timestamp")
     age = time.time() - float(timestamp) if timestamp else None
     return {
@@ -1979,8 +2223,9 @@ def _autonomy_files_payload(robot_id: str) -> Dict[str, Any]:
 
 
 def _autonomy_status_payload(robot_id: str) -> Dict[str, Any]:
+    robot_key = _robot_key(robot_id)
     with autonomy_cache_lock:
-        entry = autonomy_status_cache.get(robot_id) or {}
+        entry = autonomy_status_cache.get(robot_key) or {}
     timestamp = entry.get("timestamp")
     age = time.time() - float(timestamp) if timestamp else None
     return {
@@ -1998,8 +2243,9 @@ def _autonomy_status_payload(robot_id: str) -> Dict[str, Any]:
 
 
 def _clear_component_logs(robot_id: str) -> None:
+    robot_key = _robot_key(robot_id)
     with component_logs_cache_lock:
-        component_logs_cache.pop(robot_id, None)
+        component_logs_cache.pop(robot_key, None)
 
 
 def _normalize_component_log_timestamp_ms(value: Any) -> int:
@@ -2014,6 +2260,7 @@ def _normalize_component_log_timestamp_ms(value: Any) -> int:
 
 
 def _handle_component_logs_payload(component_id: str, payload: Any) -> None:
+    robot_key = _robot_key(component_id)
     if isinstance(payload, dict):
         value = payload.get("value")
         record = value if isinstance(value, dict) else payload
@@ -2051,14 +2298,15 @@ def _handle_component_logs_payload(component_id: str, payload: Any) -> None:
         "pid": pid,
     }
     with component_logs_cache_lock:
-        records = component_logs_cache.setdefault(component_id, deque(maxlen=COMPONENT_LOGS_MAX_ENTRIES))
+        records = component_logs_cache.setdefault(robot_key, deque(maxlen=COMPONENT_LOGS_MAX_ENTRIES))
         records.append(entry)
 
 
 def _component_logs_payload(robot_id: str, limit: int = 250) -> Dict[str, Any]:
+    robot_key = _robot_key(robot_id)
     safe_limit = max(1, min(2000, int(limit)))
     with component_logs_cache_lock:
-        records = component_logs_cache.get(robot_id)
+        records = component_logs_cache.get(robot_key)
         entries = list(records)[-safe_limit:] if records else []
     last_ts = entries[-1]["timestamp"] if entries else None
     age = time.time() - float(last_ts) if isinstance(last_ts, (int, float)) else None
@@ -2092,6 +2340,7 @@ def _normalize_overlay_shapes(raw_shapes: Any) -> list[list[list[float]]]:
 
 
 def _handle_video_overlays_payload(robot_id: str, payload: Any) -> None:
+    robot_key = _robot_key(robot_id)
     if isinstance(payload, list):
         payload_dict: Dict[str, Any] = {}
         container: Any = {"shapes": payload}
@@ -2137,19 +2386,20 @@ def _handle_video_overlays_payload(robot_id: str, payload: Any) -> None:
     source_str = str(source).strip() if isinstance(source, str) and source.strip() else None
 
     with video_overlays_cache_lock:
-        video_overlays_cache[robot_id] = {
+        video_overlays_cache[robot_key] = {
             "shapes": shapes,
             "timestamp": timestamp,
             "frame_width": frame_width,
             "frame_height": frame_height,
             "source": source_str,
         }
-    _mark_robot_video_capable(robot_id)
+    _mark_robot_video_capable(robot_key)
 
 
 def _video_overlays_payload(robot_id: str) -> Dict[str, Any]:
+    robot_key = _robot_key(robot_id)
     with video_overlays_cache_lock:
-        entry = video_overlays_cache.get(robot_id) or {}
+        entry = video_overlays_cache.get(robot_key) or {}
     timestamp = entry.get("timestamp")
     age = time.time() - float(timestamp) if timestamp else None
     return {
@@ -2167,20 +2417,21 @@ def _video_overlays_payload(robot_id: str) -> Dict[str, Any]:
 def _handle_video_payload(robot_id: str, payload_bytes: bytes) -> None:
     if not VIDEO_SUPPORT:
         return
+    robot_key = _robot_key(robot_id)
     try:
         packet = json.loads(payload_bytes.decode("utf-8"))
     except json.JSONDecodeError:
         logging.debug("Non-JSON video payload from %s", robot_id)
         return
 
-    _mark_robot_video_capable(robot_id)
-    condition = _get_video_condition(robot_id)
-    frame_bytes, metadata = _decode_video_frame(robot_id, packet)
+    _mark_robot_video_capable(robot_key)
+    condition = _get_video_condition(robot_key)
+    frame_bytes, metadata = _decode_video_frame(robot_key, packet)
     if frame_bytes is None:
         return
 
     with video_cache_lock:
-        entry = video_cache.setdefault(robot_id, {})
+        entry = video_cache.setdefault(robot_key, {})
         entry.update({"jpeg": frame_bytes, "timestamp": time.time(), "metadata": metadata})
     with condition:
         condition.notify_all()
@@ -2189,6 +2440,7 @@ def _handle_video_payload(robot_id: str, payload_bytes: bytes) -> None:
 def _decode_video_frame(robot_id: str, packet: Dict[str, Any]) -> Optional[tuple[bytes, Dict[str, Any]]]:
     if not VIDEO_SUPPORT:
         return None
+    robot_key = _robot_key(robot_id)
     encoded = packet.get("data")
     if not encoded:
         return None
@@ -2207,7 +2459,7 @@ def _decode_video_frame(robot_id: str, packet: Dict[str, Any]) -> Optional[tuple
         return None
 
     is_keyframe = bool(packet.get("keyframe"))
-    last_frame = video_last_frames.get(robot_id)
+    last_frame = video_last_frames.get(robot_key)
     if not is_keyframe and last_frame is None:
         logging.debug("Dropping delta frame before keyframe for %s", robot_id)
         return None
@@ -2219,7 +2471,7 @@ def _decode_video_frame(robot_id: str, packet: Dict[str, Any]) -> Optional[tuple
         base_frame = last_frame.astype(np.int16)
         reconstructed = np.clip(base_frame + delta, 0, 255).astype(np.uint8)
 
-    video_last_frames[robot_id] = reconstructed
+    video_last_frames[robot_key] = reconstructed
 
     success, encoded_frame = cv2.imencode(".jpg", reconstructed)
     if not success:
@@ -2238,13 +2490,14 @@ def _decode_video_frame(robot_id: str, packet: Dict[str, Any]) -> Optional[tuple
 
 
 def _handle_audio_payload(robot_id: str, payload_bytes: bytes) -> None:
-    _ensure_robot_placeholder(robot_id)
+    placeholder = _ensure_robot_placeholder(robot_id)
+    robot_key = str(placeholder.get("key") or _robot_key(robot_id))
     packet = _decode_audio_packet(payload_bytes)
     if not packet:
         logging.debug("Invalid binary audio payload from %s", robot_id)
         return
 
-    hint = CONFIG_AUDIO_HINTS.get(robot_id, {})
+    hint = _config_hint(CONFIG_AUDIO_HINTS, robot_key)
     rate = max(1, _coerce_int(packet.get("rate"), int(hint.get("rate", 16000))))
     channels = max(1, _coerce_int(packet.get("channels"), int(hint.get("channels", 1))))
     frame_samples = max(1, _coerce_int(packet.get("frame_samples"), 1))
@@ -2252,19 +2505,19 @@ def _handle_audio_payload(robot_id: str, payload_bytes: bytes) -> None:
     timestamp = float(packet.get("timestamp", time.time()))
     seq = max(0, _coerce_int(packet.get("seq"), 0))
 
-    condition = _get_audio_condition(robot_id)
+    condition = _get_audio_condition(robot_key)
     with audio_cache_lock:
-        cache = audio_cache.setdefault(robot_id, {"seq": 0, "generation": 0})
+        cache = audio_cache.setdefault(robot_key, {"seq": 0, "generation": 0})
         previous_seq = max(0, _coerce_int(cache.get("seq"), 0))
         reset_stream = previous_seq > 0 and seq > 0 and (seq + 5) < previous_seq
         if reset_stream:
-            buffer = audio_buffers.setdefault(robot_id, deque(maxlen=120))
+            buffer = audio_buffers.setdefault(robot_key, deque(maxlen=120))
             buffer.clear()
             cache["generation"] = int(cache.get("generation", 0)) + 1
         cache.update(
             {"seq": seq, "timestamp": timestamp, "rate": rate, "channels": channels, "frame_samples": frame_samples}
         )
-        buffer = audio_buffers.setdefault(robot_id, deque(maxlen=AUDIO_STREAM_BUFFER_PACKETS))
+        buffer = audio_buffers.setdefault(robot_key, deque(maxlen=AUDIO_STREAM_BUFFER_PACKETS))
         buffer.append(
             {
                 "seq": seq,
@@ -2275,7 +2528,7 @@ def _handle_audio_payload(robot_id: str, payload_bytes: bytes) -> None:
                 "data": audio_bytes,
             }
         )
-    _mark_robot_audio_capable(robot_id, CONFIG_AUDIO_HINTS.get(robot_id, {}).get("controls"))
+    _mark_robot_audio_capable(robot_key, hint.get("controls"))
     with condition:
         condition.notify_all()
 
@@ -2305,27 +2558,27 @@ def _on_mqtt_connect(client: mqtt.Client, _userdata: Any, _flags: Dict[str, Any]
         logging.info("MQTT history logging active; subscribing to all topics (#).")
         client.subscribe("#", qos=0)
     else:
-        client.subscribe("pebble/infrastructure", qos=1)
-        client.subscribe("pebble/+/+/outgoing/touch-sensors", qos=1)
-        client.subscribe("pebble/+/+/outgoing/charging-status", qos=1)
-        client.subscribe("pebble/+/+/outgoing/charging-level", qos=1)
-        client.subscribe("pebble/+/+/outgoing/online", qos=1)
-        client.subscribe("pebble/+/+/outgoing/heartbeat", qos=1)
-        client.subscribe("pebble/+/+/outgoing/capabilities", qos=1)
-        client.subscribe("pebble/+/+/outgoing/status", qos=1)
-        client.subscribe("pebble/+/+/outgoing/logs", qos=1)
-        client.subscribe("pebble/+/+/outgoing/audio", qos=0)
-        client.subscribe("pebble/+/+/outgoing/soundboard-files", qos=1)
-        client.subscribe("pebble/+/+/outgoing/soundboard-status", qos=1)
-        client.subscribe("pebble/+/+/outgoing/autonomy-files", qos=1)
-        client.subscribe("pebble/+/+/outgoing/autonomy-status", qos=1)
-        client.subscribe("pebble/+/+/outgoing/wheel-odometry", qos=1)
-        client.subscribe("pebble/+/+/outgoing/video-overlays", qos=1)
+        client.subscribe("+/infrastructure", qos=1)
+        client.subscribe("+/+/+/outgoing/touch-sensors", qos=1)
+        client.subscribe("+/+/+/outgoing/charging-status", qos=1)
+        client.subscribe("+/+/+/outgoing/charging-level", qos=1)
+        client.subscribe("+/+/+/outgoing/online", qos=1)
+        client.subscribe("+/+/+/outgoing/heartbeat", qos=1)
+        client.subscribe("+/+/+/outgoing/capabilities", qos=1)
+        client.subscribe("+/+/+/outgoing/status", qos=1)
+        client.subscribe("+/+/+/outgoing/logs", qos=1)
+        client.subscribe("+/+/+/outgoing/audio", qos=0)
+        client.subscribe("+/+/+/outgoing/soundboard-files", qos=1)
+        client.subscribe("+/+/+/outgoing/soundboard-status", qos=1)
+        client.subscribe("+/+/+/outgoing/autonomy-files", qos=1)
+        client.subscribe("+/+/+/outgoing/autonomy-status", qos=1)
+        client.subscribe("+/+/+/outgoing/wheel-odometry", qos=1)
+        client.subscribe("+/+/+/outgoing/video-overlays", qos=1)
         for topic in CONFIG_AUDIO_TOPICS:
             logging.info("Subscribing to configured audio topic %s", topic)
             client.subscribe(topic, qos=0)
         if VIDEO_SUPPORT:
-            client.subscribe("pebble/+/+/outgoing/front-camera", qos=0)
+            client.subscribe("+/+/+/outgoing/front-camera", qos=0)
             for topic in CONFIG_VIDEO_TOPICS:
                 logging.info("Subscribing to configured video topic %s", topic)
                 client.subscribe(topic, qos=0)
@@ -2351,54 +2604,77 @@ def _on_mqtt_disconnect(_client: mqtt.Client, _userdata: Any, rc: int) -> None:
     mqtt_connected.clear()
 
 
-def _parse_component_topic(topic: str) -> Optional[tuple[str, str, str, str]]:
+def _parse_component_topic(topic: str) -> Optional[tuple[str, str, str, str, str]]:
     parts = topic.split("/")
-    if len(parts) < 5 or parts[0] != "pebble":
+    if len(parts) < 5:
         return None
-    return parts[1], parts[2], parts[3], parts[4]
+    return parts[0], parts[1], parts[2], parts[3], "/".join(parts[4:])
+
+
+def _parse_infrastructure_topic(topic: str) -> Optional[str]:
+    parts = topic.split("/")
+    if len(parts) == 2 and parts[1] == "infrastructure" and parts[0]:
+        return parts[0]
+    return None
 
 
 def _on_mqtt_message(_client: mqtt.Client, _userdata: Any, msg: mqtt.MQTTMessage) -> None:
     _log_mqtt_history(msg)
 
-    if msg.topic == "pebble/infrastructure":
-        _handle_infrastructure_payload(msg.payload)
+    system = _parse_infrastructure_topic(msg.topic)
+    if system:
+        _handle_infrastructure_payload(system, msg.payload)
         return
 
     audio_robot_id = CONFIG_AUDIO_TOPICS.get(msg.topic)
+    audio_system = None
     audio_component_type = None
+    audio_component_id = None
     if audio_robot_id is None and msg.topic.endswith("/outgoing/audio"):
         parsed = _parse_component_topic(msg.topic)
-        if parsed and parsed[2] == "outgoing" and parsed[3] == "audio":
-            audio_component_type = parsed[0]
-            audio_robot_id = parsed[1]
+        if parsed and parsed[3] == "outgoing" and parsed[4] == "audio":
+            audio_system, audio_component_type, audio_component_id = parsed[0], parsed[1], parsed[2]
+            audio_robot_id = _component_key(audio_system, audio_component_type, audio_component_id)
     if audio_robot_id:
-        _ensure_robot_placeholder(audio_robot_id, audio_component_type)
+        _ensure_robot_placeholder(
+            audio_robot_id,
+            audio_component_type,
+            system=audio_system,
+            component_id=audio_component_id,
+        )
         _handle_audio_payload(audio_robot_id, msg.payload)
         return
 
     video_robot_id = None
+    video_system = None
     video_component_type = None
+    video_component_id = None
     if VIDEO_SUPPORT:
         video_robot_id = CONFIG_VIDEO_TOPICS.get(msg.topic)
         if video_robot_id is None and msg.topic.endswith("/outgoing/front-camera"):
             parsed = _parse_component_topic(msg.topic)
-            if parsed and parsed[2] == "outgoing" and parsed[3] == "front-camera":
-                video_component_type = parsed[0]
-                video_robot_id = parsed[1]
+            if parsed and parsed[3] == "outgoing" and parsed[4] == "front-camera":
+                video_system, video_component_type, video_component_id = parsed[0], parsed[1], parsed[2]
+                video_robot_id = _component_key(video_system, video_component_type, video_component_id)
     if video_robot_id:
-        _ensure_robot_placeholder(video_robot_id, video_component_type)
+        _ensure_robot_placeholder(
+            video_robot_id,
+            video_component_type,
+            system=video_system,
+            component_id=video_component_id,
+        )
         _handle_video_payload(video_robot_id, msg.payload)
         return
 
     parsed = _parse_component_topic(msg.topic)
     if not parsed:
         return
-    component_type, component_id, direction, metric = parsed
+    system, component_type, component_id, direction, metric = parsed
+    robot_key = _component_key(system, component_type, component_id)
     if direction != "outgoing":
         return
-    if not _get_robot(component_id):
-        _ensure_robot_placeholder(component_id, component_type)
+    if not _get_robot(robot_key):
+        _ensure_robot_placeholder(robot_key, component_type, system=system, component_id=component_id)
 
     if metric == "logs":
         payload: Any
@@ -2407,7 +2683,7 @@ def _on_mqtt_message(_client: mqtt.Client, _userdata: Any, msg: mqtt.MQTTMessage
             payload = json.loads(decoded)
         except (UnicodeDecodeError, json.JSONDecodeError):
             payload = msg.payload.decode("utf-8", errors="replace")
-        _handle_component_logs_payload(component_id, payload)
+        _handle_component_logs_payload(robot_key, payload)
         return
 
     try:
@@ -2416,31 +2692,31 @@ def _on_mqtt_message(_client: mqtt.Client, _userdata: Any, msg: mqtt.MQTTMessage
         logging.debug("Non-JSON MQTT payload on %s", msg.topic)
         return
     if metric == "touch-sensors":
-        _handle_touch_payload(component_id, payload, component_type)
+        _handle_touch_payload(robot_key, payload, component_type, system)
     elif metric == "charging-status":
-        _handle_charge_payload(component_id, payload, component_type)
+        _handle_charge_payload(robot_key, payload, component_type, system)
     elif metric == "charging-level":
-        _handle_charge_level_payload(component_id, payload, component_type)
+        _handle_charge_level_payload(robot_key, payload, component_type, system)
     elif metric == "status":
-        _handle_status_payload(component_id, payload, component_type)
+        _handle_status_payload(robot_key, payload, component_type, system)
     elif metric == "capabilities":
         if isinstance(payload, dict):
-            _handle_capabilities_payload(component_id, payload, component_type)
+            _handle_capabilities_payload(robot_key, payload, component_type, system)
     elif metric in ("online", "heartbeat"):
         if isinstance(payload, dict):
-            _handle_heartbeat_payload(component_id, payload, component_type)
+            _handle_heartbeat_payload(robot_key, payload, component_type, system)
     elif metric == "soundboard-files":
-        _handle_soundboard_files_payload(component_id, payload)
+        _handle_soundboard_files_payload(robot_key, payload)
     elif metric == "soundboard-status":
-        _handle_soundboard_status_payload(component_id, payload)
+        _handle_soundboard_status_payload(robot_key, payload)
     elif metric == "autonomy-files":
-        _handle_autonomy_files_payload(component_id, payload)
+        _handle_autonomy_files_payload(robot_key, payload)
     elif metric == "autonomy-status":
-        _handle_autonomy_status_payload(component_id, payload)
+        _handle_autonomy_status_payload(robot_key, payload)
     elif metric == "wheel-odometry":
-        _handle_wheel_odometry_payload(component_id, payload, component_type)
+        _handle_wheel_odometry_payload(robot_key, payload, component_type, system)
     elif metric in ("video-overlays", "apriltag-data"):
-        _handle_video_overlays_payload(component_id, payload)
+        _handle_video_overlays_payload(robot_key, payload)
 
 
 def _disconnect_mqtt(clear_error: bool = False) -> None:
@@ -2570,7 +2846,8 @@ def _robot_options_html() -> str:
   .pill { display:inline-block; padding:4px 8px; border-radius:999px; border:1px solid #999; }
   .ok { background:#e8ffe8; }
   .warn { background:#fff5e0; }
-  .robot-picker { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .robot-picker { display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+  .robot-picker select { min-width:10rem; }
   .odometry-card { grid-column: span 2; }
   @media (max-width: 1200px){ .odometry-card{ grid-column: span 1; } }
   .odometry-meta { margin-bottom:8px; }
@@ -2725,6 +3002,8 @@ def _robot_options_html() -> str:
 
   <div class="card" id="driveCard">
     <div class="robot-picker">
+      <label for="systemSelect">System:</label>
+      <select id="systemSelect"></select>
       <label for="robotSelect">Component:</label>
       <select id="robotSelect"></select>
       <button type="button" id="replayNavBtn" onclick="window.location.href='/replay'">Replay</button>
@@ -2775,7 +3054,7 @@ def _robot_options_html() -> str:
   </div>
 
   <div class="card odometry-card" id="odometryCard">
-    <h2>Wheel Odometry</h2>
+    <h2>Map & Location</h2>
     <div class="odometry-meta mono" id="odomMeta">Awaiting data...</div>
     <div class="odometry-wrap">
       <canvas id="odomCanvas"></canvas>
@@ -3058,15 +3337,37 @@ mqttDisconnectBtn.addEventListener("click", () => { disconnectMqtt().catch(conso
 refreshMqttStatus();
 setInterval(refreshMqttStatus, 5000);
 
-let currentRobot = robots.length ? robots[0].id : null;
+let currentSystem = robots.length ? String(robots[0].system || "") : null;
+let currentRobot = robots.length ? String(robots[0].key || robots[0].id || "") : null;
+
+function robotRef(robot) {
+  if (!robot || typeof robot !== "object") return null;
+  return robot.key || robot.id || null;
+}
+
+function findRobot(id) {
+  return robots.find(r => robotRef(r) === id) || null;
+}
+
+function availableSystems() {
+  return Array.from(new Set(
+    robots
+      .map(r => String(r.system || ""))
+      .filter(Boolean)
+  )).sort((a, b) => a.localeCompare(b));
+}
+
+function visibleRobots() {
+  return robots.filter((robot) => !currentSystem || String(robot.system || "") === currentSystem);
+}
 
 function robotName(id) {
-  const found = robots.find(r => r.id === id);
+  const found = findRobot(id);
   return found ? (found.name || found.id) : (id || "–");
 }
 
 function componentType(id) {
-  const found = robots.find(r => r.id === id);
+  const found = findRobot(id);
   return found && found.type ? found.type : "robots";
 }
 
@@ -3074,7 +3375,7 @@ function getWebrtcUrl(id) {
   if (!id) return "";
   const stored = localStorage.getItem(`webrtcUrl:${id}`);
   if (stored) return stored;
-  const found = robots.find(r => r.id === id);
+  const found = findRobot(id);
   return found && found.webrtcUrl ? found.webrtcUrl : "";
 }
 
@@ -3086,14 +3387,14 @@ function setWebrtcUrl(id, url) {
   } else {
     localStorage.removeItem(`webrtcUrl:${id}`);
   }
-  const found = robots.find(r => r.id === id);
+  const found = findRobot(id);
   if (found) {
     found.webrtcUrl = clean || null;
   }
 }
 
 function robotLabel(id) {
-  const robot = robots.find(r => r.id === id);
+  const robot = findRobot(id);
   if (!robot) return robotName(id);
   const base = robot.name || robot.id || "–";
   const typeSuffix = robot.type && robot.type !== "robots" ? ` (${robot.type})` : "";
@@ -3104,7 +3405,7 @@ function robotLabel(id) {
 }
 
 function robotHasVideo(id) {
-  const robot = robots.find(r => r.id === id);
+  const robot = findRobot(id);
   return robot ? Boolean(robot.hasVideo) : false;
 }
 
@@ -3113,50 +3414,50 @@ function usesWebrtc(id) {
 }
 
 function robotHasControls(id) {
-  const robot = robots.find(r => r.id === id);
+  const robot = findRobot(id);
   return robot ? Boolean(robot.hasControls) : false;
 }
 
 function robotHasAudio(id) {
-  const robot = robots.find(r => r.id === id);
+  const robot = findRobot(id);
   return robot ? Boolean(robot.hasAudio) : false;
 }
 
 function robotHasAudioControls(id) {
-  const robot = robots.find(r => r.id === id);
+  const robot = findRobot(id);
   return robot ? Boolean(robot.audioControls) : false;
 }
 
 function robotHasSoundboard(id) {
-  const robot = robots.find(r => r.id === id);
+  const robot = findRobot(id);
   if (!robot) return false;
   if (typeof robot.hasSoundboard === "boolean") return robot.hasSoundboard;
   return true;
 }
 
 function robotHasSoundboardControls(id) {
-  const robot = robots.find(r => r.id === id);
+  const robot = findRobot(id);
   if (!robot) return false;
   if (typeof robot.soundboardControls === "boolean") return robot.soundboardControls;
   return true;
 }
 
 function robotHasAutonomy(id) {
-  const robot = robots.find(r => r.id === id);
+  const robot = findRobot(id);
   if (!robot) return false;
   if (typeof robot.hasAutonomy === "boolean") return robot.hasAutonomy;
   return true;
 }
 
 function robotHasAutonomyControls(id) {
-  const robot = robots.find(r => r.id === id);
+  const robot = findRobot(id);
   if (!robot) return false;
   if (typeof robot.autonomyControls === "boolean") return robot.autonomyControls;
   return true;
 }
 
 function robotHasRebootControls(id) {
-  const robot = robots.find(r => r.id === id);
+  const robot = findRobot(id);
   if (!robot) return false;
   if (robot.type && robot.type !== "robots") return false;
   if (typeof robot.rebootControls === "boolean") return robot.rebootControls;
@@ -3164,7 +3465,7 @@ function robotHasRebootControls(id) {
 }
 
 function robotHasGitPullControls(id) {
-  const robot = robots.find(r => r.id === id);
+  const robot = findRobot(id);
   if (!robot) return false;
   if (robot.type && robot.type !== "robots") return false;
   if (typeof robot.gitPullControls === "boolean") return robot.gitPullControls;
@@ -3172,42 +3473,93 @@ function robotHasGitPullControls(id) {
   return true;
 }
 
+const systemSelect = document.getElementById('systemSelect');
 const robotSelect = document.getElementById('robotSelect');
 const activeRobot = document.getElementById('activeRobot');
 
-let lastRobotsSignature = "";
-function renderRobotOptions(newRobots) {
-  robots = Array.isArray(newRobots) ? newRobots : [];
-  const prev = currentRobot;
-  const signature = robots.map(r => `${r.id}:${r.connectionStatus || ""}`).join("|");
-  if (signature === lastRobotsSignature && robots.some(r => r.id === prev)) {
-    activeRobot.textContent = prev ? robotLabel(prev) : "No robots detected.";
-    syncRebootControls();
-    syncGitPullControls();
+function updateActiveRobotText() {
+  const robot = currentRobot ? findRobot(currentRobot) : null;
+  if (robot) {
+    const systemPrefix = robot.system ? `${robot.system} / ` : "";
+    activeRobot.textContent = `${systemPrefix}${robotLabel(currentRobot)}`;
     return;
   }
-  lastRobotsSignature = signature;
-  if (!robots.some(r => r.id === prev)) {
-    currentRobot = robots.length ? robots[0].id : null;
+  if (currentSystem) {
+    activeRobot.textContent = `No components detected on ${currentSystem}.`;
+    return;
   }
+  activeRobot.textContent = "No systems detected.";
+}
+
+function renderRobotOptions(newRobots) {
+  robots = Array.isArray(newRobots) ? newRobots : [];
+  const systems = availableSystems();
+  if (currentSystem && !systems.includes(currentSystem)) {
+    currentSystem = null;
+  }
+  if (!currentSystem) {
+    currentSystem = systems.length ? systems[0] : null;
+  }
+
+  systemSelect.innerHTML = "";
+  systems.forEach((system) => {
+    const opt = document.createElement("option");
+    opt.value = system;
+    opt.textContent = system;
+    systemSelect.appendChild(opt);
+  });
+  if (currentSystem) {
+    systemSelect.value = currentSystem;
+  }
+  systemSelect.disabled = systems.length === 0;
+
+  const selectableRobots = visibleRobots();
+  if (!selectableRobots.some(robot => robotRef(robot) === currentRobot)) {
+    currentRobot = selectableRobots.length ? robotRef(selectableRobots[0]) : null;
+  }
+
   robotSelect.innerHTML = "";
-  robots.forEach(robot => {
-    if (!robot || !robot.id) return;
+  selectableRobots.forEach(robot => {
+    const ref = robotRef(robot);
+    if (!robot || !ref) return;
     const opt = document.createElement('option');
-    opt.value = robot.id;
-    opt.textContent = robotLabel(robot.id);
+    opt.value = ref;
+    opt.textContent = robotLabel(ref);
     robotSelect.appendChild(opt);
   });
   if (currentRobot) {
     robotSelect.value = currentRobot;
   }
-  robotSelect.disabled = robots.length === 0;
-  activeRobot.textContent = currentRobot ? robotLabel(currentRobot) : "No robots detected.";
+  robotSelect.disabled = selectableRobots.length === 0;
+  updateActiveRobotText();
+  syncRebootControls();
+  syncGitPullControls();
+}
+
+function handleRobotSelectionChanged(previousRobot) {
+  updateActiveRobotText();
+  syncRebootControls();
+  syncGitPullControls();
+  refreshVideoVisibility();
+  refreshAudioVisibility();
+  if (previousRobot !== currentRobot) {
+    clearOdometryUI();
+    resetSoundboardState();
+    renderSoundList();
+    refreshSoundFiles();
+    refreshSoundboardStatus();
+    resetAutonomyState();
+    renderAutonomyList();
+    refreshAutonomyFiles();
+    refreshAutonomyStatus();
+    resetLogsState();
+    refreshComponentLogs(true);
+  }
   if (!currentRobot && typeof clearTelemetryUI === "function") {
     clearTelemetryUI();
   }
-  syncRebootControls();
-  syncGitPullControls();
+  updateSoundboardUi();
+  updateAutonomyUi();
 }
 
 async function refreshRobotList(){
@@ -3217,23 +3569,7 @@ async function refreshRobotList(){
     if (Array.isArray(data.robots)) {
       const beforeRobot = currentRobot;
       renderRobotOptions(data.robots);
-      refreshVideoVisibility();
-      refreshAudioVisibility();
-      if (beforeRobot !== currentRobot) {
-        clearOdometryUI();
-        resetSoundboardState();
-        renderSoundList();
-        refreshSoundFiles();
-        refreshSoundboardStatus();
-        resetAutonomyState();
-        renderAutonomyList();
-        refreshAutonomyFiles();
-        refreshAutonomyStatus();
-        resetLogsState();
-        refreshComponentLogs(true);
-      }
-      updateSoundboardUi();
-      updateAutonomyUi();
+      handleRobotSelectionChanged(beforeRobot);
     }
   } catch (err) {
     console.error(err);
@@ -4755,26 +5091,17 @@ async function sendVideoCommand(action) {
   }
 }
 
+systemSelect.addEventListener('change', () => {
+  const beforeRobot = currentRobot;
+  currentSystem = systemSelect.value || null;
+  renderRobotOptions(robots);
+  handleRobotSelectionChanged(beforeRobot);
+});
+
 robotSelect.addEventListener('change', () => {
+  const beforeRobot = currentRobot;
   currentRobot = robotSelect.value || null;
-  activeRobot.textContent = currentRobot ? robotLabel(currentRobot) : "No robots detected.";
-  syncRebootControls();
-  syncGitPullControls();
-  clearOdometryUI();
-  refreshVideoVisibility();
-  refreshAudioVisibility();
-  resetSoundboardState();
-  renderSoundList();
-  updateSoundboardUi();
-  refreshSoundFiles();
-  refreshSoundboardStatus();
-  resetAutonomyState();
-  renderAutonomyList();
-  updateAutonomyUi();
-  refreshAutonomyFiles();
-  refreshAutonomyStatus();
-  resetLogsState();
-  refreshComponentLogs(true);
+  handleRobotSelectionChanged(beforeRobot);
 });
 
 videoStartBtn.addEventListener('click', () => { sendVideoCommand("start").catch(console.error); });
@@ -5587,21 +5914,7 @@ function clearTelemetryUI(){
 }
 
 renderRobotOptions(robots);
-refreshVideoVisibility();
-refreshAudioVisibility();
-resetSoundboardState();
-renderSoundList();
-updateSoundboardUi();
-refreshSoundFiles();
-refreshSoundboardStatus();
-resetAutonomyState();
-renderAutonomyList();
-updateAutonomyUi();
-refreshAutonomyFiles();
-refreshAutonomyStatus();
-resetLogsState();
-refreshComponentLogs(true);
-clearOdometryUI();
+handleRobotSelectionChanged(null);
 refreshRobotList();
 setInterval(refreshRobotList, 2000);
 setInterval(refreshSoundboardStatus, 1000);
@@ -5962,8 +6275,9 @@ def list_robots():
 @app.route("/robots/<robot_id>/telemetry")
 def get_telemetry(robot_id: str):
     _ensure_robot(robot_id)
+    robot_key = _robot_key(robot_id)
     with telemetry_lock:
-        data = telemetry_cache.get(robot_id, {}).copy()
+        data = telemetry_cache.get(robot_key, {}).copy()
     state = _heartbeat_connection_state(data)
     data["connection_status"] = state["status"]
     data["online"] = state["online"]
@@ -5990,12 +6304,13 @@ def get_component_logs(robot_id: str):
 @app.route("/robots/<robot_id>/audio/status")
 def get_audio_status(robot_id: str):
     _ensure_robot(robot_id)
+    robot_key = _robot_key(robot_id)
     if not _robot_has_audio(robot_id):
         return jsonify({"enabled": False})
     with audio_cache_lock:
-        entry = audio_cache.get(robot_id) or {}
+        entry = audio_cache.get(robot_key) or {}
     with audio_uplink_lock:
-        uplink = audio_uplink_state.get(robot_id) or {}
+        uplink = audio_uplink_state.get(robot_key) or {}
     timestamp = entry.get("timestamp")
     age = time.time() - timestamp if timestamp else None
     uplink_age = None
@@ -6009,8 +6324,8 @@ def get_audio_status(robot_id: str):
         "rate": entry.get("rate"),
         "channels": entry.get("channels"),
         "frameSamples": entry.get("frame_samples"),
-        "chunkMs": _coerce_int(CONFIG_AUDIO_HINTS.get(robot_id, {}).get("chunk_ms"), 20),
-        "concealmentMs": _coerce_int(CONFIG_AUDIO_HINTS.get(robot_id, {}).get("concealment_ms"), 100),
+        "chunkMs": _coerce_int(_config_hint(CONFIG_AUDIO_HINTS, robot_key).get("chunk_ms"), 20),
+        "concealmentMs": _coerce_int(_config_hint(CONFIG_AUDIO_HINTS, robot_key).get("concealment_ms"), 100),
         "controls": _robot_has_audio_controls(robot_id),
         "uplinkTopic": _audio_uplink_topic_for_robot(robot_id),
         "uplinkSeq": uplink.get("seq"),
@@ -6023,6 +6338,7 @@ def get_audio_status(robot_id: str):
 def publish_audio_uplink(robot_id: str):
     _ensure_robot(robot_id)
     _require_audio_robot(robot_id)
+    robot_key = _robot_key(robot_id)
     payload = request.get_json(force=True, silent=True) or {}
     encoded = payload.get("data")
     if not encoded:
@@ -6032,13 +6348,13 @@ def publish_audio_uplink(robot_id: str):
     except base64.binascii.Error:
         abort(400, description="Invalid base64 payload.")
 
-    hint = CONFIG_AUDIO_UPLINK_HINTS.get(robot_id, {})
+    hint = _config_hint(CONFIG_AUDIO_UPLINK_HINTS, robot_key)
     rate = max(1, _coerce_int(payload.get("rate"), int(hint.get("rate", 16000))))
     channels = max(1, _coerce_int(payload.get("channels"), int(hint.get("channels", 1))))
     qos = max(0, min(1, _coerce_int(payload.get("qos"), int(hint.get("qos", 0)))))
 
     with audio_uplink_lock:
-        state = audio_uplink_state.setdefault(robot_id, {"seq": 0})
+        state = audio_uplink_state.setdefault(robot_key, {"seq": 0})
         seq = int(state.get("seq", 0)) + 1
         state.update({"seq": seq, "timestamp": time.time(), "last_bytes": len(pcm_bytes)})
 
@@ -6094,8 +6410,9 @@ def stop_audio_remote(robot_id: str):
 def get_video_frame(robot_id: str):
     _ensure_robot(robot_id)
     _require_video_robot(robot_id)
+    robot_key = _robot_key(robot_id)
     with video_cache_lock:
-        entry = video_cache.get(robot_id) or {}
+        entry = video_cache.get(robot_key) or {}
         frame_bytes = entry.get("jpeg")
         timestamp = entry.get("timestamp")
     if not frame_bytes:
@@ -6118,13 +6435,14 @@ def stream_video(robot_id: str):
 @app.route("/robots/<robot_id>/video/status")
 def get_video_status(robot_id: str):
     _ensure_robot(robot_id)
+    robot_key = _robot_key(robot_id)
     if not _robot_has_video(robot_id):
         return jsonify({"enabled": False})
     if not VIDEO_SUPPORT:
         return jsonify({"enabled": False, "error": "Video support unavailable"})
 
     with video_cache_lock:
-        entry = video_cache.get(robot_id) or {}
+        entry = video_cache.get(robot_key) or {}
         timestamp = entry.get("timestamp")
         has_frame = bool(entry.get("jpeg"))
 

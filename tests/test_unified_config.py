@@ -196,6 +196,8 @@ class UnifiedConfigTests(unittest.TestCase):
         self.assertEqual(normalized["mqtt"]["host"], "127.0.0.1")
         self.assertEqual(len(normalized["robots"]), 1)
         self.assertEqual(normalized["robots"][0]["id"], "testbot")
+        self.assertEqual(normalized["robots"][0]["system"], "pebble")
+        self.assertEqual(normalized["robots"][0]["key"], "pebble:robots:testbot")
         self.assertEqual(
             normalized["robots"][0]["video"]["topic"],
             "pebble/robots/testbot/outgoing/front-camera",
@@ -351,14 +353,78 @@ class UnifiedConfigTests(unittest.TestCase):
             module._handle_audio_payload("testbot", first)
             module._handle_audio_payload("testbot", second)
 
+            robot_key = module._robot_key("testbot")
             with module.audio_cache_lock:
-                cache = module.audio_cache.get("testbot") or {}
-                buffer = list(module.audio_buffers.get("testbot", []))
+                cache = module.audio_cache.get(robot_key) or {}
+                buffer = list(module.audio_buffers.get(robot_key, []))
 
         self.assertEqual(cache.get("seq"), 1)
         self.assertEqual(cache.get("generation"), 1)
         self.assertEqual(len(buffer), 1)
         self.assertEqual(buffer[0].get("seq"), 1)
+
+    def test_web_ui_template_has_system_dropdown_and_map_location_label(self):
+        cfg = self._runtime_cfg()
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            module = self._load_web_module(cfg_path)
+
+            html = module._robot_options_html()
+
+        self.assertIn('label for="systemSelect">System:</label>', html)
+        self.assertIn("<h2>Map & Location</h2>", html)
+
+    def test_web_topic_discovery_tracks_multiple_systems_without_collisions(self):
+        cfg = self._runtime_cfg()
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            module = self._load_web_module(cfg_path)
+
+            payload = json.dumps({"t": 1_800_000_000.0}).encode("utf-8")
+            msg1 = types.SimpleNamespace(
+                topic="pebble/robots/testbot/outgoing/heartbeat",
+                payload=payload,
+                qos=1,
+                retain=False,
+            )
+            msg2 = types.SimpleNamespace(
+                topic="pebblebot/robots/testbot/outgoing/heartbeat",
+                payload=payload,
+                qos=1,
+                retain=False,
+            )
+
+            module._on_mqtt_message(None, None, msg1)
+            module._on_mqtt_message(None, None, msg2)
+            snapshot = module._ui_robot_snapshot()
+
+        systems = {(item["system"], item["id"], item["key"]) for item in snapshot}
+        self.assertIn(("pebble", "testbot", "pebble:robots:testbot"), systems)
+        self.assertIn(("pebblebot", "testbot", "pebblebot:robots:testbot"), systems)
+
+    def test_web_mqtt_connect_subscribes_all_systems(self):
+        cfg = self._runtime_cfg()
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            module = self._load_web_module(cfg_path)
+
+            subscribe_calls: list[tuple[str, int]] = []
+
+            class _FakeClient:
+                def subscribe(self, topic, qos=0):
+                    subscribe_calls.append((topic, qos))
+
+            module._on_mqtt_connect(_FakeClient(), None, {}, 0)
+
+        self.assertIn(("+/infrastructure", 1), subscribe_calls)
+        self.assertIn(("+/+/+/outgoing/heartbeat", 1), subscribe_calls)
+        self.assertIn(("+/+/+/outgoing/front-camera", 0), subscribe_calls)
 
     def test_web_autonomy_payload_handlers(self):
         cfg = self._runtime_cfg()
