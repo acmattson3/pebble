@@ -1,0 +1,23 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "allwinner,sun50i-h618-orangepi-zero2w", "allwinner,sun50i-h618";
+
+    fragment@0 {
+        target = <&i2c1>;
+        __overlay__ {
+            /* Slow the header bus down while MPU-6050 bring-up is unstable. */
+            clock-frequency = <10000>;
+            status = "okay";
+        };
+    };
+
+    fragment@1 {
+        target = <&i2c1_pi_pins>;
+        __overlay__ {
+            /* The packaged pi-i2c1 overlay does not request pull-ups here. */
+            bias-pull-up;
+        };
+    };
+};

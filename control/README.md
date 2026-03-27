@@ -37,6 +37,10 @@
   - Accepts start/stop commands and runs one script at a time.
   - Starting a new script auto-stops any currently running script.
   - No child auto-restart on crash; exit/error is reflected in retained status.
+- `services/imu_daemon/`
+  - Reserved for a future GPIO/I2C IMU service.
+  - Current hardware note lives in `control/services/imu_daemon/README.md`.
+  - Current Orange Pi I2C tuning overlay source lives in `control/services/imu_daemon/pebble-imu-i2c1-tune.dts`.
 
 ## Runtime Config
 
