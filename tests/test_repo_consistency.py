@@ -88,6 +88,12 @@ class RepoConsistencyTests(unittest.TestCase):
                 self.assertNotIn("control/configs/web.json", text)
                 self.assertNotRegex(text, re.compile(r"\bPebbleBot\b|\bpebblebot\b"))
 
+    def test_systemd_example_includes_login_session_runtime_env(self):
+        text = (REPO_ROOT / "systemd" / "pebble-control.service.example").read_text(encoding="utf-8")
+        self.assertIn("PAMName=login", text)
+        self.assertIn("Environment=XDG_RUNTIME_DIR=/run/user/%U", text)
+        self.assertIn("Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus", text)
+
 
 if __name__ == "__main__":
     unittest.main()

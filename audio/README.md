@@ -76,6 +76,12 @@ already point to unified config mode.
 
 - Speaker playback path remains direct (`aplay`) by design.
 - Microphone capture is owned by AV daemon and shared via `shmsrc`.
+- For systemd deployments, use `systemd/pebble-control.service.example` or an
+  equivalent unit that provides `PAMName=login`,
+  `XDG_RUNTIME_DIR=/run/user/%U`, and
+  `DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus`. Without that
+  session context, some robots can create an audio `shmsink` segment that is
+  immediately unlinked and unreadable by `shmsrc` consumers.
 - Default `concealment_ms` is `100` (0.1s) in unified config examples.
 - Receiver logic resets packet-loss state when stream sequence rewinds (for example
   after restart), reducing long stale-buffer recovery delays.

@@ -184,6 +184,16 @@ Update at least:
 - `WorkingDirectory`
 - `ExecStart`
 
+Keep these example-unit lines unless you have a deliberate replacement:
+- `PAMName=login`
+- `Environment=XDG_RUNTIME_DIR=/run/user/%U`
+- `Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus`
+
+They provide a login-style user session for the service user, which keeps
+the AV-daemon shared-memory audio path (`shmsink` -> `shmsrc`) working
+reliably on robots like Goob. `%U` expands to the numeric UID for the
+configured `User=`.
+
 Then enable it:
 
 ```bash

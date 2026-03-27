@@ -226,4 +226,14 @@ Use the repository example unit:
 
 - `systemd/pebble-control.service.example`
 
+The example unit intentionally includes:
+
+- `PAMName=login`
+- `Environment=XDG_RUNTIME_DIR=/run/user/%U`
+- `Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus`
+
+Keep those lines when deploying AV-enabled robots. They provide the user
+session context needed for the AV-daemon shared-memory audio path to stay
+visible to `shmsrc` consumers under systemd.
+
 Install flow is documented in the root `README.md` under "Setup (Example Linux Robot)".

@@ -11,7 +11,10 @@ WorkingDirectory=/opt/pebble
 ExecStart=/usr/bin/python3 /opt/pebble/control/launcher.py --config /opt/pebble/control/configs/config.json
 Restart=on-failure
 RestartSec=5
+PAMName=login
 Environment=PYTHONUNBUFFERED=1
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus
 
 [Install]
 WantedBy=multi-user.target
