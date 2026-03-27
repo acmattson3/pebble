@@ -383,7 +383,8 @@ MQTT_CFG = CONFIG.get("mqtt", {})
 MQTT_HISTORY_CFG = CONFIG.get("mqtt_history", {}) if isinstance(CONFIG.get("mqtt_history"), dict) else {}
 REPLAY_ARCHIVE = ReplayArchive(MQTT_HISTORY_CFG) if ReplayArchive is not None else None
 ROBOT_DISCOVERY = CONFIG.get("robot_discovery", {}) if isinstance(CONFIG.get("robot_discovery"), dict) else {}
-SEED_CONFIGURED_ROBOTS = bool(ROBOT_DISCOVERY.get("seed_configured", True))
+# Configured robots are discovery hints only; the UI list comes from live MQTT topics.
+SEED_CONFIGURED_ROBOTS = False
 CONFIG_ROBOTS = CONFIG.get("robots", []) or []
 CONFIG_ROBOT_MAP = {robot["key"]: robot for robot in CONFIG_ROBOTS if robot.get("key")}
 CONFIG_ROBOT_KEYS_BY_ID: Dict[str, list[str]] = {}

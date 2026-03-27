@@ -376,6 +376,18 @@ class UnifiedConfigTests(unittest.TestCase):
         self.assertIn('label for="systemSelect">System:</label>', html)
         self.assertIn("<h2>Map & Location</h2>", html)
 
+    def test_web_does_not_seed_configured_robots_into_ui_snapshot(self):
+        cfg = self._runtime_cfg()
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            module = self._load_web_module(cfg_path)
+
+            snapshot = module._ui_robot_snapshot()
+
+        self.assertEqual(snapshot, [])
+
     def test_web_topic_discovery_tracks_multiple_systems_without_collisions(self):
         cfg = self._runtime_cfg()
 
