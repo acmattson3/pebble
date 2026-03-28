@@ -52,6 +52,11 @@ class MqttBridge:
         self.incoming_prefix = f"{self.base}/incoming/"
         self.outgoing_prefix = f"{self.base}/outgoing/"
         self.flags_prefix = f"{self.base}/incoming/flags/"
+        imu_cfg = service_cfg(config, "imu_daemon")
+        imu_topics_cfg = imu_cfg.get("topics") if isinstance(imu_cfg.get("topics"), dict) else {}
+        self.ignored_outgoing_topics = {
+            str(imu_topics_cfg.get("high_rate") or f"{self.base}/outgoing/sensors/imu-fast"),
+        }
 
         topics_cfg = self.service_cfg.get("topics") if isinstance(self.service_cfg.get("topics"), dict) else {}
         self.remote_mirror_topic = str(topics_cfg.get("remote_mirror") or f"{self.flags_prefix}remote-mirror")
@@ -251,6 +256,9 @@ class MqttBridge:
         self._handle_media_topics(topic, parsed)
 
         if topic.startswith(self.outgoing_prefix):
+            if topic in self.ignored_outgoing_topics:
+                logging.debug("Ignoring local-only outgoing topic for remote mirror: %s", topic)
+                return
             if bool(msg.retain):
                 with self.state_lock:
                     self.retained_local_outgoing[topic] = (payload_bytes, int(msg.qos), True)

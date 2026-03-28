@@ -17,7 +17,13 @@ enum LedMode { LED_OFF, LED_STATIC, LED_FADE };
 
 const float BATTERY_DIVIDER_RATIO = 2.0f;
 const float BATTERY_ADC_REF = 3.3f;
+#if defined(ARDUINO_ARCH_ESP32)
 const float BATTERY_ADC_MAX = 4095.0f;
+#else
+// XIAO SAMD21/M0 defaults to 10-bit ADC reads unless the sketch changes
+// resolution explicitly.
+const float BATTERY_ADC_MAX = 1023.0f;
+#endif
 
 struct {
   LedMode mode = LED_OFF;

@@ -288,6 +288,22 @@ def make_base_config(robot_id: str = "testbot") -> dict[str, Any]:
                     "timeout_seconds": 0.1,
                 },
             },
+            "imu_daemon": {
+                "enabled": False,
+                "device": {
+                    "path": "/dev/i2c-2",
+                    "address": 104,
+                },
+                "topics": {
+                    "high_rate": f"pebble/robots/{robot_id}/outgoing/sensors/imu-fast",
+                    "low_rate": f"pebble/robots/{robot_id}/outgoing/sensors/imu",
+                },
+                "publish": {
+                    "read_hz": 50.0,
+                    "high_rate_hz": 50.0,
+                    "low_rate_hz": 5.0,
+                },
+            },
             "soundboard_handler": {
                 "enabled": True,
                 "playback": {
