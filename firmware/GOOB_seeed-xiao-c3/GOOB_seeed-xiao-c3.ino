@@ -6,7 +6,7 @@
 #define PIN_TOUCH_1 D4
 #define PIN_TOUCH_2 D5
 
-#define PIN_CHG     D6
+#define PIN_BATT    D6
 
 #define PIN_L_FWD   D7
 #define PIN_L_BWD   D8
@@ -14,6 +14,10 @@
 #define PIN_R_BWD   D10
 
 enum LedMode { LED_OFF, LED_STATIC, LED_FADE };
+
+const float BATTERY_DIVIDER_RATIO = 2.0f;
+const float BATTERY_ADC_REF = 3.3f;
+const float BATTERY_ADC_MAX = 4095.0f;
 
 struct {
   LedMode mode = LED_OFF;
@@ -97,14 +101,14 @@ bool motorsTimeoutApplied    = false;
 bool ledIsDefault            = false;
 
 // --------- telemetry state -------------
-unsigned long lastTouchTelemetryMs = 0;   // last time we printed fast touch telemetry
-unsigned long lastChargeTelemetryMs = 0;  // last time we printed slower charge telemetry
-int lastChargeValue = -1;
+unsigned long lastTouchTelemetryMs = 0;    // last time we printed fast touch telemetry
+unsigned long lastBatteryTelemetryMs = 0;  // last time we printed slower battery telemetry
 const unsigned long TOUCH_TELEMETRY_PERIOD_MS = 20;
-const unsigned long CHARGE_TELEMETRY_PERIOD_MS = 500;
+const unsigned long BATTERY_TELEMETRY_PERIOD_MS = 5000;
 
 static inline void emitTouchTelemetry();
-static inline void emitChargeTelemetry(int chg);
+static inline float readBatteryVoltage();
+static inline void emitBatteryTelemetry(float volts);
 
 void setDefaultLed() {
   g_led.mode = LED_FADE;
@@ -131,7 +135,11 @@ void setup() {
   pinMode(PIN_TOUCH_1, INPUT);
   pinMode(PIN_TOUCH_2, INPUT);
 
-  pinMode(PIN_CHG, INPUT);  // high means charging
+  pinMode(PIN_BATT, INPUT);
+#if defined(ARDUINO_ARCH_ESP32)
+  analogReadResolution(12);
+  analogSetPinAttenuation(PIN_BATT, ADC_11db);
+#endif
 
   pinMode(PIN_L_FWD, OUTPUT);
   digitalWrite(PIN_L_FWD, 0);
@@ -147,9 +155,8 @@ void setup() {
   lastMotorCmdMs = now;
   lastLedCmdMs = now;
   lastTouchTelemetryMs = now;
-  lastChargeTelemetryMs = now;
-  lastChargeValue = digitalRead(PIN_CHG) ? 1 : 0;
-  emitChargeTelemetry(lastChargeValue);
+  lastBatteryTelemetryMs = now;
+  emitBatteryTelemetry(readBatteryVoltage());
 
   Serial.println("Done!");
 }
@@ -169,10 +176,29 @@ static inline void emitTouchTelemetry() {
   Serial.print(" a2="); Serial.println(a2);
 }
 
-static inline void emitChargeTelemetry(int chg) {
-  // Slower status stream.
+static inline float readBatteryVoltage() {
+  const int samples = 8;
+  uint32_t total = 0;
+  for (int i = 0; i < samples; i++) {
+    total += analogRead(PIN_BATT);
+    delay(2);
+  }
+  float raw = (float)total / (float)samples;
+#if defined(ARDUINO_ARCH_ESP32)
+  uint32_t mv = analogReadMilliVolts(PIN_BATT);
+  (void)raw;
+  return (mv / 1000.0f) * BATTERY_DIVIDER_RATIO;
+#else
+  return (raw / BATTERY_ADC_MAX) * BATTERY_ADC_REF * BATTERY_DIVIDER_RATIO;
+#endif
+}
+
+static inline void emitBatteryTelemetry(float volts) {
+  // `chg=-1` indicates the dedicated charge-detect line is no longer wired,
+  // while `v=` carries the divided battery reading from D6.
   Serial.print("C ");
-  Serial.print("chg="); Serial.println(chg ? 1 : 0);
+  Serial.print("chg=-1 v=");
+  Serial.println(volts, 3);
 }
 
 void loop() {
@@ -202,12 +228,9 @@ void loop() {
     emitTouchTelemetry();
   }
 
-  // Lower-rate charging telemetry (or immediate on change).
-  int chg = digitalRead(PIN_CHG) ? 1 : 0;
-  if ((now - lastChargeTelemetryMs >= CHARGE_TELEMETRY_PERIOD_MS) || (chg != lastChargeValue)) {
-    lastChargeTelemetryMs = now;
-    lastChargeValue = chg;
-    emitChargeTelemetry(chg);
+  if (now - lastBatteryTelemetryMs >= BATTERY_TELEMETRY_PERIOD_MS) {
+    lastBatteryTelemetryMs = now;
+    emitBatteryTelemetry(readBatteryVoltage());
   }
 }
 

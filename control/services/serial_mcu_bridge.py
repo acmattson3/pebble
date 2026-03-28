@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import math
 import signal
 import sys
 import threading
@@ -58,6 +59,9 @@ class SerialMcuBridge:
         self.lights_flash_topic = str(topics_cfg.get("lights_flash") or self.identity.topic("incoming", "lights-flash"))
         self.touch_topic = str(topics_cfg.get("touch_sensors") or self.identity.topic("outgoing", "touch-sensors"))
         self.charge_topic = str(topics_cfg.get("charging_status") or self.identity.topic("outgoing", "charging-status"))
+        self.charge_level_topic = str(
+            topics_cfg.get("charging_level") or self.identity.topic("outgoing", "charging-level")
+        )
         telemetry_cfg = self.service_cfg.get("telemetry") if isinstance(self.service_cfg.get("telemetry"), dict) else {}
         self.publish_touch_sensors = bool(telemetry_cfg.get("publish_touch_sensors", False))
         odometry_shm_cfg = (
@@ -98,7 +102,9 @@ class SerialMcuBridge:
         self.last_touch: Optional[dict[str, Any]] = None
         self.last_charge: Optional[dict[str, Any]] = None
         self.last_charge_value: Optional[bool] = None
+        self.last_charge_level: Optional[dict[str, Any]] = None
         self.next_charge_republish_at = 0.0
+        self.next_charge_level_republish_at = 0.0
         self.last_drive_command_at: Optional[float] = None
         self.drive_timed_out = False
 
@@ -116,6 +122,7 @@ class SerialMcuBridge:
         while not self.stop_event.is_set():
             self._drive_watchdog_tick()
             self._republish_charge_if_due()
+            self._republish_charge_level_if_due()
             self.stop_event.wait(0.05)
 
     def stop(self) -> None:
@@ -194,6 +201,9 @@ class SerialMcuBridge:
             charge = self._parse_charge_telemetry_line(line)
             if charge is not None:
                 self._handle_charge_telemetry(charge)
+            charge_level = self._parse_charge_level_telemetry_line(line)
+            if charge_level is not None:
+                self._handle_charge_level_telemetry(charge_level)
 
     @staticmethod
     def _parse_touch_telemetry_line(line: str) -> Optional[dict[str, int]]:
@@ -239,18 +249,40 @@ class SerialMcuBridge:
             return None
 
     @staticmethod
+    def _parse_charge_level_telemetry_line(line: str) -> Optional[float]:
+        if not (line.startswith("C ") or line.startswith("T ")):
+            return None
+        values: dict[str, str] = {}
+        for token in line.split()[1:]:
+            if "=" not in token:
+                continue
+            key, val = token.split("=", 1)
+            values[key] = val
+        try:
+            value = float(values["v"])
+        except (KeyError, ValueError):
+            return None
+        if not math.isfinite(value):
+            return None
+        return value
+
+    @staticmethod
     def _parse_telemetry_line(line: str) -> Optional[dict[str, Any]]:
         # Backward-compatible parser for legacy tests/consumers expecting a single line.
         touch = SerialMcuBridge._parse_touch_telemetry_line(line)
         charge = SerialMcuBridge._parse_charge_telemetry_line(line)
         if not touch or charge is None:
             return None
-        return {
+        parsed = {
             "t0": touch["a0"],
             "t1": touch["a1"],
             "t2": touch["a2"],
             "chg": charge,
         }
+        charge_level = SerialMcuBridge._parse_charge_level_telemetry_line(line)
+        if charge_level is not None:
+            parsed["v"] = charge_level
+        return parsed
 
     def _handle_touch_telemetry(self, data: dict[str, int]) -> None:
         a0 = data.get("a0")
@@ -283,23 +315,38 @@ class SerialMcuBridge:
             self._publish_json(self.touch_topic, touch)
 
     def _handle_charge_telemetry(self, charge: int) -> None:
-        payload = {"value": bool(charge)}
+        charge_value = None if int(charge) < 0 else bool(charge)
+        payload = {"value": charge_value}
         should_publish = False
         now = time.time()
         with self.telemetry_lock:
+            had_charge = self.last_charge is not None
             self.last_charge = payload
-            if self.last_charge_value != bool(charge):
-                self.last_charge_value = bool(charge)
+            if (not had_charge) or self.last_charge_value != charge_value:
                 should_publish = True
+            self.last_charge_value = charge_value
         if not should_publish:
             return
         self._publish_json(self.charge_topic, payload, qos=1, retain=True)
         self.next_charge_republish_at = now + self.retained_publish_interval_seconds
 
+    def _handle_charge_level_telemetry(self, charge_level: float) -> None:
+        level = float(charge_level)
+        if not math.isfinite(level):
+            return
+        payload = {"value": level, "unit": "v"}
+        with self.telemetry_lock:
+            self.last_charge_level = payload
+        self._publish_json(self.charge_level_topic, payload, qos=1, retain=True)
+        self.next_charge_level_republish_at = time.time() + self.retained_publish_interval_seconds
+
     def _handle_telemetry(self, data: dict[str, Any]) -> None:
         # Compatibility shim used in tests and any direct callers.
         self._handle_touch_telemetry({"t0": int(data["t0"]), "t1": int(data["t1"]), "t2": int(data["t2"])})
-        self._handle_charge_telemetry(int(data["chg"]))
+        if "chg" in data:
+            self._handle_charge_telemetry(int(data["chg"]))
+        if "v" in data:
+            self._handle_charge_level_telemetry(float(data["v"]))
 
     def _connect_local_mqtt(self) -> None:
         client = mqtt.Client()
@@ -382,9 +429,13 @@ class SerialMcuBridge:
     def _republish_cached_telemetry(self) -> None:
         with self.telemetry_lock:
             charge = self.last_charge
-        if charge:
+            charge_level = self.last_charge_level
+        if charge is not None:
             self._publish_json(self.charge_topic, charge, qos=1, retain=True)
             self.next_charge_republish_at = time.time() + self.retained_publish_interval_seconds
+        if charge_level is not None:
+            self._publish_json(self.charge_level_topic, charge_level, qos=1, retain=True)
+            self.next_charge_level_republish_at = time.time() + self.retained_publish_interval_seconds
 
     def _republish_charge_if_due(self) -> None:
         if self.next_charge_republish_at <= 0:
@@ -398,6 +449,19 @@ class SerialMcuBridge:
         if not charge:
             return
         self._publish_json(self.charge_topic, charge, qos=1, retain=True)
+
+    def _republish_charge_level_if_due(self) -> None:
+        if self.next_charge_level_republish_at <= 0:
+            return
+        now = time.time()
+        if now < self.next_charge_level_republish_at:
+            return
+        with self.telemetry_lock:
+            charge_level = self.last_charge_level
+        self.next_charge_level_republish_at = now + self.retained_publish_interval_seconds
+        if charge_level is None:
+            return
+        self._publish_json(self.charge_level_topic, charge_level, qos=1, retain=True)
 
     def _publish_json(self, topic: str, payload: dict[str, Any], qos: int = 1, retain: bool = False) -> None:
         client = self.client

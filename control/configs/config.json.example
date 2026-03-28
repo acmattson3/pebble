@@ -326,7 +326,8 @@
         "lights_solid": "pebble/robots/my-robot/incoming/lights-solid",
         "lights_flash": "pebble/robots/my-robot/incoming/lights-flash",
         "touch_sensors": "pebble/robots/my-robot/outgoing/touch-sensors",
-        "charging_status": "pebble/robots/my-robot/outgoing/charging-status"
+        "charging_status": "pebble/robots/my-robot/outgoing/charging-status",
+        "charging_level": "pebble/robots/my-robot/outgoing/charging-level"
       }
     },
     "soundboard_handler": {

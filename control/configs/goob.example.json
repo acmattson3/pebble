@@ -219,7 +219,8 @@
         "lights_solid": "pebble/robots/goob/incoming/lights-solid",
         "lights_flash": "pebble/robots/goob/incoming/lights-flash",
         "touch_sensors": "pebble/robots/goob/outgoing/touch-sensors",
-        "charging_status": "pebble/robots/goob/outgoing/charging-status"
+        "charging_status": "pebble/robots/goob/outgoing/charging-status",
+        "charging_level": "pebble/robots/goob/outgoing/charging-level"
       }
     },
     "soundboard_handler": {

@@ -28,8 +28,10 @@ class SerialMcuBridgeTests(unittest.TestCase):
     def test_parse_split_touch_and_charge_lines(self):
         touch = SerialMcuBridge._parse_touch_telemetry_line("T a0=11 a1=22 a2=33")
         charge = SerialMcuBridge._parse_charge_telemetry_line("C chg=1")
+        charge_level = SerialMcuBridge._parse_charge_level_telemetry_line("C chg=-1 v=3.742")
         self.assertEqual(touch, {"a0": 11, "a1": 22, "a2": 33})
         self.assertEqual(charge, 1)
+        self.assertEqual(charge_level, 3.742)
 
     def test_drive_values_send_serial_motor_command(self):
         bridge = self._bridge()
@@ -57,6 +59,29 @@ class SerialMcuBridgeTests(unittest.TestCase):
         self.assertIsNotNone(bridge.last_touch)
         self.assertEqual(bridge.last_touch["value"], {"a0": 10, "a1": 20, "a2": 30})
 
+    def test_handle_charge_level_telemetry_publishes_retained(self):
+        bridge = self._bridge()
+        client = FakeMqttClient()
+        bridge.client = client
+        bridge._handle_charge_level_telemetry(3.91)
+        self.assertEqual(len(client.publish_calls), 1)
+        topic, payload, _qos, retain = client.publish_calls[0]
+        self.assertEqual(topic, bridge.charge_level_topic)
+        self.assertTrue(retain)
+        self.assertEqual(json.loads(payload), {"value": 3.91, "unit": "v"})
+
+    def test_unknown_charge_publishes_null_and_keeps_odometry_unknown(self):
+        bridge = self._bridge()
+        client = FakeMqttClient()
+        bridge.client = client
+        bridge._handle_charge_telemetry(-1)
+        self.assertEqual(len(client.publish_calls), 1)
+        topic, payload, _qos, retain = client.publish_calls[0]
+        self.assertEqual(topic, bridge.charge_topic)
+        self.assertTrue(retain)
+        self.assertEqual(json.loads(payload), {"value": None})
+        self.assertIsNone(bridge.last_charge_value)
+
     def test_handle_touch_telemetry_accepts_a_labels(self):
         bridge = self._bridge()
         bridge._handle_touch_telemetry({"a0": 7, "a1": 8, "a2": 9})
@@ -79,6 +104,17 @@ class SerialMcuBridgeTests(unittest.TestCase):
         self.assertEqual(len(client.publish_calls), 1)
         bridge.next_charge_republish_at = time.time() - 1.0
         bridge._republish_charge_if_due()
+        self.assertEqual(len(client.publish_calls), 2)
+        self.assertTrue(client.publish_calls[-1][3])
+
+    def test_charge_level_republish_if_due(self):
+        bridge = self._bridge()
+        client = FakeMqttClient()
+        bridge.client = client
+        bridge._handle_charge_level_telemetry(3.88)
+        self.assertEqual(len(client.publish_calls), 1)
+        bridge.next_charge_level_republish_at = time.time() - 1.0
+        bridge._republish_charge_level_if_due()
         self.assertEqual(len(client.publish_calls), 2)
         self.assertTrue(client.publish_calls[-1][3])
 
