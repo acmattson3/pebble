@@ -105,6 +105,24 @@ class CapabilitiesTests(unittest.TestCase):
         value = build_capabilities_value(config)
         self.assertTrue(value["telemetry"]["touch_sensors"])
 
+    def test_capabilities_can_come_from_serial_bridge_instance(self):
+        config = make_base_config("capbot")
+        config["services"]["serial_mcu_bridge"]["enabled"] = False
+        config["services"]["serial_mcu_bridge"]["instances"] = {
+            "base": {
+                "enabled": True,
+                "protocol": "goob_base_v1",
+                "serial": {"port": "/dev/ttyACM9"},
+                "topics": {"drive_values": "custom/drive"},
+                "telemetry": {"publish_touch_sensors": True},
+            }
+        }
+        value = build_capabilities_value(config)
+        self.assertTrue(value["drive"]["available"])
+        self.assertTrue(value["lights"]["solid"])
+        self.assertTrue(value["telemetry"]["touch_sensors"])
+        self.assertEqual("custom/drive", value["drive"]["topic"])
+
     def test_reboot_capability_follows_reboot_control_command(self):
         config = make_base_config("capbot")
         value = build_capabilities_value(config)

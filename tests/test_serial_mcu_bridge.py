@@ -11,12 +11,12 @@ from tests.helpers import FakeMqttClient, FakeMqttMessage, FakeSerial, make_base
 
 
 class SerialMcuBridgeTests(unittest.TestCase):
-    def _bridge(self) -> SerialMcuBridge:
+    def _bridge(self, *, instance_name: str | None = None) -> SerialMcuBridge:
         config = make_base_config("serialbot")
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "config.json"
             path.write_text(json.dumps(config))
-            return SerialMcuBridge(config, path)
+            return SerialMcuBridge(config, path, instance_name=instance_name)
 
     def test_parse_telemetry_line(self):
         parsed = SerialMcuBridge._parse_telemetry_line("T t0=1 t1=2 t2=3 chg=1")
@@ -32,6 +32,42 @@ class SerialMcuBridgeTests(unittest.TestCase):
         self.assertEqual(touch, {"a0": 11, "a1": 22, "a2": 33})
         self.assertEqual(charge, 1)
         self.assertEqual(charge_level, 3.742)
+
+    def test_parse_imu_lines(self):
+        high = SerialMcuBridge._parse_imu_high_rate_telemetry_line(
+            "I n=12 ms=345 ax=1.1 ay=2.2 az=3.3 gx=4.4 gy=5.5 gz=6.6 t=25.1 r=7.7 p=8.8"
+        )
+        low = SerialMcuBridge._parse_imu_low_rate_telemetry_line(
+            "S n=12 ms=400 r=7.7 p=8.8 t=25.1 an=1.02 gbx=0.1 gby=0.2 gbz=0.3 ok=10 err=1 cal=200"
+        )
+        self.assertEqual(high["n"], 12)
+        self.assertAlmostEqual(high["ax"], 1.1)
+        self.assertEqual(low["ok"], 10)
+        self.assertAlmostEqual(low["an"], 1.02)
+
+    def test_named_imu_instance_merges_base_config(self):
+        config = make_base_config("serialbot")
+        config["services"]["serial_mcu_bridge"]["enabled"] = False
+        config["services"]["serial_mcu_bridge"]["serial"] = {
+            "port": "/dev/serial/by-id/base",
+            "baud": 115200,
+            "timeout_seconds": 0.1,
+        }
+        config["services"]["serial_mcu_bridge"]["instances"] = {
+            "imu": {
+                "enabled": True,
+                "protocol": "imu_mpu6050_v1",
+                "serial": {"port": "/dev/serial/by-id/imu"},
+            }
+        }
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "config.json"
+            path.write_text(json.dumps(config))
+            bridge = SerialMcuBridge(config, path, instance_name="imu")
+        self.assertEqual("imu_mpu6050_v1", bridge.protocol_name)
+        self.assertEqual("/dev/serial/by-id/imu", bridge.serial_port)
+        self.assertEqual(115200, bridge.baud)
+        self.assertEqual("pebble/robots/serialbot/outgoing/sensors/imu-fast", bridge.imu_high_rate_topic)
 
     def test_drive_values_send_serial_motor_command(self):
         bridge = self._bridge()
@@ -86,6 +122,61 @@ class SerialMcuBridgeTests(unittest.TestCase):
         bridge = self._bridge()
         bridge._handle_touch_telemetry({"a0": 7, "a1": 8, "a2": 9})
         self.assertEqual(bridge.last_touch["value"], {"a0": 7, "a1": 8, "a2": 9})
+
+    def test_handle_imu_high_rate_telemetry_publishes_fast_topic(self):
+        config = make_base_config("serialbot")
+        config["services"]["serial_mcu_bridge"]["enabled"] = False
+        config["services"]["serial_mcu_bridge"]["instances"] = {
+            "imu": {
+                "enabled": True,
+                "protocol": "imu_mpu6050_v1",
+                "serial": {"port": "/dev/ttyUSB9"},
+            }
+        }
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "config.json"
+            path.write_text(json.dumps(config))
+            bridge = SerialMcuBridge(config, path, instance_name="imu")
+        bridge.client = FakeMqttClient()
+        bridge._handle_imu_high_rate_telemetry(
+            {"n": 1, "ms": 25, "ax": 1.0, "ay": 2.0, "az": 3.0, "gx": 4.0, "gy": 5.0, "gz": 6.0, "t": 22.5, "r": 7.0, "p": 8.0}
+        )
+        self.assertEqual(len(bridge.client.publish_calls), 1)  # type: ignore[union-attr]
+        topic, payload, _qos, retain = bridge.client.publish_calls[0]  # type: ignore[index,union-attr]
+        self.assertEqual(topic, bridge.imu_high_rate_topic)
+        self.assertFalse(retain)
+        decoded = json.loads(payload)
+        self.assertEqual(decoded["seq"], 1)
+        self.assertEqual(decoded["value"]["orientation_deg"], {"roll": 7.0, "pitch": 8.0})
+
+    def test_handle_imu_low_rate_telemetry_uses_latest_motion(self):
+        config = make_base_config("serialbot")
+        config["services"]["serial_mcu_bridge"]["enabled"] = False
+        config["services"]["serial_mcu_bridge"]["instances"] = {
+            "imu": {
+                "enabled": True,
+                "protocol": "imu_mpu6050_v1",
+                "serial": {"port": "/dev/ttyUSB9"},
+            }
+        }
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "config.json"
+            path.write_text(json.dumps(config))
+            bridge = SerialMcuBridge(config, path, instance_name="imu")
+        bridge.client = FakeMqttClient()
+        bridge._handle_imu_high_rate_telemetry(
+            {"n": 3, "ms": 125, "ax": 1.0, "ay": 2.0, "az": 3.0, "gx": 4.0, "gy": 5.0, "gz": 6.0, "t": 22.5, "r": 7.0, "p": 8.0}
+        )
+        bridge._handle_imu_low_rate_telemetry(
+            {"n": 4, "ms": 200, "r": 7.1, "p": 8.1, "t": 22.6, "an": 1.01, "gbx": 0.1, "gby": 0.2, "gbz": 0.3, "ok": 44, "err": 2, "cal": 200}
+        )
+        self.assertEqual(len(bridge.client.publish_calls), 2)  # type: ignore[union-attr]
+        topic, payload, _qos, _retain = bridge.client.publish_calls[-1]  # type: ignore[index,union-attr]
+        self.assertEqual(topic, bridge.imu_low_rate_topic)
+        decoded = json.loads(payload)
+        self.assertEqual(decoded["seq"], 4)
+        self.assertEqual(decoded["value"]["accel_mps2"], {"x": 1.0, "y": 2.0, "z": 3.0})
+        self.assertEqual(decoded["value"]["health"]["samples_ok"], 44)
 
     def test_charge_publish_only_on_change(self):
         bridge = self._bridge()

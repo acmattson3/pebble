@@ -73,6 +73,30 @@ class LauncherTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             launcher.start()
 
+    def test_serial_bridge_instances_are_launcher_managed(self):
+        config = make_base_config("launchbot")
+        config["services"]["mqtt_bridge"]["enabled"] = False
+        config["services"]["serial_mcu_bridge"]["enabled"] = False
+        config["services"]["serial_mcu_bridge"]["instances"] = {
+            "imu": {
+                "enabled": True,
+                "protocol": "imu_mpu6050_v1",
+                "serial": {"port": "/dev/ttyUSB0"},
+            }
+        }
+        config["services"]["soundboard_handler"]["enabled"] = False
+        config["services"]["autonomy_manager"]["enabled"] = False
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(config))
+            launcher = Launcher(config, cfg_path)
+        enabled = launcher._enabled_children()
+        self.assertIn("serial_mcu_bridge:imu", enabled)
+        self.assertEqual(
+            enabled["serial_mcu_bridge:imu"],
+            ("control.services.serial_mcu_bridge", ["--instance", "imu"]),
+        )
+
     def test_capabilities_publisher_default_interval_is_hourly(self):
         config = make_base_config("launchbot")
         with tempfile.TemporaryDirectory() as td:

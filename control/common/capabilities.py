@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from control.common.config import service_cfg
+from control.common.config import enabled_service_instances, service_cfg
 from control.common.topics import RobotIdentity, identity_from_config
 
 
@@ -62,14 +62,22 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
         mqtt_bridge_cfg.get("git_pull_control") if isinstance(mqtt_bridge_cfg.get("git_pull_control"), dict) else {}
     )
 
-    serial_topics = serial_cfg.get("topics") if isinstance(serial_cfg.get("topics"), dict) else {}
-    serial_telemetry_cfg = serial_cfg.get("telemetry") if isinstance(serial_cfg.get("telemetry"), dict) else {}
+    serial_instances = enabled_service_instances(config, "serial_mcu_bridge")
+    serial_base_cfg: dict[str, Any] = {}
+    for _instance_name, instance_cfg in serial_instances:
+        protocol_name = str(instance_cfg.get("protocol") or "goob_base_v1").strip().lower()
+        if protocol_name == "goob_base_v1":
+            serial_base_cfg = instance_cfg
+            break
+
+    serial_topics = serial_base_cfg.get("topics") if isinstance(serial_base_cfg.get("topics"), dict) else {}
+    serial_telemetry_cfg = serial_base_cfg.get("telemetry") if isinstance(serial_base_cfg.get("telemetry"), dict) else {}
     sound_topics = soundboard_cfg.get("topics") if isinstance(soundboard_cfg.get("topics"), dict) else {}
     autonomy_topics = autonomy_cfg.get("topics") if isinstance(autonomy_cfg.get("topics"), dict) else {}
 
     mqtt_bridge_enabled = _truthy(mqtt_bridge_cfg.get("enabled"), False)
     ros1_bridge_enabled = _truthy(ros1_bridge_cfg.get("enabled"), False)
-    serial_enabled = _truthy(serial_cfg.get("enabled"), False)
+    serial_enabled = bool(serial_base_cfg)
     ros1_charging_status_enabled = ros1_bridge_enabled and _truthy(ros1_charge_status_cfg.get("enabled"), False)
     touch_publish_enabled = _truthy(serial_telemetry_cfg.get("publish_touch_sensors"), False)
     soundboard_enabled = _truthy(soundboard_cfg.get("enabled"), False)

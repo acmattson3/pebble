@@ -302,6 +302,7 @@
     "serial_mcu_bridge": {
       "enabled": true,
       "log_level": "INFO",
+      "protocol": "goob_base_v1",
       "retained_publish_interval_seconds": 3600,
       "serial": {
         "port": "/dev/ttyACM0",
@@ -328,6 +329,27 @@
         "touch_sensors": "pebble/robots/my-robot/outgoing/touch-sensors",
         "charging_status": "pebble/robots/my-robot/outgoing/charging-status",
         "charging_level": "pebble/robots/my-robot/outgoing/charging-level"
+      },
+      "instances": {
+        "imu": {
+          "enabled": false,
+          "protocol": "imu_mpu6050_v1",
+          "serial": {
+            "port": "/dev/serial/by-id/usb-imu-adapter",
+            "baud": 115200,
+            "timeout_seconds": 0.1
+          },
+          "topics": {
+            "high_rate": "pebble/robots/my-robot/outgoing/sensors/imu-fast",
+            "low_rate": "pebble/robots/my-robot/outgoing/sensors/imu"
+          },
+          "publish": {
+            "high_rate_qos": 0,
+            "low_rate_qos": 1,
+            "high_rate_retain": false,
+            "low_rate_retain": false
+          }
+        }
       }
     },
     "imu_daemon": {

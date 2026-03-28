@@ -29,7 +29,7 @@ import paho.mqtt.client as mqtt
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from control.common.config import load_config, service_cfg
+from control.common.config import enabled_service_instances, load_config, service_cfg
 from control.common.capabilities import capabilities_topic
 from control.common.mqtt import mqtt_auth_and_tls
 from control.common.topics import identity_from_config
@@ -235,6 +235,7 @@ def _main() -> int:
     soundboard_cfg = service_cfg(config, "soundboard_handler")
     autonomy_cfg = service_cfg(config, "autonomy_manager")
     serial_cfg = service_cfg(config, "serial_mcu_bridge")
+    serial_instances = enabled_service_instances(config, "serial_mcu_bridge")
     mqtt_bridge_cfg = service_cfg(config, "mqtt_bridge")
     heartbeat_cfg = mqtt_bridge_cfg.get("heartbeat") if isinstance(mqtt_bridge_cfg.get("heartbeat"), dict) else {}
 
@@ -314,7 +315,7 @@ def _main() -> int:
         else:
             record("autonomy retained topics", "SKIP", "autonomy_manager disabled")
 
-        if bool(serial_cfg.get("enabled", True)):
+        if bool(serial_cfg.get("enabled", True)) or bool(serial_instances):
             local.wait_for(
                 lambda e: e.topic in {
                     f"{base}/outgoing/touch-sensors",

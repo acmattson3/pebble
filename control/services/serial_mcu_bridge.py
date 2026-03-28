@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bridge local MQTT command/telemetry topics with an MCU serial link."""
+"""Bridge local MQTT command/telemetry topics with one serial MCU instance."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import paho.mqtt.client as mqtt
 import serial
@@ -20,10 +20,20 @@ import serial
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[2]))
 
-from control.common.config import default_retained_publish_interval_seconds, load_config, log_level, service_cfg
+from control.common.config import (
+    default_retained_publish_interval_seconds,
+    load_config,
+    log_level,
+    service_cfg,
+    service_instance_cfg,
+)
 from control.common.mqtt import mqtt_auth_and_tls
 from control.common.odometry_shm import OdometryRawShmWriter
 from control.common.topics import identity_from_config
+
+
+PROTOCOL_GOOB_BASE_V1 = "goob_base_v1"
+PROTOCOL_IMU_MPU6050_V1 = "imu_mpu6050_v1"
 
 
 def clamp(value: float, lo: float, hi: float) -> float:
@@ -37,51 +47,44 @@ def _parse_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
+def _parse_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _vector_payload(values: dict[str, float], digits: int = 4) -> dict[str, float]:
+    return {
+        "x": round(float(values.get("x", 0.0)), digits),
+        "y": round(float(values.get("y", 0.0)), digits),
+        "z": round(float(values.get("z", 0.0)), digits),
+    }
+
+
 class SerialMcuBridge:
-    def __init__(self, config: dict[str, Any], config_path: Path) -> None:
+    def __init__(self, config: dict[str, Any], config_path: Path, instance_name: str | None = None) -> None:
         self.config = config
         self.config_path = config_path
         self.identity = identity_from_config(config)
-        self.service_cfg = service_cfg(config, "serial_mcu_bridge")
+        self.instance_name = instance_name
+        self.service_name = (
+            "serial_mcu_bridge" if self.instance_name is None else f"serial_mcu_bridge[{self.instance_name}]"
+        )
+
+        self.service_cfg = service_instance_cfg(config, "serial_mcu_bridge", instance_name)
+        if instance_name is not None and not self.service_cfg:
+            raise SystemExit(f"serial_mcu_bridge instance not found: {instance_name}")
         if not self.service_cfg.get("enabled", True):
-            raise SystemExit("serial_mcu_bridge is disabled in config.")
+            raise SystemExit(f"{self.service_name} is disabled in config.")
 
         serial_cfg = self.service_cfg.get("serial") if isinstance(self.service_cfg.get("serial"), dict) else {}
         self.serial_port = str(serial_cfg.get("port") or "").strip()
         if not self.serial_port:
-            raise SystemExit("services.serial_mcu_bridge.serial.port is required")
+            raise SystemExit(f"{self.service_name}: serial.port is required")
         self.baud = int(serial_cfg.get("baud") or 115200)
         self.serial_timeout = float(serial_cfg.get("timeout_seconds") or 0.1)
-
-        topics_cfg = self.service_cfg.get("topics") if isinstance(self.service_cfg.get("topics"), dict) else {}
-        self.drive_topic = str(topics_cfg.get("drive_values") or self.identity.topic("incoming", "drive-values"))
-        self.lights_solid_topic = str(topics_cfg.get("lights_solid") or self.identity.topic("incoming", "lights-solid"))
-        self.lights_flash_topic = str(topics_cfg.get("lights_flash") or self.identity.topic("incoming", "lights-flash"))
-        self.touch_topic = str(topics_cfg.get("touch_sensors") or self.identity.topic("outgoing", "touch-sensors"))
-        self.charge_topic = str(topics_cfg.get("charging_status") or self.identity.topic("outgoing", "charging-status"))
-        self.charge_level_topic = str(
-            topics_cfg.get("charging_level") or self.identity.topic("outgoing", "charging-level")
-        )
-        telemetry_cfg = self.service_cfg.get("telemetry") if isinstance(self.service_cfg.get("telemetry"), dict) else {}
-        self.publish_touch_sensors = bool(telemetry_cfg.get("publish_touch_sensors", False))
-        odometry_shm_cfg = (
-            self.service_cfg.get("odometry_shm") if isinstance(self.service_cfg.get("odometry_shm"), dict) else {}
-        )
-        default_shm_name = f"{self.identity.system}_{self.identity.type}_{self.identity.robot_id}_odometry_raw"
-        self.odometry_shm_enabled = bool(odometry_shm_cfg.get("enabled", True))
-        self.odometry_shm_name = str(odometry_shm_cfg.get("name") or default_shm_name)
-        self.odometry_shm_slots = max(64, int(odometry_shm_cfg.get("slots") or 2048))
-        safety_cfg = self.service_cfg.get("safety") if isinstance(self.service_cfg.get("safety"), dict) else {}
-        self.drive_timeout_seconds = max(0.0, float(safety_cfg.get("drive_timeout_seconds") or 0.75))
-        self.ignore_retained_drive = bool(safety_cfg.get("ignore_retained_drive", True))
-        self.stop_on_shutdown = bool(safety_cfg.get("stop_on_shutdown", True))
-        default_retain_interval = default_retained_publish_interval_seconds(config, default=3600.0)
-        interval_raw = self.service_cfg.get("retained_publish_interval_seconds")
-        try:
-            interval_value = float(interval_raw if interval_raw is not None else default_retain_interval)
-        except (TypeError, ValueError):
-            interval_value = default_retain_interval
-        self.retained_publish_interval_seconds = interval_value if interval_value > 0 else default_retain_interval
+        self.protocol_name = str(self.service_cfg.get("protocol") or PROTOCOL_GOOB_BASE_V1).strip().lower()
 
         self.local_mqtt_cfg = config.get("local_mqtt") if isinstance(config.get("local_mqtt"), dict) else {}
         self.local_host = str(self.local_mqtt_cfg.get("host") or "127.0.0.1")
@@ -99,20 +102,89 @@ class SerialMcuBridge:
         self.reconnect_thread: Optional[threading.Thread] = None
         self.odometry_writer: Optional[OdometryRawShmWriter] = None
 
+        self.handlers: dict[str, Callable[[dict[str, Any]], None]] = {}
+
+        self.stop_on_shutdown = False
+        self.drive_timeout_seconds = 0.0
+        self.ignore_retained_drive = True
+        self.last_drive_command_at: Optional[float] = None
+        self.drive_timed_out = False
+
+        self.retained_publish_interval_seconds = default_retained_publish_interval_seconds(config, default=3600.0)
+        self.next_charge_republish_at = 0.0
+        self.next_charge_level_republish_at = 0.0
         self.last_touch: Optional[dict[str, Any]] = None
         self.last_charge: Optional[dict[str, Any]] = None
         self.last_charge_value: Optional[bool] = None
         self.last_charge_level: Optional[dict[str, Any]] = None
-        self.next_charge_republish_at = 0.0
-        self.next_charge_level_republish_at = 0.0
-        self.last_drive_command_at: Optional[float] = None
-        self.drive_timed_out = False
 
-        self.handlers = {
-            self.drive_topic: self._handle_drive_values,
-            self.lights_solid_topic: self._handle_lights_solid,
-            self.lights_flash_topic: self._handle_lights_flash,
-        }
+        self.last_imu_motion_value: Optional[dict[str, Any]] = None
+        self.last_imu_low_payload: Optional[dict[str, Any]] = None
+
+        self._configure_protocol()
+
+    def _configure_protocol(self) -> None:
+        topics_cfg = self.service_cfg.get("topics") if isinstance(self.service_cfg.get("topics"), dict) else {}
+        telemetry_cfg = self.service_cfg.get("telemetry") if isinstance(self.service_cfg.get("telemetry"), dict) else {}
+        safety_cfg = self.service_cfg.get("safety") if isinstance(self.service_cfg.get("safety"), dict) else {}
+        publish_cfg = self.service_cfg.get("publish") if isinstance(self.service_cfg.get("publish"), dict) else {}
+
+        interval_raw = self.service_cfg.get("retained_publish_interval_seconds")
+        try:
+            interval_value = float(
+                interval_raw if interval_raw is not None else default_retained_publish_interval_seconds(self.config, default=3600.0)
+            )
+        except (TypeError, ValueError):
+            interval_value = default_retained_publish_interval_seconds(self.config, default=3600.0)
+        self.retained_publish_interval_seconds = interval_value if interval_value > 0 else 3600.0
+
+        if self.protocol_name == PROTOCOL_GOOB_BASE_V1:
+            self.drive_topic = str(topics_cfg.get("drive_values") or self.identity.topic("incoming", "drive-values"))
+            self.lights_solid_topic = str(topics_cfg.get("lights_solid") or self.identity.topic("incoming", "lights-solid"))
+            self.lights_flash_topic = str(topics_cfg.get("lights_flash") or self.identity.topic("incoming", "lights-flash"))
+            self.touch_topic = str(topics_cfg.get("touch_sensors") or self.identity.topic("outgoing", "touch-sensors"))
+            self.charge_topic = str(topics_cfg.get("charging_status") or self.identity.topic("outgoing", "charging-status"))
+            self.charge_level_topic = str(
+                topics_cfg.get("charging_level") or self.identity.topic("outgoing", "charging-level")
+            )
+            self.publish_touch_sensors = bool(telemetry_cfg.get("publish_touch_sensors", False))
+
+            odometry_shm_cfg = (
+                self.service_cfg.get("odometry_shm") if isinstance(self.service_cfg.get("odometry_shm"), dict) else {}
+            )
+            default_shm_name = f"{self.identity.system}_{self.identity.type}_{self.identity.robot_id}_odometry_raw"
+            self.odometry_shm_enabled = bool(odometry_shm_cfg.get("enabled", True))
+            self.odometry_shm_name = str(odometry_shm_cfg.get("name") or default_shm_name)
+            self.odometry_shm_slots = max(64, int(odometry_shm_cfg.get("slots") or 2048))
+
+            self.drive_timeout_seconds = max(0.0, float(safety_cfg.get("drive_timeout_seconds") or 0.75))
+            self.ignore_retained_drive = bool(safety_cfg.get("ignore_retained_drive", True))
+            self.stop_on_shutdown = bool(safety_cfg.get("stop_on_shutdown", True))
+
+            self.handlers = {
+                self.drive_topic: self._handle_drive_values,
+                self.lights_solid_topic: self._handle_lights_solid,
+                self.lights_flash_topic: self._handle_lights_flash,
+            }
+            return
+
+        if self.protocol_name == PROTOCOL_IMU_MPU6050_V1:
+            self.odometry_shm_enabled = False
+            self.publish_touch_sensors = False
+            self.drive_timeout_seconds = 0.0
+            self.ignore_retained_drive = True
+            self.stop_on_shutdown = False
+
+            self.imu_high_rate_topic = str(topics_cfg.get("high_rate") or self.identity.topic("outgoing", "sensors/imu-fast"))
+            self.imu_low_rate_topic = str(topics_cfg.get("low_rate") or self.identity.topic("outgoing", "sensors/imu"))
+            self.imu_high_rate_qos = max(0, min(2, _parse_int(publish_cfg.get("high_rate_qos"), 0)))
+            self.imu_low_rate_qos = max(0, min(2, _parse_int(publish_cfg.get("low_rate_qos"), 1)))
+            self.imu_high_rate_retain = bool(publish_cfg.get("high_rate_retain", False))
+            self.imu_low_rate_retain = bool(publish_cfg.get("low_rate_retain", False))
+            self.handlers = {}
+            return
+
+        raise SystemExit(f"{self.service_name}: unsupported protocol {self.protocol_name}")
 
     def start(self) -> None:
         self._open_odometry_shm()
@@ -120,9 +192,10 @@ class SerialMcuBridge:
         self._start_serial_reader()
         self._connect_local_mqtt()
         while not self.stop_event.is_set():
-            self._drive_watchdog_tick()
-            self._republish_charge_if_due()
-            self._republish_charge_level_if_due()
+            if self.protocol_name == PROTOCOL_GOOB_BASE_V1:
+                self._drive_watchdog_tick()
+                self._republish_charge_if_due()
+                self._republish_charge_level_if_due()
             self.stop_event.wait(0.05)
 
     def stop(self) -> None:
@@ -152,7 +225,7 @@ class SerialMcuBridge:
             self.odometry_writer = None
 
     def _open_odometry_shm(self) -> None:
-        if not self.odometry_shm_enabled:
+        if not getattr(self, "odometry_shm_enabled", False):
             return
         try:
             writer = OdometryRawShmWriter(name=self.odometry_shm_name, slots=self.odometry_shm_slots)
@@ -174,10 +247,10 @@ class SerialMcuBridge:
         time.sleep(0.5)
         ser.reset_input_buffer()
         self.ser = ser
-        logging.info("Serial connected on %s @ %d", self.serial_port, self.baud)
+        logging.info("Serial connected on %s @ %d for %s", self.serial_port, self.baud, self.service_name)
 
     def _start_serial_reader(self) -> None:
-        thread = threading.Thread(target=self._serial_reader, name="serial-reader", daemon=True)
+        thread = threading.Thread(target=self._serial_reader, name=f"{self.service_name}-reader", daemon=True)
         thread.start()
         self.reader_thread = thread
 
@@ -187,7 +260,7 @@ class SerialMcuBridge:
             try:
                 raw = self.ser.readline()
             except serial.SerialException as exc:
-                logging.error("Serial read failed: %s", exc)
+                logging.error("Serial read failed for %s: %s", self.service_name, exc)
                 time.sleep(0.5)
                 continue
             if not raw:
@@ -195,26 +268,61 @@ class SerialMcuBridge:
             line = raw.decode("utf-8", errors="ignore").strip()
             if not line:
                 continue
-            touch = self._parse_touch_telemetry_line(line)
-            if touch:
-                self._handle_touch_telemetry(touch)
-            charge = self._parse_charge_telemetry_line(line)
-            if charge is not None:
-                self._handle_charge_telemetry(charge)
-            charge_level = self._parse_charge_level_telemetry_line(line)
-            if charge_level is not None:
-                self._handle_charge_level_telemetry(charge_level)
+            if self.protocol_name == PROTOCOL_GOOB_BASE_V1:
+                self._handle_goob_base_line(line)
+            elif self.protocol_name == PROTOCOL_IMU_MPU6050_V1:
+                self._handle_imu_line(line)
+
+    def _handle_goob_base_line(self, line: str) -> None:
+        touch = self._parse_touch_telemetry_line(line)
+        if touch:
+            self._handle_touch_telemetry(touch)
+            return
+        charge = self._parse_charge_telemetry_line(line)
+        if charge is not None:
+            self._handle_charge_telemetry(charge)
+            return
+        charge_level = self._parse_charge_level_telemetry_line(line)
+        if charge_level is not None:
+            self._handle_charge_level_telemetry(charge_level)
+            return
+        self._handle_non_telemetry_line(line)
+
+    def _handle_imu_line(self, line: str) -> None:
+        high_rate = self._parse_imu_high_rate_telemetry_line(line)
+        if high_rate is not None:
+            self._handle_imu_high_rate_telemetry(high_rate)
+            return
+        low_rate = self._parse_imu_low_rate_telemetry_line(line)
+        if low_rate is not None:
+            self._handle_imu_low_rate_telemetry(low_rate)
+            return
+        self._handle_non_telemetry_line(line)
+
+    def _handle_non_telemetry_line(self, line: str) -> None:
+        if line.startswith("WARN "):
+            logging.warning("[%s] %s", self.service_name, line[5:].strip())
+            return
+        if line.startswith("ERR "):
+            logging.error("[%s] %s", self.service_name, line[4:].strip())
+            return
+        logging.info("[%s] %s", self.service_name, line)
 
     @staticmethod
-    def _parse_touch_telemetry_line(line: str) -> Optional[dict[str, int]]:
-        if not line.startswith("T "):
-            return None
+    def _parse_key_value_tokens(line: str) -> dict[str, str]:
         values: dict[str, str] = {}
         for token in line.split()[1:]:
             if "=" not in token:
                 continue
             key, val = token.split("=", 1)
             values[key] = val
+        return values
+
+    @staticmethod
+    def _parse_touch_telemetry_line(line: str) -> Optional[dict[str, int]]:
+        if not line.startswith("T "):
+            return None
+        values = SerialMcuBridge._parse_key_value_tokens(line)
         try:
             return {
                 "a0": int(values["a0"]),
@@ -223,7 +331,6 @@ class SerialMcuBridge:
             }
         except (KeyError, ValueError):
             try:
-                # Backward-compat with legacy touch labels.
                 return {
                     "a0": int(values["t0"]),
                     "a1": int(values["t1"]),
@@ -237,12 +344,7 @@ class SerialMcuBridge:
     def _parse_charge_telemetry_line(line: str) -> Optional[int]:
         if not (line.startswith("C ") or line.startswith("T ")):
             return None
-        values: dict[str, str] = {}
-        for token in line.split()[1:]:
-            if "=" not in token:
-                continue
-            key, val = token.split("=", 1)
-            values[key] = val
+        values = SerialMcuBridge._parse_key_value_tokens(line)
         try:
             return int(values["chg"])
         except (KeyError, ValueError):
@@ -252,12 +354,7 @@ class SerialMcuBridge:
     def _parse_charge_level_telemetry_line(line: str) -> Optional[float]:
         if not (line.startswith("C ") or line.startswith("T ")):
             return None
-        values: dict[str, str] = {}
-        for token in line.split()[1:]:
-            if "=" not in token:
-                continue
-            key, val = token.split("=", 1)
-            values[key] = val
+        values = SerialMcuBridge._parse_key_value_tokens(line)
         try:
             value = float(values["v"])
         except (KeyError, ValueError):
@@ -267,8 +364,58 @@ class SerialMcuBridge:
         return value
 
     @staticmethod
+    def _parse_imu_high_rate_telemetry_line(line: str) -> Optional[dict[str, Any]]:
+        if not line.startswith("I "):
+            return None
+        values = SerialMcuBridge._parse_key_value_tokens(line)
+        try:
+            parsed = {
+                "n": int(values["n"]),
+                "ms": int(values["ms"]),
+                "ax": float(values["ax"]),
+                "ay": float(values["ay"]),
+                "az": float(values["az"]),
+                "gx": float(values["gx"]),
+                "gy": float(values["gy"]),
+                "gz": float(values["gz"]),
+                "t": float(values["t"]),
+                "r": float(values["r"]),
+                "p": float(values["p"]),
+            }
+        except (KeyError, ValueError):
+            return None
+        if not all(math.isfinite(float(parsed[key])) for key in ("ax", "ay", "az", "gx", "gy", "gz", "t", "r", "p")):
+            return None
+        return parsed
+
+    @staticmethod
+    def _parse_imu_low_rate_telemetry_line(line: str) -> Optional[dict[str, Any]]:
+        if not line.startswith("S "):
+            return None
+        values = SerialMcuBridge._parse_key_value_tokens(line)
+        try:
+            parsed = {
+                "n": int(values["n"]),
+                "ms": int(values["ms"]),
+                "r": float(values["r"]),
+                "p": float(values["p"]),
+                "t": float(values["t"]),
+                "an": float(values["an"]),
+                "gbx": float(values["gbx"]),
+                "gby": float(values["gby"]),
+                "gbz": float(values["gbz"]),
+                "ok": int(values["ok"]),
+                "err": int(values["err"]),
+                "cal": int(values["cal"]),
+            }
+        except (KeyError, ValueError):
+            return None
+        if not all(math.isfinite(float(parsed[key])) for key in ("r", "p", "t", "an", "gbx", "gby", "gbz")):
+            return None
+        return parsed
+
+    @staticmethod
     def _parse_telemetry_line(line: str) -> Optional[dict[str, Any]]:
-        # Backward-compatible parser for legacy tests/consumers expecting a single line.
         touch = SerialMcuBridge._parse_touch_telemetry_line(line)
         charge = SerialMcuBridge._parse_charge_telemetry_line(line)
         if not touch or charge is None:
@@ -340,8 +487,72 @@ class SerialMcuBridge:
         self._publish_json(self.charge_level_topic, payload, qos=1, retain=True)
         self.next_charge_level_republish_at = time.time() + self.retained_publish_interval_seconds
 
+    def _handle_imu_high_rate_telemetry(self, data: dict[str, Any]) -> None:
+        motion_value = {
+            "accel_mps2": _vector_payload({"x": data["ax"], "y": data["ay"], "z": data["az"]}),
+            "gyro_dps": _vector_payload({"x": data["gx"], "y": data["gy"], "z": data["gz"]}),
+            "temp_c": round(float(data["t"]), 3),
+            "orientation_deg": {
+                "roll": round(float(data["r"]), 3),
+                "pitch": round(float(data["p"]), 3),
+            },
+        }
+        payload = {
+            "t": int(time.time() * 1000.0),
+            "seq": int(data["n"]),
+            "mcu_ms": int(data["ms"]),
+            "value": motion_value,
+        }
+        with self.telemetry_lock:
+            self.last_imu_motion_value = motion_value
+        self._publish_json(
+            self.imu_high_rate_topic,
+            payload,
+            qos=self.imu_high_rate_qos,
+            retain=self.imu_high_rate_retain,
+        )
+
+    def _handle_imu_low_rate_telemetry(self, data: dict[str, Any]) -> None:
+        with self.telemetry_lock:
+            motion_value = dict(self.last_imu_motion_value or {})
+
+        if "orientation_deg" not in motion_value:
+            motion_value["orientation_deg"] = {
+                "roll": round(float(data["r"]), 3),
+                "pitch": round(float(data["p"]), 3),
+            }
+        if "temp_c" not in motion_value:
+            motion_value["temp_c"] = round(float(data["t"]), 3)
+
+        motion_value["accel_norm_g"] = round(float(data["an"]), 4)
+        motion_value["gyro_bias_dps"] = _vector_payload(
+            {"x": data["gbx"], "y": data["gby"], "z": data["gbz"]}
+        )
+        motion_value["health"] = {
+            "device": self.serial_port,
+            "protocol": self.protocol_name,
+            "instance": self.instance_name or "default",
+            "samples_ok": int(data["ok"]),
+            "samples_error": int(data["err"]),
+            "calibration_samples": int(data["cal"]),
+        }
+
+        payload = {
+            "t": int(time.time() * 1000.0),
+            "seq": int(data["n"]),
+            "mcu_ms": int(data["ms"]),
+            "value": motion_value,
+        }
+        with self.telemetry_lock:
+            self.last_imu_low_payload = payload
+        self._publish_json(
+            self.imu_low_rate_topic,
+            payload,
+            qos=self.imu_low_rate_qos,
+            retain=self.imu_low_rate_retain,
+        )
+
     def _handle_telemetry(self, data: dict[str, Any]) -> None:
-        # Compatibility shim used in tests and any direct callers.
         self._handle_touch_telemetry({"t0": int(data["t0"]), "t1": int(data["t1"]), "t2": int(data["t2"])})
         if "chg" in data:
             self._handle_charge_telemetry(int(data["chg"]))
@@ -358,13 +569,13 @@ class SerialMcuBridge:
 
         retry_delay = 2.0
         while not self.stop_event.is_set():
-            logging.info("Connecting to local MQTT %s:%d", self.local_host, self.local_port)
+            logging.info("Connecting to local MQTT %s:%d for %s", self.local_host, self.local_port, self.service_name)
             try:
                 client.connect(self.local_host, self.local_port, self.local_keepalive)
                 client.loop_start()
                 return
             except OSError as exc:
-                logging.warning("Local MQTT connection failed: %s", exc)
+                logging.warning("Local MQTT connection failed for %s: %s", self.service_name, exc)
                 self.stop_event.wait(retry_delay)
                 retry_delay = min(retry_delay * 2, 60.0)
 
@@ -372,7 +583,7 @@ class SerialMcuBridge:
         if rc != 0:
             logging.error("Local MQTT connect failed rc=%s", rc)
             return
-        logging.info("Local MQTT connected; subscribing command topics.")
+        logging.info("Local MQTT connected for %s", self.service_name)
         for topic in self.handlers:
             client.subscribe(topic, qos=1)
         self._republish_cached_telemetry()
@@ -388,7 +599,7 @@ class SerialMcuBridge:
         with self.reconnect_lock:
             if self.reconnect_thread and self.reconnect_thread.is_alive():
                 return
-            thread = threading.Thread(target=self._reconnect_loop, name="mqtt-reconnect", daemon=True)
+            thread = threading.Thread(target=self._reconnect_loop, name=f"{self.service_name}-mqtt-reconnect", daemon=True)
             thread.start()
             self.reconnect_thread = thread
 
@@ -405,7 +616,7 @@ class SerialMcuBridge:
                 client.connect(self.local_host, self.local_port, self.local_keepalive)
                 return
             except OSError as exc:
-                logging.warning("Local MQTT reconnect failed: %s", exc)
+                logging.warning("Local MQTT reconnect failed for %s: %s", self.service_name, exc)
                 self.stop_event.wait(delay)
                 delay = min(delay * 2, 60.0)
 
@@ -413,7 +624,7 @@ class SerialMcuBridge:
         handler = self.handlers.get(msg.topic)
         if not handler:
             return
-        if msg.topic == self.drive_topic and self.ignore_retained_drive and bool(msg.retain):
+        if msg.topic == getattr(self, "drive_topic", None) and self.ignore_retained_drive and bool(msg.retain):
             logging.info("Ignoring retained drive command on %s", msg.topic)
             return
         try:
@@ -427,15 +638,23 @@ class SerialMcuBridge:
             logging.exception("Command handler failed for %s", msg.topic)
 
     def _republish_cached_telemetry(self) -> None:
-        with self.telemetry_lock:
-            charge = self.last_charge
-            charge_level = self.last_charge_level
-        if charge is not None:
-            self._publish_json(self.charge_topic, charge, qos=1, retain=True)
-            self.next_charge_republish_at = time.time() + self.retained_publish_interval_seconds
-        if charge_level is not None:
-            self._publish_json(self.charge_level_topic, charge_level, qos=1, retain=True)
-            self.next_charge_level_republish_at = time.time() + self.retained_publish_interval_seconds
+        if self.protocol_name == PROTOCOL_GOOB_BASE_V1:
+            with self.telemetry_lock:
+                charge = self.last_charge
+                charge_level = self.last_charge_level
+            if charge is not None:
+                self._publish_json(self.charge_topic, charge, qos=1, retain=True)
+                self.next_charge_republish_at = time.time() + self.retained_publish_interval_seconds
+            if charge_level is not None:
+                self._publish_json(self.charge_level_topic, charge_level, qos=1, retain=True)
+                self.next_charge_level_republish_at = time.time() + self.retained_publish_interval_seconds
+            return
+
+        if self.protocol_name == PROTOCOL_IMU_MPU6050_V1 and self.imu_low_rate_retain:
+            with self.telemetry_lock:
+                payload = self.last_imu_low_payload
+            if payload is not None:
+                self._publish_json(self.imu_low_rate_topic, payload, qos=self.imu_low_rate_qos, retain=True)
 
     def _republish_charge_if_due(self) -> None:
         if self.next_charge_republish_at <= 0:
@@ -534,22 +753,25 @@ class SerialMcuBridge:
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Bridge local MQTT and MCU serial topics.")
+    parser = argparse.ArgumentParser(description="Bridge local MQTT and one MCU serial instance.")
     parser.add_argument("--config", help="Path to runtime config JSON.")
+    parser.add_argument("--instance", help="Named serial_mcu_bridge instance to run.")
     return parser.parse_args()
 
 
 def main() -> None:
     args = _parse_args()
     config, config_path = load_config(args.config)
-    svc_cfg = service_cfg(config, "serial_mcu_bridge")
+    svc_cfg = service_instance_cfg(config, "serial_mcu_bridge", args.instance)
+    if args.instance is not None and not svc_cfg:
+        raise SystemExit(f"serial_mcu_bridge instance not found: {args.instance}")
     logging.basicConfig(
         level=getattr(logging, log_level(config, svc_cfg), logging.INFO),
         format="%(asctime)s [%(levelname)s] %(message)s",
         datefmt="%H:%M:%S",
     )
 
-    bridge = SerialMcuBridge(config, config_path)
+    bridge = SerialMcuBridge(config, config_path, instance_name=args.instance)
 
     def _shutdown(_signum: int, _frame: Any) -> None:
         bridge.stop()

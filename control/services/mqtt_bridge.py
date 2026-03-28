@@ -21,7 +21,7 @@ import paho.mqtt.client as mqtt
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[2]))
 
-from control.common.config import load_config, log_level, service_cfg
+from control.common.config import enabled_service_instances, load_config, log_level, service_cfg
 from control.common.mqtt import create_client, mqtt_auth_and_tls, parse_bool_payload
 from control.common.topics import identity_from_config
 
@@ -54,9 +54,18 @@ class MqttBridge:
         self.flags_prefix = f"{self.base}/incoming/flags/"
         imu_cfg = service_cfg(config, "imu_daemon")
         imu_topics_cfg = imu_cfg.get("topics") if isinstance(imu_cfg.get("topics"), dict) else {}
-        self.ignored_outgoing_topics = {
+        ignored_outgoing_topics = {
             str(imu_topics_cfg.get("high_rate") or f"{self.base}/outgoing/sensors/imu-fast"),
         }
+        for _instance_name, instance_cfg in enabled_service_instances(config, "serial_mcu_bridge"):
+            protocol_name = str(instance_cfg.get("protocol") or "goob_base_v1").strip().lower()
+            if protocol_name != "imu_mpu6050_v1":
+                continue
+            instance_topics_cfg = instance_cfg.get("topics") if isinstance(instance_cfg.get("topics"), dict) else {}
+            ignored_outgoing_topics.add(
+                str(instance_topics_cfg.get("high_rate") or f"{self.base}/outgoing/sensors/imu-fast")
+            )
+        self.ignored_outgoing_topics = ignored_outgoing_topics
 
         topics_cfg = self.service_cfg.get("topics") if isinstance(self.service_cfg.get("topics"), dict) else {}
         self.remote_mirror_topic = str(topics_cfg.get("remote_mirror") or f"{self.flags_prefix}remote-mirror")

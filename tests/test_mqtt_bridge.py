@@ -209,6 +209,47 @@ class MqttBridgeTests(unittest.TestCase):
         self.assertEqual(len(bridge.remote_client.publish_calls), 1)
         self.assertEqual(bridge.remote_client.publish_calls[0][0], low_rate_topic)
 
+    def test_serial_imu_instance_high_rate_topic_is_not_forwarded(self):
+        config = make_base_config("mqbot")
+        config["services"]["serial_mcu_bridge"]["enabled"] = False
+        config["services"]["serial_mcu_bridge"]["instances"] = {
+            "imu": {
+                "enabled": True,
+                "protocol": "imu_mpu6050_v1",
+                "serial": {"port": "/dev/ttyUSB0"},
+                "topics": {
+                    "high_rate": "pebble/robots/mqbot/outgoing/custom-imu-fast",
+                    "low_rate": "pebble/robots/mqbot/outgoing/custom-imu",
+                },
+            }
+        }
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(config))
+            bridge = MqttBridge(config, cfg_path)
+
+        bridge.local_client = FakeMqttClient()
+        bridge.remote_client = FakeMqttClient()
+
+        high_rate_msg = FakeMqttMessage(
+            topic="pebble/robots/mqbot/outgoing/custom-imu-fast",
+            payload=b'{"seq":1}',
+            qos=0,
+            retain=False,
+        )
+        bridge._on_local_message(None, None, high_rate_msg)  # type: ignore[arg-type]
+        self.assertEqual(len(bridge.remote_client.publish_calls), 0)
+
+        low_rate_msg = FakeMqttMessage(
+            topic="pebble/robots/mqbot/outgoing/custom-imu",
+            payload=b'{"seq":2}',
+            qos=1,
+            retain=False,
+        )
+        bridge._on_local_message(None, None, low_rate_msg)  # type: ignore[arg-type]
+        self.assertEqual(len(bridge.remote_client.publish_calls), 1)
+        self.assertEqual(bridge.remote_client.publish_calls[0][0], "pebble/robots/mqbot/outgoing/custom-imu")
+
     def test_remote_connect_replays_cached_retained_outgoing(self):
         bridge = self._bridge()
         bridge.local_client = FakeMqttClient()

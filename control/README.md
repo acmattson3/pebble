@@ -156,6 +156,12 @@ Reboot control config (in `services.mqtt_bridge`):
 
 `serial_mcu_bridge` supports command safety controls:
 
+- It can run either as one legacy service config or as multiple named instances under `services.serial_mcu_bridge.instances.<name>`.
+- Each instance selects a `protocol`.
+- Current built-in protocols are:
+  - `goob_base_v1` for the existing drive/lights/touch/charging MCU contract
+  - `imu_mpu6050_v1` for the Nano USB-serial MPU-6050 bridge that publishes IMU MQTT topics directly
+
 - `services.serial_mcu_bridge.safety.drive_timeout_seconds`
   - If no new drive command arrives within this window, send `M 0 0`.
 - `services.serial_mcu_bridge.safety.ignore_retained_drive`
@@ -170,12 +176,24 @@ Reboot control config (in `services.mqtt_bridge`):
 - `services.serial_mcu_bridge.retained_publish_interval_seconds`
   - Interval used to re-publish retained charging status (default inherits `services.defaults.retained_publish_interval_seconds`, normally `3600`).
   - Charging status is always published immediately when it changes.
+- `services.serial_mcu_bridge.instances.<name>.topics.high_rate|low_rate`
+  - IMU protocol topics for `imu_mpu6050_v1` instances.
+- `services.serial_mcu_bridge.instances.<name>.publish.high_rate_qos|low_rate_qos|high_rate_retain|low_rate_retain`
+  - IMU protocol publish controls for `imu_mpu6050_v1` instances.
 - `services.serial_mcu_bridge.odometry_shm.enabled`
   - Default `true`. Enables writing raw touch samples to shared memory.
 - `services.serial_mcu_bridge.odometry_shm.name`
   - Shared-memory segment name (default `{system}_{type}_{id}_odometry_raw`).
 - `services.serial_mcu_bridge.odometry_shm.slots`
   - Ring-buffer slot count (default `2048`).
+
+Goob currently uses this split:
+
+- root `serial_mcu_bridge`
+  - `goob_base_v1` on the XIAO SAMD21 for drive, lights, touch, and charging telemetry
+- `serial_mcu_bridge.instances.imu`
+  - `imu_mpu6050_v1` on a USB Arduino Nano + GY-521 (`CH340` serial adapter)
+  - publishes `{base}/outgoing/sensors/imu-fast` locally and `{base}/outgoing/sensors/imu` for mirrored consumers
 
 ## Launch
 

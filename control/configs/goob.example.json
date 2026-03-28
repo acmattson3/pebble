@@ -195,9 +195,10 @@
     "serial_mcu_bridge": {
       "enabled": true,
       "log_level": "INFO",
+      "protocol": "goob_base_v1",
       "retained_publish_interval_seconds": 3600,
       "serial": {
-        "port": "/dev/ttyACM0",
+        "port": "/dev/serial/by-id/usb-Seeed_Seeed_XIAO_M0_86F6799D50543653302E3120FF11351D-if00",
         "baud": 460800,
         "timeout_seconds": 0.1
       },
@@ -221,6 +222,27 @@
         "touch_sensors": "pebble/robots/goob/outgoing/touch-sensors",
         "charging_status": "pebble/robots/goob/outgoing/charging-status",
         "charging_level": "pebble/robots/goob/outgoing/charging-level"
+      },
+      "instances": {
+        "imu": {
+          "enabled": true,
+          "protocol": "imu_mpu6050_v1",
+          "serial": {
+            "port": "/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0",
+            "baud": 115200,
+            "timeout_seconds": 0.1
+          },
+          "topics": {
+            "high_rate": "pebble/robots/goob/outgoing/sensors/imu-fast",
+            "low_rate": "pebble/robots/goob/outgoing/sensors/imu"
+          },
+          "publish": {
+            "high_rate_qos": 0,
+            "low_rate_qos": 1,
+            "high_rate_retain": false,
+            "low_rate_retain": false
+          }
+        }
       }
     },
     "imu_daemon": {

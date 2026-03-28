@@ -5,6 +5,16 @@ sensor on the Orange Pi Zero 2W header bus.
 
 ## Current Hardware Status
 
+This daemon is no longer the active Goob IMU path.
+
+As of `2026-03-28`, Goob's working IMU path is a dedicated Arduino Nano over
+USB serial running `firmware/GOOB_arduino-nano-imu/`, with the Orange Pi
+consuming IMU data through `serial_mcu_bridge` rather than direct GPIO/I2C.
+
+This README is kept because the Orange Pi header-bus bring-up and overlay work
+are still useful reference material if direct-host IMU access is revisited on a
+future robot.
+
 Goob has a `GY-521` breakout with an `MPU-6050` connected directly to the
 Orange Pi Zero 2W GPIO header with:
 
@@ -25,9 +35,8 @@ The current Goob bring-up also uses the user overlay source in
 `bias-pull-up` to the header pins and lowers the I2C bus speed during
 troubleshooting.
 
-Since the original note was written, Goob also gained a `1uF` capacitor across
-`3.3V/GND` at the IMU breakout to reduce supply noise while bring-up
-continues.
+During troubleshooting, Goob temporarily had an added `1uF` capacitor across
+`3.3V/GND` at the IMU breakout. That capacitor has since been removed.
 
 ## Current Software Status
 
@@ -60,8 +69,8 @@ The daemon now exists with a conservative first-pass runtime contract:
 - it performs startup gyro-bias calibration when the robot is stationary
 
 This is intentionally a bring-up-oriented implementation, not a final sensor
-fusion stack. It should be treated as a stable place to start integrating IMU
-consumers while the Orange Pi header bus still needs tuning work.
+fusion stack. For Goob specifically, it should now be treated as the archived
+direct-host IMU path rather than the active deployment path.
 
 ## Bus Tuning Notes
 
