@@ -18,9 +18,7 @@ DOCUMENTED_PATHS = {
     "control/README.md": [
         ("control/configs/config.json.example", "control/configs/config.json.example"),
         ("systemd/pebble-control.service.example", "systemd/pebble-control.service.example"),
-        ("control/services/imu_daemon/README.md", "control/services/imu_daemon/README.md"),
-        ("control/services/imu_daemon/", "control/services/imu_daemon/__init__.py"),
-        ("control/services/imu_daemon/pebble-imu-i2c1-tune.dts", "control/services/imu_daemon/pebble-imu-i2c1-tune.dts"),
+        ("control/services/serial_standard.md", "control/services/serial_standard.md"),
     ],
     "firmware/README.md": [
         ("firmware/MINILAMP_seeed-xiao-c6/private_config.h.example", "firmware/MINILAMP_seeed-xiao-c6/private_config.h.example"),

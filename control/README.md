@@ -9,14 +9,9 @@
   - Publishes retained `{system}/{type}/{id}/outgoing/capabilities` from `config.json`.
   - Publishes structured runtime logs to `{system}/{type}/{id}/outgoing/logs`.
   - Republish interval is configurable via `services.launcher.capabilities.publish_interval_seconds` (default is inherited from `services.defaults.retained_publish_interval_seconds`, normally `3600`).
-  - `imu_daemon` is intentionally not launcher-managed on Orange Pi systems right now.
 - `services/av_daemon.py`
   - Owns physical camera/microphone devices with GStreamer (`gst-launch-1.0`).
   - Exposes shared local streams over `shmsink` for other local processes.
-- `services/imu_daemon/`
-  - Owns local GPIO/I2C IMU access for an MPU-6050-style sensor.
-  - Publishes filtered high-rate and low-rate IMU telemetry into local MQTT.
-  - Uses retry/reopen logic because Goob's Orange Pi header I2C bus has shown intermittent read failures during bring-up.
 - `services/mqtt_bridge.py`
   - Bridges local MQTT and remote MQTT.
   - Publishes remote `online` heartbeat.
@@ -42,8 +37,9 @@
   - Accepts start/stop commands and runs one script at a time.
   - Starting a new script auto-stops any currently running script.
   - No child auto-restart on crash; exit/error is reflected in retained status.
-  - Hardware note lives in `control/services/imu_daemon/README.md`.
-  - Current Orange Pi I2C tuning overlay source lives in `control/services/imu_daemon/pebble-imu-i2c1-tune.dts`.
+- `services/serial_standard.md`
+  - Compact self-describing serial MCU standard for `pebble_serial_v1`.
+  - Defines discovery, framing, and dynamic `local_only` behavior for serial MCU telemetry.
 
 ## Runtime Config
 
@@ -77,14 +73,6 @@ Reference schema:
 - Autonomy manager config:
   - `services.autonomy_manager.topics.command|files|status`
   - `services.autonomy_manager.scripts.<name>.args[]` (web-editable runtime fields mapped to script CLI args)
-- IMU daemon config:
-  - `services.imu_daemon.device.path|address|read_retries|retry_backoff_seconds|reopen_backoff_seconds|reset_after_consecutive_errors`
-  - `services.imu_daemon.topics.high_rate|low_rate`
-  - `services.imu_daemon.publish.read_hz|high_rate_hz|low_rate_hz|*_qos|*_retain`
-  - `services.imu_daemon.mpu6050.dlpf_config|sample_rate_divider|gyro_full_scale|accel_full_scale`
-  - `services.imu_daemon.calibration.startup_samples|timeout_seconds|sample_delay_seconds`
-  - `services.imu_daemon.filter.accel_low_pass_alpha|gyro_low_pass_alpha|orientation_alpha`
-
 ## Topic Format
 
 This runtime uses the topic format:

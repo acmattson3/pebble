@@ -59,20 +59,6 @@ class LauncherTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             launcher.start()
 
-    def test_imu_daemon_is_not_launcher_managed(self):
-        config = make_base_config("launchbot")
-        config["services"]["mqtt_bridge"]["enabled"] = False
-        config["services"]["serial_mcu_bridge"]["enabled"] = False
-        config["services"]["soundboard_handler"]["enabled"] = False
-        config["services"]["autonomy_manager"]["enabled"] = False
-        config["services"]["imu_daemon"]["enabled"] = True
-        with tempfile.TemporaryDirectory() as td:
-            cfg_path = Path(td) / "config.json"
-            cfg_path.write_text(json.dumps(config))
-            launcher = Launcher(config, cfg_path)
-        with self.assertRaises(SystemExit):
-            launcher.start()
-
     def test_serial_bridge_instances_are_launcher_managed(self):
         config = make_base_config("launchbot")
         config["services"]["mqtt_bridge"]["enabled"] = False

@@ -193,7 +193,7 @@ class MqttBridgeTests(unittest.TestCase):
         self.assertEqual(bridge.remote_client.publish_calls[0][0], bridge.heartbeat_topic)
         self.assertEqual(len(bridge.local_client.publish_calls), 0)
 
-    def test_high_rate_imu_topic_is_not_forwarded_but_low_rate_is(self):
+    def test_unknown_high_rate_topic_is_forwarded_by_default(self):
         bridge = self._bridge()
         bridge.local_client = FakeMqttClient()
         bridge.remote_client = FakeMqttClient()
@@ -201,13 +201,8 @@ class MqttBridgeTests(unittest.TestCase):
         high_rate_topic = f"{bridge.outgoing_prefix}sensors/imu-fast"
         high_rate_msg = FakeMqttMessage(topic=high_rate_topic, payload=b'{"seq":1}', qos=0, retain=False)
         bridge._on_local_message(None, None, high_rate_msg)  # type: ignore[arg-type]
-        self.assertEqual(len(bridge.remote_client.publish_calls), 0)
-
-        low_rate_topic = f"{bridge.outgoing_prefix}sensors/imu"
-        low_rate_msg = FakeMqttMessage(topic=low_rate_topic, payload=b'{"seq":2}', qos=1, retain=False)
-        bridge._on_local_message(None, None, low_rate_msg)  # type: ignore[arg-type]
         self.assertEqual(len(bridge.remote_client.publish_calls), 1)
-        self.assertEqual(bridge.remote_client.publish_calls[0][0], low_rate_topic)
+        self.assertEqual(bridge.remote_client.publish_calls[0][0], high_rate_topic)
 
     def test_serial_imu_instance_high_rate_topic_is_not_forwarded(self):
         config = make_base_config("mqbot")

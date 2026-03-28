@@ -52,11 +52,7 @@ class MqttBridge:
         self.incoming_prefix = f"{self.base}/incoming/"
         self.outgoing_prefix = f"{self.base}/outgoing/"
         self.flags_prefix = f"{self.base}/incoming/flags/"
-        imu_cfg = service_cfg(config, "imu_daemon")
-        imu_topics_cfg = imu_cfg.get("topics") if isinstance(imu_cfg.get("topics"), dict) else {}
-        ignored_outgoing_topics = {
-            str(imu_topics_cfg.get("high_rate") or f"{self.base}/outgoing/sensors/imu-fast"),
-        }
+        ignored_outgoing_topics: set[str] = set()
         for _instance_name, instance_cfg in enabled_service_instances(config, "serial_mcu_bridge"):
             protocol_name = str(instance_cfg.get("protocol") or "goob_base_v1").strip().lower()
             if protocol_name != "imu_mpu6050_v1":

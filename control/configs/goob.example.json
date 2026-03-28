@@ -245,48 +245,6 @@
         }
       }
     },
-    "imu_daemon": {
-      "enabled": false,
-      "log_level": "INFO",
-      "device": {
-        "path": "/dev/i2c-2",
-        "address": 104,
-        "read_retries": 4,
-        "retry_backoff_seconds": 0.01,
-        "reopen_backoff_seconds": 1.0,
-        "reset_after_consecutive_errors": 5
-      },
-      "topics": {
-        "high_rate": "pebble/robots/goob/outgoing/sensors/imu-fast",
-        "low_rate": "pebble/robots/goob/outgoing/sensors/imu"
-      },
-      "publish": {
-        "read_hz": 50.0,
-        "high_rate_hz": 50.0,
-        "low_rate_hz": 5.0,
-        "high_rate_qos": 0,
-        "low_rate_qos": 1,
-        "high_rate_retain": false,
-        "low_rate_retain": false
-      },
-      "mpu6050": {
-        "minimal_init": false,
-        "dlpf_config": 3,
-        "sample_rate_divider": 19,
-        "gyro_full_scale": 0,
-        "accel_full_scale": 0
-      },
-      "calibration": {
-        "startup_samples": 100,
-        "timeout_seconds": 5.0,
-        "sample_delay_seconds": 0.01
-      },
-      "filter": {
-        "accel_low_pass_alpha": 0.25,
-        "gyro_low_pass_alpha": 0.25,
-        "orientation_alpha": 0.98
-      }
-    },
     "soundboard_handler": {
       "enabled": true,
       "log_level": "INFO",
