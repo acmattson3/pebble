@@ -24,16 +24,38 @@ from control.common.config import (
     default_retained_publish_interval_seconds,
     load_config,
     log_level,
-    service_cfg,
     service_instance_cfg,
 )
 from control.common.mqtt import mqtt_auth_and_tls
 from control.common.odometry_shm import OdometryRawShmWriter
 from control.common.topics import identity_from_config
+from control.services.serial_standard import (
+    MSG_ACK,
+    MSG_CMD,
+    MSG_DESCRIBE,
+    MSG_DESCRIBE_REQ,
+    MSG_HELLO,
+    MSG_LOG,
+    MSG_NACK,
+    MSG_PING,
+    MSG_PONG,
+    MSG_SAMPLE,
+    MSG_STATE,
+    PROTOCOL_NAME as STANDARD_PROTOCOL_NAME,
+    Packet as StandardPacket,
+    SerialStandardError,
+    decode_discovery,
+    decode_hello,
+    decode_packet,
+    decode_struct_payload,
+    encode_packet,
+    encode_struct_payload,
+)
 
 
 PROTOCOL_GOOB_BASE_V1 = "goob_base_v1"
 PROTOCOL_IMU_MPU6050_V1 = "imu_mpu6050_v1"
+PROTOCOL_PEBBLE_SERIAL_V1 = STANDARD_PROTOCOL_NAME
 
 
 def clamp(value: float, lo: float, hi: float) -> float:
@@ -121,6 +143,14 @@ class SerialMcuBridge:
         self.last_imu_motion_value: Optional[dict[str, Any]] = None
         self.last_imu_low_payload: Optional[dict[str, Any]] = None
 
+        self.standard_rx_buffer = bytearray()
+        self.standard_discovery: Optional[dict[str, Any]] = None
+        self.standard_device_uid: Optional[str] = None
+        self.standard_schema_hash: Optional[str] = None
+        self.standard_interfaces_by_id: dict[int, dict[str, Any]] = {}
+        self.standard_next_describe_request_at = 0.0
+        self.standard_command_seq = 0
+
         self._configure_protocol()
 
     def _configure_protocol(self) -> None:
@@ -184,6 +214,16 @@ class SerialMcuBridge:
             self.handlers = {}
             return
 
+        if self.protocol_name == PROTOCOL_PEBBLE_SERIAL_V1:
+            self.odometry_shm_enabled = False
+            self.publish_touch_sensors = False
+            self.drive_timeout_seconds = 0.0
+            self.ignore_retained_drive = True
+            self.stop_on_shutdown = False
+            self.handlers = {}
+            self.standard_next_describe_request_at = time.monotonic() + 1.0
+            return
+
         raise SystemExit(f"{self.service_name}: unsupported protocol {self.protocol_name}")
 
     def start(self) -> None:
@@ -196,6 +236,8 @@ class SerialMcuBridge:
                 self._drive_watchdog_tick()
                 self._republish_charge_if_due()
                 self._republish_charge_level_if_due()
+            elif self.protocol_name == PROTOCOL_PEBBLE_SERIAL_V1:
+                self._standard_discovery_tick()
             self.stop_event.wait(0.05)
 
     def stop(self) -> None:
@@ -257,6 +299,19 @@ class SerialMcuBridge:
     def _serial_reader(self) -> None:
         assert self.ser is not None
         while not self.stop_event.is_set():
+            if self.protocol_name == PROTOCOL_PEBBLE_SERIAL_V1:
+                try:
+                    read_size = getattr(self.ser, "in_waiting", 0) or 1
+                    raw = self.ser.read(read_size)
+                except serial.SerialException as exc:
+                    logging.error("Serial read failed for %s: %s", self.service_name, exc)
+                    time.sleep(0.5)
+                    continue
+                if not raw:
+                    continue
+                self._handle_standard_bytes(raw)
+                continue
+
             try:
                 raw = self.ser.readline()
             except serial.SerialException as exc:
@@ -298,6 +353,332 @@ class SerialMcuBridge:
             self._handle_imu_low_rate_telemetry(low_rate)
             return
         self._handle_non_telemetry_line(line)
+
+    def _handle_standard_bytes(self, raw: bytes) -> None:
+        self.standard_rx_buffer.extend(raw)
+        while True:
+            try:
+                frame_end = self.standard_rx_buffer.index(0)
+            except ValueError:
+                return
+            frame = bytes(self.standard_rx_buffer[:frame_end])
+            del self.standard_rx_buffer[: frame_end + 1]
+            if not frame:
+                continue
+            try:
+                packet = decode_packet(frame)
+            except SerialStandardError as exc:
+                logging.warning("Bad %s frame: %s", PROTOCOL_PEBBLE_SERIAL_V1, exc)
+                continue
+            self._handle_standard_packet(packet)
+
+    def _handle_standard_packet(self, packet: StandardPacket) -> None:
+        if packet.msg_type == MSG_HELLO:
+            self._handle_standard_hello(packet)
+            return
+        if packet.msg_type == MSG_DESCRIBE:
+            self._handle_standard_describe(packet)
+            return
+        if packet.msg_type == MSG_SAMPLE:
+            self._handle_standard_outbound(packet, is_state=False)
+            return
+        if packet.msg_type == MSG_STATE:
+            self._handle_standard_outbound(packet, is_state=True)
+            return
+        if packet.msg_type == MSG_LOG:
+            try:
+                message = packet.payload.decode("utf-8", errors="replace").strip()
+            except Exception:
+                message = ""
+            if message:
+                logging.info("[%s] %s", self.service_name, message)
+            return
+        if packet.msg_type == MSG_ACK:
+            logging.info("[%s] ack interface=%d seq=%d", self.service_name, packet.interface_id, packet.seq)
+            return
+        if packet.msg_type == MSG_NACK:
+            try:
+                reason = packet.payload.decode("utf-8", errors="replace").strip()
+            except Exception:
+                reason = ""
+            logging.warning("[%s] nack interface=%d seq=%d %s", self.service_name, packet.interface_id, packet.seq, reason)
+            return
+        if packet.msg_type == MSG_PONG:
+            return
+        logging.debug("[%s] Ignored standard packet type=%d", self.service_name, packet.msg_type)
+
+    def _handle_standard_hello(self, packet: StandardPacket) -> None:
+        try:
+            payload = decode_hello(packet.payload)
+        except SerialStandardError:
+            logging.warning("Bad %s hello payload", PROTOCOL_PEBBLE_SERIAL_V1)
+            return
+        device_uid = str(payload.get("device_uid") or "").strip()
+        schema_hash = str(payload.get("schema_hash") or "").strip()
+        if device_uid:
+            self.standard_device_uid = device_uid
+        if schema_hash:
+            self.standard_schema_hash = schema_hash
+        self.standard_next_describe_request_at = time.monotonic() + 0.25
+        logging.info(
+            "[%s] hello device_uid=%s schema_hash=%s",
+            self.service_name,
+            self.standard_device_uid or "?",
+            self.standard_schema_hash or "?",
+        )
+
+    def _handle_standard_describe(self, packet: StandardPacket) -> None:
+        try:
+            payload = decode_discovery(packet.payload)
+        except SerialStandardError:
+            logging.warning("Bad %s describe payload", PROTOCOL_PEBBLE_SERIAL_V1)
+            return
+
+        device_uid = str(payload.get("device_uid") or "").strip()
+        schema_hash = str(payload.get("schema_hash") or "").strip()
+        if device_uid:
+            self.standard_device_uid = device_uid
+        if schema_hash:
+            self.standard_schema_hash = schema_hash
+
+        interfaces = payload.get("interfaces")
+        if not isinstance(interfaces, list):
+            logging.warning("Bad %s describe interfaces", PROTOCOL_PEBBLE_SERIAL_V1)
+            return
+
+        self.standard_discovery = payload
+        self.standard_interfaces_by_id = {}
+        for interface in interfaces:
+            if not isinstance(interface, dict):
+                continue
+            try:
+                interface_id = int(interface["id"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            self.standard_interfaces_by_id[interface_id] = interface
+            if str(interface.get("dir") or "").strip().lower() == "in":
+                self._register_standard_command_topics(interface_id, interface)
+
+        if self.standard_discovery is not None:
+            self._publish_json(self._standard_discovery_topic(), self.standard_discovery, qos=1, retain=True)
+        logging.info(
+            "[%s] describe device_uid=%s interfaces=%d",
+            self.service_name,
+            self.standard_device_uid or "?",
+            len(self.standard_interfaces_by_id),
+        )
+
+    def _register_standard_command_topics(self, interface_id: int, interface: dict[str, Any]) -> None:
+        topic_specs = self._standard_command_topics(interface)
+        for topic in topic_specs:
+            if topic in self.handlers:
+                continue
+
+            def _handler(payload: dict[str, Any], *, _interface_id: int = interface_id) -> None:
+                self._handle_standard_command(_interface_id, payload)
+
+            self.handlers[topic] = _handler
+            client = self.client
+            is_connected = getattr(client, "is_connected", None) if client is not None else None
+            if client is not None and callable(is_connected) and is_connected():
+                client.subscribe(topic, qos=1)
+
+    def _handle_standard_outbound(self, packet: StandardPacket, *, is_state: bool) -> None:
+        interface = self.standard_interfaces_by_id.get(packet.interface_id)
+        if not interface:
+            logging.debug("Unknown %s interface_id=%d", PROTOCOL_PEBBLE_SERIAL_V1, packet.interface_id)
+            return
+        if str(interface.get("dir") or "").strip().lower() != "out":
+            logging.debug("Ignored outbound packet for input interface_id=%d", packet.interface_id)
+            return
+        encoding = interface.get("encoding")
+        if not isinstance(encoding, dict):
+            logging.warning("Missing encoding for interface_id=%d", packet.interface_id)
+            return
+        if str(encoding.get("kind") or "").strip().lower() != "struct_v1":
+            logging.warning("Unsupported encoding kind for interface_id=%d", packet.interface_id)
+            return
+        fields = encoding.get("fields")
+        if not isinstance(fields, list):
+            logging.warning("Missing fields for interface_id=%d", packet.interface_id)
+            return
+        try:
+            values = decode_struct_payload(packet.payload, fields)
+        except SerialStandardError as exc:
+            logging.warning("Failed to decode interface_id=%d: %s", packet.interface_id, exc)
+            return
+
+        generic_payload = self._standard_generic_payload(interface, packet, values)
+        generic_topic = self._standard_generic_topic("outgoing", str(interface.get("name") or f"iface-{packet.interface_id}"))
+        qos = 1 if is_state else 0
+        retain = bool(interface.get("retain", False))
+        self._publish_json(generic_topic, generic_payload, qos=qos, retain=retain)
+
+        alias_topic = self._standard_alias_topic(interface)
+        if alias_topic is not None:
+            alias_payload = self._standard_alias_payload(interface, packet, values, generic_payload)
+            self._publish_json(alias_topic, alias_payload, qos=qos, retain=retain)
+            profile = str(interface.get("profile") or "").strip().lower()
+            if profile == "imu.summary.v1":
+                with self.telemetry_lock:
+                    self.last_imu_low_payload = alias_payload
+
+    def _handle_standard_command(self, interface_id: int, payload: dict[str, Any]) -> None:
+        interface = self.standard_interfaces_by_id.get(interface_id)
+        if not interface:
+            logging.warning("Unknown command interface_id=%d", interface_id)
+            return
+        encoding = interface.get("encoding")
+        if not isinstance(encoding, dict):
+            logging.warning("Missing command encoding for interface_id=%d", interface_id)
+            return
+        if str(encoding.get("kind") or "").strip().lower() != "struct_v1":
+            logging.warning("Unsupported command encoding for interface_id=%d", interface_id)
+            return
+        fields = encoding.get("fields")
+        if not isinstance(fields, list):
+            logging.warning("Missing command fields for interface_id=%d", interface_id)
+            return
+        values = self._extract_value(payload)
+        try:
+            encoded_payload = encode_struct_payload(values, fields)
+        except SerialStandardError as exc:
+            logging.warning("Bad command payload for interface_id=%d: %s", interface_id, exc)
+            return
+        self.standard_command_seq = (self.standard_command_seq + 1) & 0xFFFFFFFF
+        packet = encode_packet(
+            MSG_CMD,
+            payload=encoded_payload,
+            interface_id=interface_id,
+            seq=self.standard_command_seq,
+            timestamp_ms=int(time.time() * 1000.0) & 0xFFFFFFFF,
+        )
+        self._send_serial_bytes(packet, description=f"cmd[{interface_id}]")
+
+    def _standard_discovery_tick(self) -> None:
+        if self.standard_discovery is not None:
+            return
+        now = time.monotonic()
+        if now < self.standard_next_describe_request_at:
+            return
+        self.standard_next_describe_request_at = now + 2.0
+        packet = encode_packet(MSG_DESCRIBE_REQ)
+        self._send_serial_bytes(packet, description="describe_req")
+
+    def _standard_device_key(self) -> str:
+        candidate = self.standard_device_uid or (self.instance_name or "default")
+        return candidate.strip("/") or "default"
+
+    def _standard_discovery_topic(self) -> str:
+        return self.identity.topic("outgoing", f"mcu/{self._standard_device_key()}/describe")
+
+    def _standard_generic_topic(self, direction: str, name: str) -> str:
+        clean_name = name.strip("/") or "unnamed"
+        return self.identity.topic(direction, f"mcu/{self._standard_device_key()}/{clean_name}")
+
+    def _standard_alias_topic(self, interface: dict[str, Any]) -> Optional[str]:
+        channel = str(interface.get("channel") or "").strip().strip("/")
+        if not channel:
+            return None
+        direction = "outgoing" if str(interface.get("dir") or "").strip().lower() == "out" else "incoming"
+        return self.identity.topic(direction, channel)
+
+    def _standard_command_topics(self, interface: dict[str, Any]) -> list[str]:
+        name = str(interface.get("name") or "").strip()
+        topics = [self._standard_generic_topic("incoming", name or f"iface-{interface.get('id', 'unknown')}")]
+        alias_topic = self._standard_alias_topic(interface)
+        if alias_topic is not None and alias_topic not in topics:
+            topics.append(alias_topic)
+        return topics
+
+    def _standard_generic_payload(
+        self,
+        interface: dict[str, Any],
+        packet: StandardPacket,
+        values: dict[str, Any],
+    ) -> dict[str, Any]:
+        return {
+            "t": int(time.time() * 1000.0),
+            "seq": int(packet.seq),
+            "mcu_ms": int(packet.timestamp_ms),
+            "device_uid": self._standard_device_key(),
+            "interface": str(interface.get("name") or f"iface-{packet.interface_id}"),
+            "profile": str(interface.get("profile") or ""),
+            "value": values,
+        }
+
+    def _standard_motion_value(self, values: dict[str, Any]) -> dict[str, Any]:
+        motion_value: dict[str, Any] = {}
+        if all(axis in values for axis in ("ax", "ay", "az")):
+            motion_value["accel_mps2"] = _vector_payload(
+                {"x": values["ax"], "y": values["ay"], "z": values["az"]}
+            )
+        if all(axis in values for axis in ("gx", "gy", "gz")):
+            motion_value["gyro_dps"] = _vector_payload(
+                {"x": values["gx"], "y": values["gy"], "z": values["gz"]}
+            )
+        if "temp_c" in values:
+            motion_value["temp_c"] = round(float(values["temp_c"]), 3)
+        orientation: dict[str, float] = {}
+        if "roll_deg" in values:
+            orientation["roll"] = round(float(values["roll_deg"]), 3)
+        if "pitch_deg" in values:
+            orientation["pitch"] = round(float(values["pitch_deg"]), 3)
+        if orientation:
+            motion_value["orientation_deg"] = orientation
+        return motion_value
+
+    def _standard_alias_payload(
+        self,
+        interface: dict[str, Any],
+        packet: StandardPacket,
+        values: dict[str, Any],
+        generic_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        profile = str(interface.get("profile") or "").strip().lower()
+        if profile == "imu.motion.v1":
+            motion_value = self._standard_motion_value(values)
+            with self.telemetry_lock:
+                self.last_imu_motion_value = dict(motion_value)
+            return {
+                "t": generic_payload["t"],
+                "seq": int(packet.seq),
+                "mcu_ms": int(packet.timestamp_ms),
+                "value": motion_value,
+            }
+        if profile == "imu.summary.v1":
+            with self.telemetry_lock:
+                motion_value = dict(self.last_imu_motion_value or {})
+            motion_value.update(self._standard_motion_value(values))
+            if "accel_norm_g" in values:
+                motion_value["accel_norm_g"] = round(float(values["accel_norm_g"]), 4)
+            if any(key in values for key in ("gyro_bias_x_dps", "gyro_bias_y_dps", "gyro_bias_z_dps")):
+                motion_value["gyro_bias_dps"] = _vector_payload(
+                    {
+                        "x": values.get("gyro_bias_x_dps", 0.0),
+                        "y": values.get("gyro_bias_y_dps", 0.0),
+                        "z": values.get("gyro_bias_z_dps", 0.0),
+                    }
+                )
+            health: dict[str, Any] = {
+                "device": self.serial_port,
+                "protocol": self.protocol_name,
+                "instance": self.instance_name or "default",
+            }
+            if "samples_ok" in values:
+                health["samples_ok"] = int(values["samples_ok"])
+            if "samples_error" in values:
+                health["samples_error"] = int(values["samples_error"])
+            if "calibration_samples" in values:
+                health["calibration_samples"] = int(values["calibration_samples"])
+            motion_value["health"] = health
+            return {
+                "t": generic_payload["t"],
+                "seq": int(packet.seq),
+                "mcu_ms": int(packet.timestamp_ms),
+                "value": motion_value,
+            }
+        return generic_payload
 
     def _handle_non_telemetry_line(self, line: str) -> None:
         if line.startswith("WARN "):
@@ -655,6 +1036,11 @@ class SerialMcuBridge:
                 payload = self.last_imu_low_payload
             if payload is not None:
                 self._publish_json(self.imu_low_rate_topic, payload, qos=self.imu_low_rate_qos, retain=True)
+            return
+
+        if self.protocol_name == PROTOCOL_PEBBLE_SERIAL_V1:
+            if self.standard_discovery is not None:
+                self._publish_json(self._standard_discovery_topic(), self.standard_discovery, qos=1, retain=True)
 
     def _republish_charge_if_due(self) -> None:
         if self.next_charge_republish_at <= 0:
@@ -722,16 +1108,19 @@ class SerialMcuBridge:
         self._send_serial_line("F", f"{b:.3f}", f"{g:.3f}", f"{r:.3f}", f"{period:.3f}")
 
     def _send_serial_line(self, *parts: str) -> None:
-        if not self.ser:
-            logging.warning("Serial unavailable; dropped command %s", parts[0])
-            return
         line = " ".join(parts) + "\n"
+        self._send_serial_bytes(line.encode("utf-8"), description=parts[0])
+
+    def _send_serial_bytes(self, data: bytes, *, description: str) -> None:
+        if not self.ser:
+            logging.warning("Serial unavailable; dropped %s", description)
+            return
         with self.serial_lock:
             try:
-                self.ser.write(line.encode("utf-8"))
+                self.ser.write(data)
                 self.ser.flush()
             except serial.SerialException as exc:
-                logging.error("Failed serial write for %s: %s", parts[0], exc)
+                logging.error("Failed serial write for %s: %s", description, exc)
 
     def _send_drive_stop(self, reason: str) -> None:
         self._send_serial_line("M", "0.000", "0.000")

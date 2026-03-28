@@ -8,6 +8,10 @@ If you are integrating a different controller platform, treat the contents of
 this directory as examples of how Pebble topics and device behavior can be
 mapped onto embedded firmware.
 
+The current USB-serial MCU direction is documented in
+`control/services/serial_standard.md`. New serial-only MCU firmware should
+target `pebble_serial_v1` rather than inventing a one-off text protocol.
+
 ## Included reference targets
 
 - `firmware/FRED_seeed-xiao-samd21/`
@@ -17,6 +21,7 @@ mapped onto embedded firmware.
 - `firmware/GOOB_arduino-nano-imu/`
   - Dedicated USB-serial MPU-6050 bridge sketch for moving Goob IMU handling off the Orange Pi.
   - Current Goob bring-up has this Nano driving the GY-521 from `5V` and talking to the host only over USB serial.
+  - The sketch now speaks compact `pebble_serial_v1` packets for discovery and telemetry rather than the older text `I ...` / `S ...` lines.
   - Working wiring is:
     - `Nano 5V -> GY-521 VCC`
     - `Nano GND -> GY-521 GND`

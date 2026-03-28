@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from control.services.serial_mcu_bridge import SerialMcuBridge
+from control.services.serial_standard import MSG_DESCRIBE, MSG_SAMPLE, MSG_STATE, encode_discovery, encode_packet, encode_struct_payload
 from tests.helpers import FakeMqttClient, FakeMqttMessage, FakeSerial, make_base_config
 
 
@@ -233,6 +234,131 @@ class SerialMcuBridgeTests(unittest.TestCase):
         bridge._drive_watchdog_tick()
         self.assertEqual(bridge.ser.writes[-1].decode("utf-8"), "M 0.000 0.000\n")
         self.assertTrue(bridge.drive_timed_out)
+
+    def test_standard_imu_packets_publish_generic_and_alias_topics(self):
+        config = make_base_config("serialbot")
+        config["services"]["serial_mcu_bridge"]["enabled"] = False
+        config["services"]["serial_mcu_bridge"]["instances"] = {
+            "imu": {
+                "enabled": True,
+                "protocol": "pebble_serial_v1",
+                "serial": {"port": "/dev/ttyUSB9"},
+            }
+        }
+        discovery = {
+            "schema_version": 1,
+            "schema_hash": "goob-imu-v2",
+            "device_uid": "goob-imu-nano",
+            "firmware_version": "2026.03.28",
+            "model": "arduino-nano",
+            "interfaces": [
+                {
+                    "id": 1,
+                    "name": "imu_fast",
+                    "dir": "out",
+                    "kind": "sample",
+                    "channel": "sensors/imu-fast",
+                    "profile": "imu.motion.v1",
+                    "rate_hz": 100,
+                    "local_only": True,
+                    "encoding": {
+                        "kind": "struct_v1",
+                        "fields": [
+                            {"name": "ax", "type": "i16", "scale": 0.001},
+                            {"name": "ay", "type": "i16", "scale": 0.001},
+                            {"name": "az", "type": "i16", "scale": 0.001},
+                            {"name": "gx", "type": "i16", "scale": 0.01},
+                            {"name": "gy", "type": "i16", "scale": 0.01},
+                            {"name": "gz", "type": "i16", "scale": 0.01},
+                            {"name": "temp_c", "type": "i16", "scale": 0.01},
+                            {"name": "roll_deg", "type": "i16", "scale": 0.01},
+                            {"name": "pitch_deg", "type": "i16", "scale": 0.01},
+                        ],
+                    },
+                },
+                {
+                    "id": 2,
+                    "name": "imu",
+                    "dir": "out",
+                    "kind": "state",
+                    "channel": "sensors/imu",
+                    "profile": "imu.summary.v1",
+                    "rate_hz": 5,
+                    "encoding": {
+                        "kind": "struct_v1",
+                        "fields": [
+                            {"name": "accel_norm_g", "type": "u16", "scale": 0.001},
+                            {"name": "gyro_bias_x_dps", "type": "i16", "scale": 0.01},
+                            {"name": "gyro_bias_y_dps", "type": "i16", "scale": 0.01},
+                            {"name": "gyro_bias_z_dps", "type": "i16", "scale": 0.01},
+                            {"name": "samples_ok", "type": "u32"},
+                            {"name": "samples_error", "type": "u32"},
+                            {"name": "calibration_samples", "type": "u16"},
+                        ],
+                    },
+                },
+            ],
+        }
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "config.json"
+            path.write_text(json.dumps(config))
+            bridge = SerialMcuBridge(config, path, instance_name="imu")
+        bridge.client = FakeMqttClient()
+
+        describe_frame = encode_packet(MSG_DESCRIBE, payload=encode_discovery(discovery))
+        bridge._handle_standard_bytes(describe_frame)
+
+        fast_values = {
+            "ax": 1.0,
+            "ay": 2.0,
+            "az": 3.0,
+            "gx": 4.0,
+            "gy": 5.0,
+            "gz": 6.0,
+            "temp_c": 22.5,
+            "roll_deg": 7.0,
+            "pitch_deg": 8.0,
+        }
+        fast_frame = encode_packet(
+            MSG_SAMPLE,
+            interface_id=1,
+            seq=10,
+            timestamp_ms=250,
+            payload=encode_struct_payload(fast_values, discovery["interfaces"][0]["encoding"]["fields"]),
+        )
+        bridge._handle_standard_bytes(fast_frame)
+
+        low_values = {
+            "accel_norm_g": 1.01,
+            "gyro_bias_x_dps": 0.1,
+            "gyro_bias_y_dps": 0.2,
+            "gyro_bias_z_dps": 0.3,
+            "samples_ok": 44,
+            "samples_error": 2,
+            "calibration_samples": 200,
+        }
+        low_frame = encode_packet(
+            MSG_STATE,
+            interface_id=2,
+            seq=11,
+            timestamp_ms=300,
+            payload=encode_struct_payload(low_values, discovery["interfaces"][1]["encoding"]["fields"]),
+        )
+        bridge._handle_standard_bytes(low_frame)
+
+        publish_calls = bridge.client.publish_calls  # type: ignore[union-attr]
+        self.assertEqual(publish_calls[0][0], "pebble/robots/serialbot/outgoing/mcu/goob-imu-nano/describe")
+        self.assertEqual(publish_calls[1][0], "pebble/robots/serialbot/outgoing/mcu/goob-imu-nano/imu_fast")
+        self.assertEqual(publish_calls[2][0], "pebble/robots/serialbot/outgoing/sensors/imu-fast")
+        self.assertEqual(publish_calls[3][0], "pebble/robots/serialbot/outgoing/mcu/goob-imu-nano/imu")
+        self.assertEqual(publish_calls[4][0], "pebble/robots/serialbot/outgoing/sensors/imu")
+
+        fast_alias_payload = json.loads(publish_calls[2][1])
+        self.assertEqual(fast_alias_payload["value"]["accel_mps2"], {"x": 1.0, "y": 2.0, "z": 3.0})
+        low_alias_payload = json.loads(publish_calls[4][1])
+        self.assertEqual(low_alias_payload["value"]["accel_mps2"], {"x": 1.0, "y": 2.0, "z": 3.0})
+        self.assertEqual(low_alias_payload["value"]["health"]["samples_ok"], 44)
+        self.assertEqual(low_alias_payload["value"]["gyro_bias_dps"], {"x": 0.1, "y": 0.2, "z": 0.3})
 
 
 if __name__ == "__main__":

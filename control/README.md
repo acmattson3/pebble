@@ -161,6 +161,7 @@ Reboot control config (in `services.mqtt_bridge`):
 - Current built-in protocols are:
   - `goob_base_v1` for the existing drive/lights/touch/charging MCU contract
   - `imu_mpu6050_v1` for the Nano USB-serial MPU-6050 bridge that publishes IMU MQTT topics directly
+  - `pebble_serial_v1` for self-describing MCUs that expose compact discovery plus compact runtime packets
 
 - `services.serial_mcu_bridge.safety.drive_timeout_seconds`
   - If no new drive command arrives within this window, send `M 0 0`.
@@ -194,6 +195,13 @@ Goob currently uses this split:
 - `serial_mcu_bridge.instances.imu`
   - `imu_mpu6050_v1` on a USB Arduino Nano + GY-521 (`CH340` serial adapter)
   - publishes `{base}/outgoing/sensors/imu-fast` locally and `{base}/outgoing/sensors/imu` for mirrored consumers
+
+The wire-level standard for future serial MCUs is documented in
+`control/services/serial_standard.md`.
+
+For `pebble_serial_v1`, `mqtt_bridge` also learns dynamic `local_only` topics
+from retained discovery payloads and keeps those topics on the local broker
+instead of mirroring them remotely.
 
 ## Launch
 

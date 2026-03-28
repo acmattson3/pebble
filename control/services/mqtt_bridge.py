@@ -118,6 +118,8 @@ class MqttBridge:
         self.git_pull_process: Optional[subprocess.Popen] = None
         self.audio_processes: dict[str, Optional[subprocess.Popen]] = {"publisher": None, "receiver": None}
 
+        self.dynamic_local_only_topics_by_device: dict[str, set[str]] = {}
+        self.dynamic_ignored_outgoing_topics: set[str] = set()
         self.recent_remote_to_local: dict[str, tuple[bytes, float]] = {}
         self.retained_local_outgoing: dict[str, tuple[bytes, int, bool]] = {}
 
@@ -263,9 +265,10 @@ class MqttBridge:
 
         self._handle_flag_topics(topic, parsed, retained=bool(msg.retain))
         self._handle_media_topics(topic, parsed)
+        self._handle_standard_discovery(topic, parsed)
 
         if topic.startswith(self.outgoing_prefix):
-            if topic in self.ignored_outgoing_topics:
+            if self._is_ignored_outgoing_topic(topic):
                 logging.debug("Ignoring local-only outgoing topic for remote mirror: %s", topic)
                 return
             if bool(msg.retain):
@@ -474,6 +477,50 @@ class MqttBridge:
             return
         client.publish(topic, payload, qos=qos, retain=retain)
 
+    def _is_ignored_outgoing_topic(self, topic: str) -> bool:
+        with self.state_lock:
+            return topic in self.ignored_outgoing_topics or topic in self.dynamic_ignored_outgoing_topics
+
+    def _handle_standard_discovery(self, topic: str, parsed: Any) -> None:
+        if not topic.startswith(f"{self.outgoing_prefix}mcu/") or not topic.endswith("/describe"):
+            return
+        if not isinstance(parsed, dict):
+            return
+        interfaces = parsed.get("interfaces")
+        if not isinstance(interfaces, list):
+            return
+        protocol_name = str(parsed.get("protocol") or "").strip().lower()
+        if protocol_name and protocol_name != "pebble_serial_v1":
+            return
+
+        suffix = topic[len(self.outgoing_prefix) :]
+        parts = suffix.split("/")
+        if len(parts) < 3 or parts[0] != "mcu":
+            return
+        device_uid = str(parsed.get("device_uid") or parts[1]).strip().strip("/") or parts[1]
+
+        local_only_topics: set[str] = set()
+        for interface in interfaces:
+            if not isinstance(interface, dict):
+                continue
+            if not bool(interface.get("local_only", False)):
+                continue
+            name = str(interface.get("name") or "").strip().strip("/")
+            if name:
+                local_only_topics.add(self.identity.topic("outgoing", f"mcu/{device_uid}/{name}"))
+            channel = str(interface.get("channel") or "").strip().strip("/")
+            if channel:
+                local_only_topics.add(self.identity.topic("outgoing", channel))
+
+        with self.state_lock:
+            self.dynamic_local_only_topics_by_device[device_uid] = local_only_topics
+            merged: set[str] = set()
+            for topics in self.dynamic_local_only_topics_by_device.values():
+                merged.update(topics)
+            self.dynamic_ignored_outgoing_topics = merged
+            for ignored_topic in local_only_topics:
+                self.retained_local_outgoing.pop(ignored_topic, None)
+
     def _replay_retained_outgoing_to_remote(self) -> None:
         with self.state_lock:
             items = list(self.retained_local_outgoing.items())
@@ -481,6 +528,8 @@ class MqttBridge:
             return
         logging.info("Replaying %d retained outgoing topics to remote broker", len(items))
         for topic, (payload, qos, retain) in items:
+            if self._is_ignored_outgoing_topic(topic):
+                continue
             self._publish_remote_raw(topic, payload, qos=qos, retain=retain)
 
     @staticmethod

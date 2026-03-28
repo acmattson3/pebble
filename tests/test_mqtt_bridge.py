@@ -250,6 +250,90 @@ class MqttBridgeTests(unittest.TestCase):
         self.assertEqual(len(bridge.remote_client.publish_calls), 1)
         self.assertEqual(bridge.remote_client.publish_calls[0][0], "pebble/robots/mqbot/outgoing/custom-imu")
 
+    def test_standard_discovery_adds_dynamic_local_only_topics(self):
+        bridge = self._bridge()
+        bridge.local_client = FakeMqttClient()
+        bridge.remote_client = FakeMqttClient()
+
+        describe_topic = f"{bridge.outgoing_prefix}mcu/goob-imu-nano/describe"
+        describe_payload = {
+            "protocol": "pebble_serial_v1",
+            "device_uid": "goob-imu-nano",
+            "interfaces": [
+                {
+                    "name": "imu_fast",
+                    "channel": "sensors/imu-fast",
+                    "local_only": True,
+                },
+                {
+                    "name": "imu",
+                    "channel": "sensors/imu",
+                    "local_only": False,
+                },
+            ],
+        }
+        describe_msg = FakeMqttMessage(topic=describe_topic, payload=json.dumps(describe_payload).encode("utf-8"), qos=1, retain=True)
+        bridge._on_local_message(None, None, describe_msg)  # type: ignore[arg-type]
+
+        self.assertIn(f"{bridge.outgoing_prefix}mcu/goob-imu-nano/imu_fast", bridge.dynamic_ignored_outgoing_topics)
+        self.assertIn(f"{bridge.outgoing_prefix}sensors/imu-fast", bridge.dynamic_ignored_outgoing_topics)
+        self.assertEqual(len(bridge.remote_client.publish_calls), 1)
+        self.assertEqual(bridge.remote_client.publish_calls[0][0], describe_topic)
+
+        bridge.remote_client.publish_calls.clear()
+        generic_fast = FakeMqttMessage(
+            topic=f"{bridge.outgoing_prefix}mcu/goob-imu-nano/imu_fast",
+            payload=b'{"seq":1}',
+            qos=0,
+            retain=False,
+        )
+        alias_fast = FakeMqttMessage(
+            topic=f"{bridge.outgoing_prefix}sensors/imu-fast",
+            payload=b'{"seq":1}',
+            qos=0,
+            retain=False,
+        )
+        low_rate = FakeMqttMessage(
+            topic=f"{bridge.outgoing_prefix}sensors/imu",
+            payload=b'{"seq":2}',
+            qos=1,
+            retain=False,
+        )
+        bridge._on_local_message(None, None, generic_fast)  # type: ignore[arg-type]
+        bridge._on_local_message(None, None, alias_fast)  # type: ignore[arg-type]
+        bridge._on_local_message(None, None, low_rate)  # type: ignore[arg-type]
+        self.assertEqual(len(bridge.remote_client.publish_calls), 1)
+        self.assertEqual(bridge.remote_client.publish_calls[0][0], f"{bridge.outgoing_prefix}sensors/imu")
+
+    def test_standard_discovery_prunes_local_only_retained_replay(self):
+        bridge = self._bridge()
+        bridge.local_client = FakeMqttClient()
+        bridge.remote_client = FakeMqttClient()
+
+        fast_topic = f"{bridge.outgoing_prefix}mcu/goob-imu-nano/imu_fast"
+        bridge.retained_local_outgoing[fast_topic] = (b'{"seq":1}', 1, True)
+
+        describe_topic = f"{bridge.outgoing_prefix}mcu/goob-imu-nano/describe"
+        describe_payload = {
+            "protocol": "pebble_serial_v1",
+            "device_uid": "goob-imu-nano",
+            "interfaces": [
+                {
+                    "name": "imu_fast",
+                    "channel": "sensors/imu-fast",
+                    "local_only": True,
+                }
+            ],
+        }
+        describe_msg = FakeMqttMessage(topic=describe_topic, payload=json.dumps(describe_payload).encode("utf-8"), qos=1, retain=True)
+        bridge._on_local_message(None, None, describe_msg)  # type: ignore[arg-type]
+
+        bridge.remote_client.publish_calls.clear()
+        bridge._replay_retained_outgoing_to_remote()
+        published_topics = [topic for topic, _payload, _qos, _retain in bridge.remote_client.publish_calls]
+        self.assertNotIn(fast_topic, published_topics)
+        self.assertIn(describe_topic, published_topics)
+
     def test_remote_connect_replays_cached_retained_outgoing(self):
         bridge = self._bridge()
         bridge.local_client = FakeMqttClient()
