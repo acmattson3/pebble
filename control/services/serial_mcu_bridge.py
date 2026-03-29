@@ -687,6 +687,9 @@ class SerialMcuBridge:
         if line.startswith("ERR "):
             logging.error("[%s] %s", self.service_name, line[4:].strip())
             return
+        if line.startswith("OK "):
+            logging.debug("[%s] %s", self.service_name, line)
+            return
         logging.info("[%s] %s", self.service_name, line)
 
     @staticmethod

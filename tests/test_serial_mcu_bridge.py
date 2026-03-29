@@ -5,6 +5,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from control.services.serial_mcu_bridge import SerialMcuBridge
 from control.services.serial_standard import MSG_DESCRIBE, MSG_SAMPLE, MSG_STATE, encode_discovery, encode_packet, encode_struct_payload
@@ -45,6 +46,14 @@ class SerialMcuBridgeTests(unittest.TestCase):
         self.assertAlmostEqual(high["ax"], 1.1)
         self.assertEqual(low["ok"], 10)
         self.assertAlmostEqual(low["an"], 1.02)
+
+    def test_ok_ack_lines_are_debug_only(self):
+        bridge = self._bridge()
+        with mock.patch("control.services.serial_mcu_bridge.logging.debug") as debug_mock:
+            with mock.patch("control.services.serial_mcu_bridge.logging.info") as info_mock:
+                bridge._handle_non_telemetry_line("OK M")
+        debug_mock.assert_called_once_with("[%s] %s", bridge.service_name, "OK M")
+        info_mock.assert_not_called()
 
     def test_named_imu_instance_merges_base_config(self):
         config = make_base_config("serialbot")
