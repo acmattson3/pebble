@@ -68,6 +68,9 @@ class MqttBridge:
         self.mqtt_audio_flag_topic = str(topics_cfg.get("mqtt_audio") or f"{self.flags_prefix}mqtt-audio")
         self.mqtt_video_flag_topic = str(topics_cfg.get("mqtt_video") or f"{self.flags_prefix}mqtt-video")
         self.reboot_flag_topic = str(topics_cfg.get("reboot") or f"{self.flags_prefix}reboot")
+        self.service_restart_flag_topic = str(
+            topics_cfg.get("service_restart") or f"{self.flags_prefix}service-restart"
+        )
         self.git_pull_flag_topic = str(topics_cfg.get("git_pull") or f"{self.flags_prefix}git-pull")
         self.audio_control_topic = str(topics_cfg.get("audio_control") or f"{self.base}/incoming/audio")
         self.video_control_topic = str(topics_cfg.get("video_control") or f"{self.base}/incoming/front-camera")
@@ -85,6 +88,16 @@ class MqttBridge:
         self.reboot_control_cfg = self.service_cfg.get("reboot_control") if isinstance(self.service_cfg.get("reboot_control"), dict) else {}
         self.reboot_cooldown_seconds = max(0.0, float(self.reboot_control_cfg.get("cooldown_seconds") or 30.0))
         self.reboot_ignore_retained = bool(self.reboot_control_cfg.get("ignore_retained", True))
+        self.service_restart_control_cfg = (
+            self.service_cfg.get("service_restart_control")
+            if isinstance(self.service_cfg.get("service_restart_control"), dict)
+            else {}
+        )
+        self.service_restart_cooldown_seconds = max(
+            0.0,
+            float(self.service_restart_control_cfg.get("cooldown_seconds") or 10.0),
+        )
+        self.service_restart_ignore_retained = bool(self.service_restart_control_cfg.get("ignore_retained", True))
         self.git_pull_control_cfg = self.service_cfg.get("git_pull_control") if isinstance(self.service_cfg.get("git_pull_control"), dict) else {}
         self.git_pull_cooldown_seconds = max(0.0, float(self.git_pull_control_cfg.get("cooldown_seconds") or 60.0))
         self.git_pull_ignore_retained = bool(self.git_pull_control_cfg.get("ignore_retained", True))
@@ -107,6 +120,7 @@ class MqttBridge:
         self.mqtt_audio_requested = False
         self.mqtt_video_requested = False
         self.last_reboot_request_at = 0.0
+        self.last_service_restart_request_at = 0.0
         self.last_git_pull_request_at = 0.0
         self.mirror_subscription: Optional[str] = None
 
@@ -192,6 +206,7 @@ class MqttBridge:
         client.subscribe(self.audio_control_topic, qos=1)
         client.subscribe(self.video_control_topic, qos=1)
         client.subscribe(self.reboot_flag_topic, qos=1)
+        client.subscribe(self.service_restart_flag_topic, qos=1)
         client.subscribe(self.git_pull_flag_topic, qos=1)
         self._refresh_mirror_subscription(force=True)
 
@@ -297,6 +312,7 @@ class MqttBridge:
         start_audio = False
         start_video = False
         request_reboot = False
+        request_service_restart = False
         request_git_pull = False
         with self.state_lock:
             if topic == self.remote_mirror_topic:
@@ -341,6 +357,25 @@ class MqttBridge:
                         else:
                             self.last_reboot_request_at = now
                             request_reboot = True
+            elif topic == self.service_restart_flag_topic:
+                value = parse_bool_payload(parsed)
+                if value is None:
+                    logging.warning("service-restart flag payload missing boolean: %s", parsed)
+                elif value:
+                    if retained and self.service_restart_ignore_retained:
+                        logging.warning("Ignoring retained service-restart request on %s", topic)
+                    else:
+                        now = time.monotonic()
+                        elapsed = now - self.last_service_restart_request_at
+                        if elapsed < self.service_restart_cooldown_seconds:
+                            logging.warning(
+                                "Ignoring service-restart request on %s during cooldown (%.1fs remaining)",
+                                topic,
+                                self.service_restart_cooldown_seconds - elapsed,
+                            )
+                        else:
+                            self.last_service_restart_request_at = now
+                            request_service_restart = True
             elif topic == self.git_pull_flag_topic:
                 value = parse_bool_payload(parsed)
                 if value is None:
@@ -369,6 +404,8 @@ class MqttBridge:
             self._start_video_process()
         if request_reboot:
             self._start_reboot_command()
+        if request_service_restart:
+            self._start_service_restart_command()
         if request_git_pull:
             self._start_git_pull_command()
 
@@ -572,6 +609,33 @@ class MqttBridge:
             logging.warning("Issued reboot command pid=%s", proc.pid)
         except (OSError, ValueError) as exc:
             logging.error("Failed to execute reboot command: %s", exc)
+
+    def _service_restart_command(self) -> Any:
+        return self.service_restart_control_cfg.get("command")
+
+    def _service_restart_env(self) -> dict[str, str]:
+        env = os.environ.copy()
+        env_overrides = self.service_restart_control_cfg.get("env")
+        if isinstance(env_overrides, dict):
+            env.update({str(k): str(v) for k, v in env_overrides.items()})
+        return env
+
+    def _start_service_restart_command(self) -> None:
+        command = self._service_restart_command()
+        if not command:
+            logging.warning(
+                "service-restart flag received but services.mqtt_bridge.service_restart_control.command is missing"
+            )
+            return
+        try:
+            proc = subprocess.Popen(
+                self._normalize_command(command),
+                cwd=self._resolve_cwd(self.service_restart_control_cfg.get("cwd")),
+                env=self._service_restart_env(),
+            )
+            logging.warning("Issued service restart command pid=%s", proc.pid)
+        except (OSError, ValueError) as exc:
+            logging.error("Failed to execute service restart command: %s", exc)
 
     def _git_pull_command(self) -> Any:
         return self.git_pull_control_cfg.get("command")

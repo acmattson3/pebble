@@ -89,6 +89,7 @@ Flags are standard incoming topics under `incoming/flags/`:
 - `.../incoming/flags/mqtt-audio`
 - `.../incoming/flags/mqtt-video`
 - `.../incoming/flags/reboot`
+- `.../incoming/flags/service-restart`
 - `.../incoming/flags/git-pull`
 
 Payload:
@@ -111,6 +112,9 @@ Flag semantics:
 - `incoming/flags/reboot=true` triggers a one-shot reboot command on-robot.
   - Reboot requests are expected to be non-retained.
   - Retained reboot requests are ignored by default (`services.mqtt_bridge.reboot_control.ignore_retained=true`).
+- `incoming/flags/service-restart=true` triggers a one-shot service restart command on-robot.
+  - Service-restart requests are expected to be non-retained.
+  - Retained service-restart requests are ignored by default (`services.mqtt_bridge.service_restart_control.ignore_retained=true`).
 - `incoming/flags/git-pull=true` triggers a one-shot git pull command on-robot.
   - Git-pull requests are expected to be non-retained.
   - Retained git-pull requests are ignored by default (`services.mqtt_bridge.git_pull_control.ignore_retained=true`).
@@ -131,6 +135,14 @@ Reboot control config (in `services.mqtt_bridge`):
   - Minimum seconds between accepted reboot requests (default `30`).
 - `reboot_control.ignore_retained`
   - Ignore retained reboot payloads (default `true`).
+- `topics.service_restart`
+  - Topic for service-restart flag input (default `.../incoming/flags/service-restart`).
+- `service_restart_control.command`
+  - Command list/string to execute when a service-restart request is received.
+- `service_restart_control.cooldown_seconds`
+  - Minimum seconds between accepted service-restart requests (default `10`).
+- `service_restart_control.ignore_retained`
+  - Ignore retained service-restart payloads (default `true`).
 - `topics.git_pull`
   - Topic for git-pull flag input (default `.../incoming/flags/git-pull`).
 - `git_pull_control.command`
@@ -169,6 +181,10 @@ Reboot control config (in `services.mqtt_bridge`):
   - IMU protocol topics for `imu_mpu6050_v1` instances.
 - `services.serial_mcu_bridge.instances.<name>.publish.high_rate_qos|low_rate_qos|high_rate_retain|low_rate_retain`
   - IMU protocol publish controls for `imu_mpu6050_v1` instances.
+- `services.serial_mcu_bridge.instances.<name>.health.imu_sample_timeout_seconds`
+  - Exit the IMU bridge if telemetry stops for this many seconds so the launcher restarts it.
+- `services.serial_mcu_bridge.instances.<name>.health.exit_on_serial_error`
+  - Exit on serial read/write failures instead of staying alive without telemetry.
 - `services.serial_mcu_bridge.odometry_shm.enabled`
   - Default `true`. Enables writing raw touch samples to shared memory.
 - `services.serial_mcu_bridge.odometry_shm.name`

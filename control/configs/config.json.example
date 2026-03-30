@@ -102,6 +102,7 @@
         "mqtt_audio": "pebble/robots/my-robot/incoming/flags/mqtt-audio",
         "mqtt_video": "pebble/robots/my-robot/incoming/flags/mqtt-video",
         "reboot": "pebble/robots/my-robot/incoming/flags/reboot",
+        "service_restart": "pebble/robots/my-robot/incoming/flags/service-restart",
         "git_pull": "pebble/robots/my-robot/incoming/flags/git-pull",
         "audio_control": "pebble/robots/my-robot/incoming/audio",
         "video_control": "pebble/robots/my-robot/incoming/front-camera"
@@ -183,6 +184,13 @@
         "command": ["sudo", "-n", "/sbin/reboot"],
         "cwd": "",
         "cooldown_seconds": 30,
+        "ignore_retained": true,
+        "env": {}
+      },
+      "service_restart_control": {
+        "command": ["sudo", "-n", "/usr/bin/systemctl", "restart", "pebble-control.service"],
+        "cwd": "",
+        "cooldown_seconds": 10,
         "ignore_retained": true,
         "env": {}
       },
@@ -348,6 +356,10 @@
             "low_rate_qos": 1,
             "high_rate_retain": false,
             "low_rate_retain": false
+          },
+          "health": {
+            "imu_sample_timeout_seconds": 5.0,
+            "exit_on_serial_error": true
           }
         }
       }
@@ -639,6 +651,9 @@
           "controls": true
         },
         "reboot": {
+          "controls": true
+        },
+        "service_restart": {
           "controls": true
         }
       }

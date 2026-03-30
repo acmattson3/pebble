@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import serial
+
 from control.services.serial_mcu_bridge import SerialMcuBridge
 from control.services.serial_standard import MSG_DESCRIBE, MSG_SAMPLE, MSG_STATE, encode_discovery, encode_packet, encode_struct_payload
 from tests.helpers import FakeMqttClient, FakeMqttMessage, FakeSerial, make_base_config
@@ -187,6 +189,51 @@ class SerialMcuBridgeTests(unittest.TestCase):
         self.assertEqual(decoded["seq"], 4)
         self.assertEqual(decoded["value"]["accel_mps2"], {"x": 1.0, "y": 2.0, "z": 3.0})
         self.assertEqual(decoded["value"]["health"]["samples_ok"], 44)
+
+    def test_imu_watchdog_sets_fatal_error_when_telemetry_stalls(self):
+        config = make_base_config("serialbot")
+        config["services"]["serial_mcu_bridge"]["enabled"] = False
+        config["services"]["serial_mcu_bridge"]["instances"] = {
+            "imu": {
+                "enabled": True,
+                "protocol": "imu_mpu6050_v1",
+                "serial": {"port": "/dev/ttyUSB9"},
+                "health": {"imu_sample_timeout_seconds": 0.1},
+            }
+        }
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "config.json"
+            path.write_text(json.dumps(config))
+            bridge = SerialMcuBridge(config, path, instance_name="imu")
+
+        bridge.last_imu_sample_at = time.monotonic() - 1.0
+        bridge._imu_watchdog_tick()
+        self.assertTrue(bridge.stop_event.is_set())
+        self.assertIn("IMU telemetry stalled", bridge._fatal_error_message() or "")
+
+    def test_imu_serial_read_failure_becomes_fatal(self):
+        config = make_base_config("serialbot")
+        config["services"]["serial_mcu_bridge"]["enabled"] = False
+        config["services"]["serial_mcu_bridge"]["instances"] = {
+            "imu": {
+                "enabled": True,
+                "protocol": "imu_mpu6050_v1",
+                "serial": {"port": "/dev/ttyUSB9"},
+            }
+        }
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "config.json"
+            path.write_text(json.dumps(config))
+            bridge = SerialMcuBridge(config, path, instance_name="imu")
+
+        class RaisingSerial:
+            def readline(self):
+                raise serial.SerialException("imu disconnected")
+
+        bridge.ser = RaisingSerial()  # type: ignore[assignment]
+        bridge._serial_reader()
+        self.assertTrue(bridge.stop_event.is_set())
+        self.assertIn("Serial read failed", bridge._fatal_error_message() or "")
 
     def test_charge_publish_only_on_change(self):
         bridge = self._bridge()

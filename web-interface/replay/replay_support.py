@@ -194,7 +194,7 @@ def _classify_activity(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             tags.add("autonomy")
         else:
             return None
-    elif metric in {"flags/reboot", "flags/git-pull"}:
+    elif metric in {"flags/reboot", "flags/service-restart", "flags/git-pull"}:
         state = _normalize_bool_payload(payload)
         if state:
             tags.add(metric.split("/")[-1])
@@ -565,6 +565,7 @@ class ReplayArchive:
                     {"topic": {"$regex": r"/incoming/front-camera$"}},
                     {"topic": {"$regex": r"/incoming/audio$"}},
                     {"topic": {"$regex": r"/incoming/flags/reboot$"}},
+                    {"topic": {"$regex": r"/incoming/flags/service-restart$"}},
                     {"topic": {"$regex": r"/incoming/flags/git-pull$"}},
                 ]
             }

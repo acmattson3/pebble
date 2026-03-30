@@ -209,6 +209,7 @@ def _normalize_web_robot(
     audio_cfg = robot.get("audio") if isinstance(robot.get("audio"), dict) else {}
     autonomy_cfg = robot.get("autonomy") if isinstance(robot.get("autonomy"), dict) else {}
     reboot_cfg = robot.get("reboot") if isinstance(robot.get("reboot"), dict) else {}
+    service_restart_cfg = robot.get("service_restart") if isinstance(robot.get("service_restart"), dict) else {}
     git_pull_cfg = robot.get("git_pull") if isinstance(robot.get("git_pull"), dict) else {}
 
     identity_hint = (
@@ -248,6 +249,9 @@ def _normalize_web_robot(
         },
         "reboot": {
             "controls": bool(reboot_cfg.get("controls", True)),
+        },
+        "service_restart": {
+            "controls": bool(service_restart_cfg.get("controls", True)),
         },
         "git_pull": {
             "controls": bool(git_pull_cfg.get("controls", True)),
@@ -336,6 +340,9 @@ def _normalize_config(raw: Dict[str, Any]) -> Dict[str, Any]:
                 "reboot": {
                     "controls": True,
                 },
+                "service_restart": {
+                    "controls": True,
+                },
                 "git_pull": {
                     "controls": True,
                 },
@@ -397,6 +404,7 @@ CONFIG_AUDIO_UPLINK_HINTS: Dict[str, Dict[str, Any]] = {}
 CONFIG_AUDIO_UPLINK_TOPICS: Dict[str, str] = {}
 CONFIG_AUTONOMY_HINTS: Dict[str, Dict[str, Any]] = {}
 CONFIG_REBOOT_HINTS: Dict[str, Dict[str, Any]] = {}
+CONFIG_SERVICE_RESTART_HINTS: Dict[str, Dict[str, Any]] = {}
 CONFIG_GIT_PULL_HINTS: Dict[str, Dict[str, Any]] = {}
 for robot in CONFIG_ROBOTS:
     robot_key = str(robot.get("key") or "").strip()
@@ -441,6 +449,11 @@ for robot in CONFIG_ROBOTS:
     if isinstance(reboot_cfg, dict):
         CONFIG_REBOOT_HINTS[robot_key] = {
             "controls": bool(reboot_cfg.get("controls", True)),
+        }
+    service_restart_cfg = robot.get("service_restart")
+    if isinstance(service_restart_cfg, dict):
+        CONFIG_SERVICE_RESTART_HINTS[robot_key] = {
+            "controls": bool(service_restart_cfg.get("controls", True)),
         }
     git_pull_cfg = robot.get("git_pull")
     if isinstance(git_pull_cfg, dict):
@@ -826,6 +839,13 @@ def _reboot_flag_topic_for_robot(robot_id: str) -> str:
     return _topic(robot_id, "incoming", "flags/reboot")
 
 
+def _service_restart_flag_topic_for_robot(robot_id: str) -> str:
+    robot = _get_robot(robot_id)
+    if robot and robot.get("serviceRestartFlagTopic"):
+        return str(robot.get("serviceRestartFlagTopic"))
+    return _topic(robot_id, "incoming", "flags/service-restart")
+
+
 def _git_pull_flag_topic_for_robot(robot_id: str) -> str:
     robot = _get_robot(robot_id)
     if robot and robot.get("gitPullFlagTopic"):
@@ -971,6 +991,20 @@ def _robot_has_reboot_controls(robot_id: str) -> bool:
     component_type = str(robot.get("type") or "robots").strip().lower()
     if component_type and component_type != "robots":
         return False
+    if "rebootControls" in robot:
+        return bool(robot.get("rebootControls"))
+    return _default_capabilities_enabled(robot)
+
+
+def _robot_has_service_restart_controls(robot_id: str) -> bool:
+    robot = _get_robot(robot_id)
+    if not robot:
+        return False
+    component_type = str(robot.get("type") or "robots").strip().lower()
+    if component_type and component_type != "robots":
+        return False
+    if "serviceRestartControls" in robot:
+        return bool(robot.get("serviceRestartControls"))
     if "rebootControls" in robot:
         return bool(robot.get("rebootControls"))
     return _default_capabilities_enabled(robot)
@@ -1184,6 +1218,12 @@ def _publish_audio_flag(robot_id: str, enabled: bool) -> bool:
 def _publish_reboot_flag(robot_id: str) -> bool:
     payload = {"value": True}
     topic = _reboot_flag_topic_for_robot(robot_id)
+    return _publish_command(topic, payload, qos=1, retain=False)
+
+
+def _publish_service_restart_flag(robot_id: str) -> bool:
+    payload = {"value": True}
+    topic = _service_restart_flag_topic_for_robot(robot_id)
     return _publish_command(topic, payload, qos=1, retain=False)
 
 
@@ -1554,6 +1594,23 @@ def _handle_capabilities_payload(
             if isinstance(reboot_flag_topic, str) and reboot_flag_topic.strip():
                 entry["rebootFlagTopic"] = reboot_flag_topic.strip()
 
+        service_restart = None
+        if system is not None and isinstance(system.get("service_restart"), dict):
+            service_restart = system.get("service_restart")
+        elif system is not None and isinstance(system.get("service-restart"), dict):
+            service_restart = system.get("service-restart")
+        elif isinstance(value.get("service_restart"), dict):
+            service_restart = value.get("service_restart")
+        elif isinstance(value.get("service-restart"), dict):
+            service_restart = value.get("service-restart")
+        if isinstance(service_restart, dict):
+            service_restart_controls = _coerce_bool(service_restart.get("controls"))
+            service_restart_flag_topic = service_restart.get("flag_topic") or service_restart.get("topic")
+            if service_restart_controls is not None:
+                entry["serviceRestartControls"] = service_restart_controls
+            if isinstance(service_restart_flag_topic, str) and service_restart_flag_topic.strip():
+                entry["serviceRestartFlagTopic"] = service_restart_flag_topic.strip()
+
         git_pull = None
         if system is not None and isinstance(system.get("git_pull"), dict):
             git_pull = system.get("git_pull")
@@ -1753,6 +1810,8 @@ def _apply_robot_hints(robot_id: str, entry: Dict[str, Any]) -> None:
         entry.setdefault("autonomyControls", CONFIG_AUTONOMY_HINTS[entry_key].get("controls", True))
     if entry_key in CONFIG_REBOOT_HINTS:
         entry.setdefault("rebootControls", CONFIG_REBOOT_HINTS[entry_key].get("controls", True))
+    if entry_key in CONFIG_SERVICE_RESTART_HINTS:
+        entry.setdefault("serviceRestartControls", CONFIG_SERVICE_RESTART_HINTS[entry_key].get("controls", True))
     if entry_key in CONFIG_GIT_PULL_HINTS:
         entry.setdefault("gitPullControls", CONFIG_GIT_PULL_HINTS[entry_key].get("controls", True))
 
@@ -1883,6 +1942,7 @@ def _ui_robot_snapshot() -> list[Dict[str, Any]]:
                 "hasAutonomy": _robot_has_autonomy(robot_key),
                 "autonomyControls": _robot_has_autonomy_controls(robot_key),
                 "rebootControls": _robot_has_reboot_controls(robot_key),
+                "serviceRestartControls": _robot_has_service_restart_controls(robot_key),
                 "gitPullControls": _robot_has_git_pull_controls(robot_key),
                 "online": state["online"],
                 "connectionStatus": state["status"],
@@ -3024,8 +3084,10 @@ def _robot_options_html() -> str:
     <div class="row">
       <button id="stopBtn">STOP</button>
       <button id="rebootBtn">Reboot Robot</button>
+      <button id="serviceRestartBtn">Restart Service</button>
       <button id="gitPullBtn">Git Pull</button>
       <span id="rebootStatus" class="mono"></span>
+      <span id="serviceRestartStatus" class="mono"></span>
       <span id="gitPullStatus" class="mono"></span>
     </div>
     <div id="status" class="mono">Select a component to begin.</div>
@@ -3465,6 +3527,15 @@ function robotHasRebootControls(id) {
   return true;
 }
 
+function robotHasServiceRestartControls(id) {
+  const robot = findRobot(id);
+  if (!robot) return false;
+  if (robot.type && robot.type !== "robots") return false;
+  if (typeof robot.serviceRestartControls === "boolean") return robot.serviceRestartControls;
+  if (typeof robot.rebootControls === "boolean") return robot.rebootControls;
+  return true;
+}
+
 function robotHasGitPullControls(id) {
   const robot = findRobot(id);
   if (!robot) return false;
@@ -3534,12 +3605,14 @@ function renderRobotOptions(newRobots) {
   robotSelect.disabled = selectableRobots.length === 0;
   updateActiveRobotText();
   syncRebootControls();
+  syncServiceRestartControls();
   syncGitPullControls();
 }
 
 function handleRobotSelectionChanged(previousRobot) {
   updateActiveRobotText();
   syncRebootControls();
+  syncServiceRestartControls();
   syncGitPullControls();
   refreshVideoVisibility();
   refreshAudioVisibility();
@@ -5236,6 +5309,8 @@ const trnEl = document.getElementById('trn');
 const stopBtn = document.getElementById('stopBtn');
 const rebootBtn = document.getElementById('rebootBtn');
 const rebootStatusEl = document.getElementById('rebootStatus');
+const serviceRestartBtn = document.getElementById('serviceRestartBtn');
+const serviceRestartStatusEl = document.getElementById('serviceRestartStatus');
 const gitPullBtn = document.getElementById('gitPullBtn');
 const gitPullStatusEl = document.getElementById('gitPullStatus');
 let joystickActive = false;
@@ -5594,6 +5669,9 @@ stopBtn.addEventListener("click", () => { pressed.clear(); updateIndicators(); s
 if (rebootBtn) {
   rebootBtn.addEventListener("click", () => { sendRebootCommand().catch(console.error); });
 }
+if (serviceRestartBtn) {
+  serviceRestartBtn.addEventListener("click", () => { sendServiceRestartCommand().catch(console.error); });
+}
 if (gitPullBtn) {
   gitPullBtn.addEventListener("click", () => { sendGitPullCommand().catch(console.error); });
 }
@@ -5642,6 +5720,28 @@ function syncRebootControls() {
   }
 }
 
+function syncServiceRestartControls() {
+  if (!serviceRestartBtn || !serviceRestartStatusEl) return;
+  if (!currentRobot) {
+    serviceRestartBtn.disabled = true;
+    serviceRestartStatusEl.textContent = "";
+    return;
+  }
+  const isRobot = componentType(currentRobot) === "robots";
+  const hasControls = isRobot && robotHasServiceRestartControls(currentRobot);
+  serviceRestartBtn.disabled = !hasControls;
+  if (!isRobot) {
+    serviceRestartStatusEl.textContent = "Service restart unavailable for this component type.";
+  } else if (!hasControls) {
+    serviceRestartStatusEl.textContent = "No remote service restart controls.";
+  } else if (
+    serviceRestartStatusEl.textContent === "Service restart unavailable for this component type."
+    || serviceRestartStatusEl.textContent === "No remote service restart controls."
+  ) {
+    serviceRestartStatusEl.textContent = "";
+  }
+}
+
 function syncGitPullControls() {
   if (!gitPullBtn || !gitPullStatusEl) return;
   if (!currentRobot) {
@@ -5683,6 +5783,26 @@ async function sendRebootCommand() {
     rebootStatusEl.textContent = `Reboot failed: ${err.message || err}`;
   } finally {
     syncRebootControls();
+  }
+}
+
+async function sendServiceRestartCommand() {
+  if (!currentRobot) return;
+  if (componentType(currentRobot) !== "robots") return;
+  if (!robotHasServiceRestartControls(currentRobot)) return;
+  serviceRestartBtn.disabled = true;
+  serviceRestartStatusEl.textContent = "Sending service restart request...";
+  try {
+    const { ok, data } = await fetchJson(`/robots/${currentRobot}/service-restart`, { method: "POST" });
+    if (!ok) {
+      throw new Error(data.error || data.status || "Request failed.");
+    }
+    serviceRestartStatusEl.textContent = "Service restart requested.";
+  } catch (err) {
+    console.error(err);
+    serviceRestartStatusEl.textContent = `Service restart failed: ${err.message || err}`;
+  } finally {
+    syncServiceRestartControls();
   }
 }
 
@@ -5910,6 +6030,7 @@ function clearTelemetryUI(){
   statusEl.textContent = "Select a component to begin.";
   lightStatusEl.textContent = "Awaiting command...";
   if (rebootStatusEl) rebootStatusEl.textContent = "";
+  if (serviceRestartStatusEl) serviceRestartStatusEl.textContent = "";
   if (gitPullStatusEl) gitPullStatusEl.textContent = "";
   clearOdometryUI();
 }
@@ -6252,6 +6373,20 @@ def reboot_robot(robot_id: str):
     if not ok:
         return jsonify({"status": "mqtt-unavailable"}), 503
     return jsonify({"status": "ok", "topic": _reboot_flag_topic_for_robot(robot_id), "retain": False})
+
+
+@app.route("/robots/<robot_id>/service-restart", methods=["POST"])
+def service_restart_robot(robot_id: str):
+    robot = _ensure_robot(robot_id)
+    component_type = str(robot.get("type") or "robots").strip().lower()
+    if component_type != "robots":
+        return jsonify({"status": "unsupported"}), 403
+    if not _robot_has_service_restart_controls(robot_id):
+        return jsonify({"status": "unsupported"}), 403
+    ok = _publish_service_restart_flag(robot_id)
+    if not ok:
+        return jsonify({"status": "mqtt-unavailable"}), 503
+    return jsonify({"status": "ok", "topic": _service_restart_flag_topic_for_robot(robot_id), "retain": False})
 
 
 @app.route("/robots/<robot_id>/git-pull", methods=["POST"])

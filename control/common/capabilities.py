@@ -58,6 +58,11 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
     audio_ctl_cfg = mqtt_bridge_cfg.get("audio_control") if isinstance(mqtt_bridge_cfg.get("audio_control"), dict) else {}
     video_ctl_cfg = mqtt_bridge_cfg.get("video_control") if isinstance(mqtt_bridge_cfg.get("video_control"), dict) else {}
     reboot_ctl_cfg = mqtt_bridge_cfg.get("reboot_control") if isinstance(mqtt_bridge_cfg.get("reboot_control"), dict) else {}
+    service_restart_ctl_cfg = (
+        mqtt_bridge_cfg.get("service_restart_control")
+        if isinstance(mqtt_bridge_cfg.get("service_restart_control"), dict)
+        else {}
+    )
     git_pull_ctl_cfg = (
         mqtt_bridge_cfg.get("git_pull_control") if isinstance(mqtt_bridge_cfg.get("git_pull_control"), dict) else {}
     )
@@ -91,6 +96,7 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
         audio_ctl_cfg.get("command") or audio_ctl_cfg.get("publisher_command") or audio_ctl_cfg.get("receiver_command")
     )
     reboot_control_configured = bool(reboot_ctl_cfg.get("command"))
+    service_restart_control_configured = bool(service_restart_ctl_cfg.get("command"))
     git_pull_control_configured = bool(git_pull_ctl_cfg.get("command"))
 
     value: dict[str, Any] = {
@@ -147,6 +153,15 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
                 "available": True,
                 "controls": bool(mqtt_bridge_enabled and reboot_control_configured),
                 "flag_topic": _topic(bridge_topics, "reboot", identity.topic("incoming", "flags/reboot")),
+            },
+            "service_restart": {
+                "available": True,
+                "controls": bool(mqtt_bridge_enabled and service_restart_control_configured),
+                "flag_topic": _topic(
+                    bridge_topics,
+                    "service_restart",
+                    identity.topic("incoming", "flags/service-restart"),
+                ),
             },
             "git_pull": {
                 "available": True,

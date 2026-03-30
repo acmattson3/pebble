@@ -100,6 +100,7 @@
         "mqtt_audio": "pebble/robots/goob/incoming/flags/mqtt-audio",
         "mqtt_video": "pebble/robots/goob/incoming/flags/mqtt-video",
         "reboot": "pebble/robots/goob/incoming/flags/reboot",
+        "service_restart": "pebble/robots/goob/incoming/flags/service-restart",
         "git_pull": "pebble/robots/goob/incoming/flags/git-pull",
         "audio_control": "pebble/robots/goob/incoming/audio",
         "video_control": "pebble/robots/goob/incoming/front-camera"
@@ -184,6 +185,13 @@
         "ignore_retained": true,
         "env": {}
       },
+      "service_restart_control": {
+        "command": ["sudo", "-n", "/usr/bin/systemctl", "restart", "pebble-control.service"],
+        "cwd": "",
+        "cooldown_seconds": 10,
+        "ignore_retained": true,
+        "env": {}
+      },
       "git_pull_control": {
         "command": ["git", "-C", "/opt/pebble", "pull", "--ff-only"],
         "cwd": "",
@@ -241,6 +249,10 @@
             "low_rate_qos": 1,
             "high_rate_retain": false,
             "low_rate_retain": false
+          },
+          "health": {
+            "imu_sample_timeout_seconds": 5.0,
+            "exit_on_serial_error": true
           }
         }
       }
