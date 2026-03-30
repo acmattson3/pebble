@@ -1429,6 +1429,102 @@ def _handle_wheel_odometry_payload(
     )
 
 
+def _vector_dict(value: Any) -> Optional[Dict[str, float]]:
+    if not isinstance(value, dict):
+        return None
+    result: Dict[str, float] = {}
+    for axis in ("x", "y", "z"):
+        raw = value.get(axis)
+        if isinstance(raw, (int, float)) and math.isfinite(float(raw)):
+            result[axis] = float(raw)
+    return result or None
+
+
+def _handle_imu_payload(
+    robot_id: str,
+    payload: Dict[str, Any],
+    component_type: Optional[str] = None,
+    system: Optional[str] = None,
+) -> None:
+    values = payload.get("value") if isinstance(payload.get("value"), dict) else payload
+    if not isinstance(values, dict):
+        return
+
+    imu: Dict[str, Any] = {}
+    orientation = values.get("orientation_deg")
+    if isinstance(orientation, dict):
+        roll = orientation.get("roll")
+        pitch = orientation.get("pitch")
+        orientation_payload: Dict[str, float] = {}
+        if isinstance(roll, (int, float)) and math.isfinite(float(roll)):
+            orientation_payload["roll"] = float(roll)
+        if isinstance(pitch, (int, float)) and math.isfinite(float(pitch)):
+            orientation_payload["pitch"] = float(pitch)
+        if orientation_payload:
+            imu["orientation_deg"] = orientation_payload
+
+    accel = _vector_dict(values.get("accel_mps2"))
+    if accel:
+        imu["accel_mps2"] = accel
+
+    gyro = _vector_dict(values.get("gyro_dps"))
+    if gyro:
+        imu["gyro_dps"] = gyro
+
+    gyro_bias = _vector_dict(values.get("gyro_bias_dps"))
+    if gyro_bias:
+        imu["gyro_bias_dps"] = gyro_bias
+
+    temp_c = values.get("temp_c")
+    if isinstance(temp_c, (int, float)) and math.isfinite(float(temp_c)):
+        imu["temp_c"] = float(temp_c)
+
+    accel_norm_g = values.get("accel_norm_g")
+    if isinstance(accel_norm_g, (int, float)) and math.isfinite(float(accel_norm_g)):
+        imu["accel_norm_g"] = float(accel_norm_g)
+
+    health = values.get("health")
+    if isinstance(health, dict):
+        health_payload: Dict[str, Any] = {}
+        for key in ("device", "protocol", "instance"):
+            raw = health.get(key)
+            if isinstance(raw, str) and raw:
+                health_payload[key] = raw
+        for key in ("samples_ok", "samples_error", "calibration_samples"):
+            raw = health.get(key)
+            if isinstance(raw, (int, float)):
+                health_payload[key] = int(raw)
+        if health_payload:
+            imu["health"] = health_payload
+
+    seq = payload.get("seq")
+    if isinstance(seq, (int, float)):
+        imu["seq"] = int(seq)
+    mcu_ms = payload.get("mcu_ms")
+    if isinstance(mcu_ms, (int, float)):
+        imu["mcu_ms"] = int(mcu_ms)
+    t_ms = payload.get("t")
+    if isinstance(t_ms, (int, float)):
+        imu["t"] = int(t_ms)
+
+    if not imu:
+        return
+
+    robot_key = _robot_key(robot_id)
+    with telemetry_lock:
+        entry = telemetry_cache.setdefault(robot_key, {})
+        merged = dict(entry.get("imu") or {})
+        merged.update(imu)
+        entry["imu"] = merged
+    _record_heartbeat_sample(
+        robot_key,
+        component_type=component_type,
+        sent_at=_heartbeat_timestamp_seconds(payload),
+        explicit=False,
+        system=system,
+    )
+
+
 def _handle_status_payload(
     component_id: str,
     payload: Dict[str, Any],
@@ -2574,6 +2670,7 @@ def _on_mqtt_connect(client: mqtt.Client, _userdata: Any, _flags: Dict[str, Any]
         client.subscribe("+/+/+/outgoing/autonomy-files", qos=1)
         client.subscribe("+/+/+/outgoing/autonomy-status", qos=1)
         client.subscribe("+/+/+/outgoing/wheel-odometry", qos=1)
+        client.subscribe("+/+/+/outgoing/sensors/imu", qos=1)
         client.subscribe("+/+/+/outgoing/video-overlays", qos=1)
         for topic in CONFIG_AUDIO_TOPICS:
             logging.info("Subscribing to configured audio topic %s", topic)
@@ -2716,6 +2813,8 @@ def _on_mqtt_message(_client: mqtt.Client, _userdata: Any, msg: mqtt.MQTTMessage
         _handle_autonomy_status_payload(robot_key, payload)
     elif metric == "wheel-odometry":
         _handle_wheel_odometry_payload(robot_key, payload, component_type, system)
+    elif metric == "sensors/imu":
+        _handle_imu_payload(robot_key, payload, component_type, system)
     elif metric in ("video-overlays", "apriltag-data"):
         _handle_video_overlays_payload(robot_key, payload)
 
@@ -2854,6 +2953,9 @@ def _robot_options_html() -> str:
   .odometry-meta { margin-bottom:8px; }
   .odometry-wrap { width:100%; aspect-ratio:16/9; border:1px solid #d6d6d6; border-radius:10px; overflow:hidden; background:#f8fafc; }
   .odometry-wrap canvas { width:100%; height:100%; display:block; }
+  .imu-wrap { width:100%; aspect-ratio:1 / 1; max-height:260px; border:1px solid #d6d6d6; border-radius:10px; overflow:hidden; background:#f8fafc; margin-bottom:10px; }
+  .imu-wrap canvas { width:100%; height:100%; display:block; }
+  .imu-meta { display:grid; grid-template-columns: 1fr; gap:6px; }
   .video-card { grid-column: span 2; }
   @media (max-width: 1200px){ .video-card{ grid-column: span 1; } }
   .video-wrap { position:relative; width:100%; padding-top:56.25%; background:#000; border-radius:12px; overflow:hidden; }
@@ -3054,6 +3156,19 @@ def _robot_options_html() -> str:
     <div class="row mono">Offline for: <span id="offlineFor">–</span></div>
   </div>
 
+  <div class="card" id="imuCard">
+    <h2>IMU</h2>
+    <div class="imu-wrap">
+      <canvas id="imuCanvas"></canvas>
+    </div>
+    <div class="imu-meta mono">
+      <div id="imuOrientation">Roll: – | Pitch: –</div>
+      <div id="imuAccel">Accel: –</div>
+      <div id="imuGyro">Gyro: –</div>
+      <div id="imuHealth">Status: Awaiting data...</div>
+    </div>
+  </div>
+
   <div class="card odometry-card" id="odometryCard">
     <h2>Map & Location</h2>
     <div class="odometry-meta mono" id="odomMeta">Awaiting data...</div>
@@ -3162,6 +3277,7 @@ const connectionCard = document.getElementById('connectionCard');
 const driveCard = document.getElementById('driveCard');
 const lightsCard = document.getElementById('lightsCard');
 const touchCard = document.getElementById('touchCard');
+const imuCard = document.getElementById('imuCard');
 const odometryCard = document.getElementById('odometryCard');
 const soundboardCard = document.getElementById('soundboardCard');
 const autonomyCard = document.getElementById('autonomyCard');
@@ -3169,9 +3285,15 @@ const logsCard = document.getElementById('logsCard');
 const joystickBase = document.getElementById('joystickBase');
 const joystickThumb = document.getElementById('joystickThumb');
 const joystickStatus = document.getElementById('joystickStatus');
+const imuCanvas = document.getElementById('imuCanvas');
+const imuOrientationEl = document.getElementById('imuOrientation');
+const imuAccelEl = document.getElementById('imuAccel');
+const imuGyroEl = document.getElementById('imuGyro');
+const imuHealthEl = document.getElementById('imuHealth');
 const odomMeta = document.getElementById('odomMeta');
 const odomCanvas = document.getElementById('odomCanvas');
 const ODOM_TRAIL_MAX_POINTS = 320;
+let imuLatest = null;
 let odomTrail = [];
 let odomLastToken = null;
 let odomLatest = null;
@@ -3211,6 +3333,7 @@ function makeCardCollapsible(cardId) {
       // Ignore localStorage failures.
     }
     if (cardId === "videoCard") drawVideoOverlays();
+    if (cardId === "imuCard") drawImuPlot();
     if (cardId === "odometryCard") drawOdometryPlot();
   }
 
@@ -3233,6 +3356,7 @@ function initCollapsibleCards() {
     "driveCard",
     "lightsCard",
     "touchCard",
+    "imuCard",
     "odometryCard",
     "videoCard",
     "audioCard",
@@ -3544,6 +3668,7 @@ function handleRobotSelectionChanged(previousRobot) {
   refreshVideoVisibility();
   refreshAudioVisibility();
   if (previousRobot !== currentRobot) {
+    clearImuUI();
     clearOdometryUI();
     resetSoundboardState();
     renderSoundList();
@@ -3728,6 +3853,7 @@ function applyLayoutMode(isMobile) {
     moveCard(driveCard, mobileOptionsContent);
     moveCard(lightsCard, mobileOptionsContent);
     moveCard(touchCard, mobileOptionsContent);
+    moveCard(imuCard, mobileOptionsContent);
     moveCard(odometryCard, mobileOptionsContent);
     moveCard(audioCard, mobileOptionsContent);
     moveCard(soundboardCard, mobileOptionsContent);
@@ -3738,6 +3864,7 @@ function applyLayoutMode(isMobile) {
     moveCard(driveCard, desktopGrid);
     moveCard(lightsCard, desktopGrid);
     moveCard(touchCard, desktopGrid);
+    moveCard(imuCard, desktopGrid);
     moveCard(odometryCard, desktopGrid);
     moveCard(videoCard, desktopGrid);
     moveCard(audioCard, desktopGrid);
@@ -3751,12 +3878,14 @@ function updateLayoutMode() {
   const shouldMobile = prefersMobileLayout();
   if (shouldMobile === mobileMode) {
     drawVideoOverlays();
+    drawImuPlot();
     drawOdometryPlot();
     return;
   }
   mobileMode = shouldMobile;
   applyLayoutMode(mobileMode);
   drawVideoOverlays();
+  drawImuPlot();
   drawOdometryPlot();
   if (mobileMode) {
     setTimeout(updateJoystickMetrics, 0);
@@ -5169,6 +5298,7 @@ if (videoOverlayToggle) {
   });
 }
 window.addEventListener('resize', drawVideoOverlays);
+window.addEventListener('resize', drawImuPlot);
 window.addEventListener('beforeunload', () => {
   cleanupVideoStream();
   stopVideoOverlayLoop(true);
@@ -5754,6 +5884,158 @@ function clearOdometryUI() {
   drawOdometryPlot();
 }
 
+function formatVectorLine(label, value, unit) {
+  if (!value || typeof value !== "object") {
+    return `${label}: –`;
+  }
+  const x = Number(value.x);
+  const y = Number(value.y);
+  const z = Number(value.z);
+  if (![x, y, z].every(Number.isFinite)) {
+    return `${label}: –`;
+  }
+  return `${label}: x=${x.toFixed(2)} ${unit}, y=${y.toFixed(2)} ${unit}, z=${z.toFixed(2)} ${unit}`;
+}
+
+function clearImuUI() {
+  imuLatest = null;
+  if (imuOrientationEl) imuOrientationEl.textContent = "Roll: – | Pitch: –";
+  if (imuAccelEl) imuAccelEl.textContent = "Accel: –";
+  if (imuGyroEl) imuGyroEl.textContent = "Gyro: –";
+  if (imuHealthEl) imuHealthEl.textContent = "Status: Awaiting data...";
+  drawImuPlot();
+}
+
+function drawImuPlot() {
+  if (!imuCanvas) return;
+  const ctx = imuCanvas.getContext("2d");
+  if (!ctx) return;
+
+  const rect = imuCanvas.getBoundingClientRect();
+  const width = Math.max(1, Math.floor(rect.width));
+  const height = Math.max(1, Math.floor(rect.height));
+  const dpr = window.devicePixelRatio || 1;
+  imuCanvas.width = Math.max(1, Math.floor(width * dpr));
+  imuCanvas.height = Math.max(1, Math.floor(height * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillRect(0, 0, width, height);
+
+  const cx = width * 0.5;
+  const cy = height * 0.5;
+  const radius = Math.max(24, Math.min(width, height) * 0.34);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.clip();
+
+  const rollDeg = Number(imuLatest?.orientation_deg?.roll);
+  const pitchDeg = Number(imuLatest?.orientation_deg?.pitch);
+  const rollRad = Number.isFinite(rollDeg) ? (rollDeg * Math.PI / 180.0) : 0;
+  const pitchOffset = Number.isFinite(pitchDeg) ? clampValue((pitchDeg / 45.0) * radius, -radius * 0.85, radius * 0.85) : 0;
+
+  ctx.translate(cx, cy);
+  ctx.rotate(-rollRad);
+  ctx.fillStyle = "#9dd2ff";
+  ctx.fillRect(-radius * 2, -radius * 2 + pitchOffset, radius * 4, radius * 2 - pitchOffset);
+  ctx.fillStyle = "#d8c6a2";
+  ctx.fillRect(-radius * 2, pitchOffset, radius * 4, radius * 2);
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(-radius * 1.6, pitchOffset);
+  ctx.lineTo(radius * 1.6, pitchOffset);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.strokeStyle = "#334155";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = "#64748b";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx - radius, cy);
+  ctx.lineTo(cx + radius, cy);
+  ctx.moveTo(cx, cy - radius);
+  ctx.lineTo(cx, cy + radius);
+  ctx.stroke();
+
+  const accel = imuLatest?.accel_mps2;
+  const ax = Number(accel?.x);
+  const ay = Number(accel?.y);
+  if (Number.isFinite(ax) && Number.isFinite(ay)) {
+    const scale = Math.max(8, radius * 0.09);
+    const dx = clampValue(ax * scale, -radius * 0.8, radius * 0.8);
+    const dy = clampValue(-ay * scale, -radius * 0.8, radius * 0.8);
+    ctx.strokeStyle = "#dc2626";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + dx, cy + dy);
+    ctx.stroke();
+    ctx.fillStyle = "#dc2626";
+    ctx.beginPath();
+    ctx.arc(cx + dx, cy + dy, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "600 12px ui-monospace,monospace";
+  ctx.fillText("Roll / Pitch", 12, 20);
+  ctx.fillStyle = "#475569";
+  ctx.fillText("Accel vector", 12, 38);
+}
+
+function updateImuFromTelemetry(imu) {
+  if (!imu || typeof imu !== "object") {
+    clearImuUI();
+    return;
+  }
+  imuLatest = imu;
+
+  const roll = Number(imu.orientation_deg?.roll);
+  const pitch = Number(imu.orientation_deg?.pitch);
+  const temp = Number(imu.temp_c);
+  const accelNormG = Number(imu.accel_norm_g);
+  const samplesOk = Number(imu.health?.samples_ok);
+  const samplesErr = Number(imu.health?.samples_error);
+  const cal = Number(imu.health?.calibration_samples);
+
+  if (imuOrientationEl) {
+    const parts = [
+      `Roll: ${Number.isFinite(roll) ? `${roll.toFixed(1)}°` : "–"}`,
+      `Pitch: ${Number.isFinite(pitch) ? `${pitch.toFixed(1)}°` : "–"}`,
+    ];
+    if (Number.isFinite(temp)) parts.push(`Temp: ${temp.toFixed(1)} C`);
+    imuOrientationEl.textContent = parts.join(" | ");
+  }
+  if (imuAccelEl) {
+    let line = formatVectorLine("Accel", imu.accel_mps2, "m/s^2");
+    if (Number.isFinite(accelNormG)) {
+      line += ` | |a|=${accelNormG.toFixed(3)} g`;
+    }
+    imuAccelEl.textContent = line;
+  }
+  if (imuGyroEl) {
+    imuGyroEl.textContent = formatVectorLine("Gyro", imu.gyro_dps, "dps");
+  }
+  if (imuHealthEl) {
+    const parts = [];
+    if (Number.isFinite(samplesOk)) parts.push(`ok=${samplesOk.toFixed(0)}`);
+    if (Number.isFinite(samplesErr)) parts.push(`err=${samplesErr.toFixed(0)}`);
+    if (Number.isFinite(cal)) parts.push(`cal=${cal.toFixed(0)}`);
+    if (Number.isFinite(Number(imu.seq))) parts.push(`seq=${Number(imu.seq).toFixed(0)}`);
+    imuHealthEl.textContent = parts.length ? `Status: ${parts.join(" | ")}` : "Status: Live IMU sample";
+  }
+  drawImuPlot();
+}
+
 function drawOdometryPlot() {
   if (!odomCanvas) return;
   const ctx = odomCanvas.getContext("2d");
@@ -5911,6 +6193,7 @@ function clearTelemetryUI(){
   lightStatusEl.textContent = "Awaiting command...";
   if (rebootStatusEl) rebootStatusEl.textContent = "";
   if (gitPullStatusEl) gitPullStatusEl.textContent = "";
+  clearImuUI();
   clearOdometryUI();
 }
 
@@ -5970,6 +6253,7 @@ async function pollTelemetry(){
     }
 
     updateOdometryFromTelemetry(t.odometry);
+    updateImuFromTelemetry(t.imu);
   } catch(e) { console.error(e); }
 }
 setInterval(pollTelemetry, 200);
