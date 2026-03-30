@@ -39,6 +39,7 @@ class CapabilitiesTests(unittest.TestCase):
         self.assertEqual(value["video"]["overlays_topic"], "pebble/robots/capbot/outgoing/video-overlays")
         self.assertEqual(value["audio"]["uplink_topic"], "pebble/robots/capbot/incoming/audio-stream")
         self.assertEqual(value["autonomy"]["command_topic"], "pebble/robots/capbot/incoming/autonomy-command")
+        self.assertEqual(value["system"]["service_restart"]["flag_topic"], "pebble/robots/capbot/incoming/flags/service-restart")
         self.assertEqual(value["system"]["git_pull"]["flag_topic"], "pebble/robots/capbot/incoming/flags/git-pull")
 
     def test_build_capabilities_value_disabled_services(self):
@@ -57,6 +58,7 @@ class CapabilitiesTests(unittest.TestCase):
         self.assertFalse(value["telemetry"]["touch_sensors"])
         self.assertFalse(value["soundboard"]["available"])
         self.assertFalse(value["autonomy"]["available"])
+        self.assertFalse(value["system"]["service_restart"]["controls"])
         self.assertFalse(value["system"]["git_pull"]["controls"])
 
     def test_drive_capability_can_come_from_ros1_bridge(self):
@@ -137,6 +139,23 @@ class CapabilitiesTests(unittest.TestCase):
         reboot = value["system"]["reboot"]
         self.assertTrue(reboot["controls"])
         self.assertEqual(reboot["flag_topic"], "custom/reboot")
+
+    def test_service_restart_capability_follows_service_restart_command(self):
+        config = make_base_config("capbot")
+        value = build_capabilities_value(config)
+        service_restart = value["system"]["service_restart"]
+        self.assertTrue(service_restart["available"])
+        self.assertFalse(service_restart["controls"])
+        self.assertEqual(service_restart["flag_topic"], "pebble/robots/capbot/incoming/flags/service-restart")
+
+        config["services"]["mqtt_bridge"]["service_restart_control"] = {
+            "command": ["sudo", "-n", "/usr/bin/systemctl", "restart", "pebble-control.service"]
+        }
+        config["services"]["mqtt_bridge"]["topics"] = {"service_restart": "custom/service-restart"}
+        value = build_capabilities_value(config)
+        service_restart = value["system"]["service_restart"]
+        self.assertTrue(service_restart["controls"])
+        self.assertEqual(service_restart["flag_topic"], "custom/service-restart")
 
 
 if __name__ == "__main__":

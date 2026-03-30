@@ -300,6 +300,13 @@ class UnifiedConfigTests(unittest.TestCase):
                         "files_topic": "pebble/robots/testbot/outgoing/autonomy-files-custom",
                         "status_topic": "pebble/robots/testbot/outgoing/autonomy-status-custom",
                     },
+                    "system": {
+                        "service_restart": {
+                            "available": True,
+                            "controls": True,
+                            "flag_topic": "pebble/robots/testbot/incoming/flags/service-restart-custom",
+                        }
+                    },
                 },
             }
             module._handle_capabilities_payload("testbot", payload, "robots")
@@ -335,6 +342,10 @@ class UnifiedConfigTests(unittest.TestCase):
             self.assertEqual(
                 module._autonomy_status_topic_for_robot("testbot"),
                 "pebble/robots/testbot/outgoing/autonomy-status-custom",
+            )
+            self.assertEqual(
+                module._service_restart_flag_topic_for_robot("testbot"),
+                "pebble/robots/testbot/incoming/flags/service-restart-custom",
             )
 
     def test_web_audio_buffer_resets_on_sequence_rewind(self):

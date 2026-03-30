@@ -113,13 +113,14 @@ class MqttBridgeTests(unittest.TestCase):
             bridge._on_local_message(None, None, video_flag_false)  # type: ignore[arg-type]
             self.assertIsNone(bridge.video_process)
 
-    def test_local_connect_subscribes_reboot_and_git_pull_flag_topics(self):
+    def test_local_connect_subscribes_system_flag_topics(self):
         bridge = self._bridge()
         bridge.local_client = FakeMqttClient()
 
         bridge._on_local_connect(bridge.local_client, None, {}, 0)  # type: ignore[arg-type]
         subscribed_topics = {topic for topic, _qos in bridge.local_client.subscribe_calls}
         self.assertIn(bridge.reboot_flag_topic, subscribed_topics)
+        self.assertIn(bridge.service_restart_flag_topic, subscribed_topics)
         self.assertIn(bridge.git_pull_flag_topic, subscribed_topics)
 
     def test_reboot_flag_triggers_reboot_command(self):
@@ -144,6 +145,35 @@ class MqttBridgeTests(unittest.TestCase):
             false_msg = FakeMqttMessage(topic=bridge.reboot_flag_topic, payload=b'{"value":false}', retain=False)
             bridge._on_local_message(None, None, false_msg)  # type: ignore[arg-type]
             retained_true_msg = FakeMqttMessage(topic=bridge.reboot_flag_topic, payload=b'{"value":true}', retain=True)
+            bridge._on_local_message(None, None, retained_true_msg)  # type: ignore[arg-type]
+            self.assertEqual(len(popen_factory.calls), 0)
+
+    def test_service_restart_flag_triggers_command(self):
+        bridge = self._bridge()
+        bridge.service_restart_control_cfg = {"command": ["echo", "restart-service"]}
+        bridge.service_restart_cooldown_seconds = 0.0
+        popen_factory = FakePopenFactory()
+
+        with mock.patch("control.services.mqtt_bridge.subprocess.Popen", new=popen_factory):
+            msg = FakeMqttMessage(topic=bridge.service_restart_flag_topic, payload=b'{"value":true}', retain=False)
+            bridge._on_local_message(None, None, msg)  # type: ignore[arg-type]
+            self.assertEqual(len(popen_factory.calls), 1)
+
+    def test_service_restart_flag_ignores_false_and_retained_messages(self):
+        bridge = self._bridge()
+        bridge.service_restart_control_cfg = {"command": ["echo", "restart-service"]}
+        bridge.service_restart_cooldown_seconds = 0.0
+        bridge.service_restart_ignore_retained = True
+        popen_factory = FakePopenFactory()
+
+        with mock.patch("control.services.mqtt_bridge.subprocess.Popen", new=popen_factory):
+            false_msg = FakeMqttMessage(topic=bridge.service_restart_flag_topic, payload=b'{"value":false}', retain=False)
+            bridge._on_local_message(None, None, false_msg)  # type: ignore[arg-type]
+            retained_true_msg = FakeMqttMessage(
+                topic=bridge.service_restart_flag_topic,
+                payload=b'{"value":true}',
+                retain=True,
+            )
             bridge._on_local_message(None, None, retained_true_msg)  # type: ignore[arg-type]
             self.assertEqual(len(popen_factory.calls), 0)
 

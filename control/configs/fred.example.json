@@ -104,6 +104,7 @@
         "mqtt_audio": "pebble/robots/fred/incoming/flags/mqtt-audio",
         "mqtt_video": "pebble/robots/fred/incoming/flags/mqtt-video",
         "reboot": "pebble/robots/fred/incoming/flags/reboot",
+        "service_restart": "pebble/robots/fred/incoming/flags/service-restart",
         "git_pull": "pebble/robots/fred/incoming/flags/git-pull",
         "audio_control": "pebble/robots/fred/incoming/audio",
         "video_control": "pebble/robots/fred/incoming/front-camera"
@@ -185,6 +186,13 @@
         "command": ["sudo", "-n", "/sbin/reboot"],
         "cwd": "",
         "cooldown_seconds": 30,
+        "ignore_retained": true,
+        "env": {}
+      },
+      "service_restart_control": {
+        "command": ["sudo", "-n", "/usr/bin/systemctl", "restart", "pebble-control.service"],
+        "cwd": "",
+        "cooldown_seconds": 10,
         "ignore_retained": true,
         "env": {}
       },

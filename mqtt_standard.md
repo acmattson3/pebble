@@ -303,6 +303,7 @@ Here `{base}` means `{system}/{type}/{id}` in the current repository.
 | `{base}/incoming/flags/mqtt-audio` | web UI | MQTT bridge | Optional media gating flag. |
 | `{base}/incoming/flags/mqtt-video` | web UI | MQTT bridge | Optional media gating flag. |
 | `{base}/incoming/flags/reboot` | web UI | MQTT bridge | Optional one-shot reboot control. |
+| `{base}/incoming/flags/service-restart` | web UI | MQTT bridge | Optional one-shot service restart control. |
 | `{base}/incoming/flags/git-pull` | web UI | MQTT bridge | Optional one-shot repo-update control. |
 
 #### Outgoing Topics Implemented Here
@@ -356,6 +357,7 @@ This currently applies to:
 - `incoming/flags/mqtt-audio`
 - `incoming/flags/mqtt-video`
 - `incoming/flags/reboot`
+- `incoming/flags/service-restart`
 - `incoming/flags/git-pull`
 
 ### 8.3 Example Drive Payload Used Here
@@ -465,6 +467,7 @@ The current repository may populate the following `value` sections:
 - `soundboard`
 - `autonomy`
 - `system.reboot`
+- `system.service_restart`
 - `system.git_pull`
 - `drive`
 - `lights`
@@ -765,6 +768,7 @@ are implementation details, not part of the general standard itself.
 | `services.mqtt_bridge.topics.mqtt_audio` | `incoming/flags/mqtt-audio` |
 | `services.mqtt_bridge.topics.mqtt_video` | `incoming/flags/mqtt-video` |
 | `services.mqtt_bridge.topics.reboot` | `incoming/flags/reboot` |
+| `services.mqtt_bridge.topics.service_restart` | `incoming/flags/service-restart` |
 | `services.mqtt_bridge.topics.git_pull` | `incoming/flags/git-pull` |
 | `services.mqtt_bridge.topics.audio_control` | `incoming/audio` |
 | `services.mqtt_bridge.topics.video_control` | `incoming/front-camera` |

@@ -97,6 +97,14 @@ add this in `sudo visudo` so reboot can run without a password prompt:
 username ALL=(root) NOPASSWD: /sbin/reboot
 ```
 
+If you enable remote service-restart control (`services.mqtt_bridge.service_restart_control.command`),
+add the matching `systemctl` line in `sudo visudo` so the runtime user can restart
+`pebble-control.service` without a password prompt:
+
+```text
+username ALL=(root) NOPASSWD: /usr/bin/systemctl restart pebble-control.service
+```
+
 If you enable remote git-pull control (`services.mqtt_bridge.git_pull_control.command`),
 ensure the runtime service user can run `git pull` in `/opt/pebble` without prompts
 (repo ownership + non-interactive auth keys/tokens as needed).

@@ -131,6 +131,15 @@ Reboot integration:
   - `Reboot Robot` button appears for `type=robots` components.
   - if capabilities advertise `system.reboot.controls=false`, the button is disabled.
 
+Service-restart integration:
+- publishes to:
+  - `{system}/{type}/{id}/incoming/flags/service-restart`
+- payload:
+  - `{ "value": true }` with `retain=false` (one-shot request).
+- UI behavior:
+  - `Restart Service` button appears for `type=robots` components.
+  - if capabilities advertise `system.service_restart.controls=false`, the button is disabled.
+
 Autonomy integration:
 - subscribes to:
   - `{system}/{type}/{id}/outgoing/autonomy-files` (retained)

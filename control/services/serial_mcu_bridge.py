@@ -117,6 +117,7 @@ class SerialMcuBridge:
         self.serial_lock = threading.Lock()
         self.telemetry_lock = threading.Lock()
         self.reconnect_lock = threading.Lock()
+        self.failure_lock = threading.Lock()
 
         self.ser: Optional[serial.Serial] = None
         self.client: Optional[mqtt.Client] = None
@@ -142,6 +143,11 @@ class SerialMcuBridge:
 
         self.last_imu_motion_value: Optional[dict[str, Any]] = None
         self.last_imu_low_payload: Optional[dict[str, Any]] = None
+        self.last_imu_sample_at = time.monotonic()
+        self.imu_sample_timeout_seconds = 0.0
+        self.imu_watchdog_armed = False
+        self.exit_on_serial_error = False
+        self.fatal_error: Optional[str] = None
 
         self.standard_rx_buffer = bytearray()
         self.standard_discovery: Optional[dict[str, Any]] = None
@@ -158,6 +164,35 @@ class SerialMcuBridge:
         telemetry_cfg = self.service_cfg.get("telemetry") if isinstance(self.service_cfg.get("telemetry"), dict) else {}
         safety_cfg = self.service_cfg.get("safety") if isinstance(self.service_cfg.get("safety"), dict) else {}
         publish_cfg = self.service_cfg.get("publish") if isinstance(self.service_cfg.get("publish"), dict) else {}
+        health_cfg = self.service_cfg.get("health") if isinstance(self.service_cfg.get("health"), dict) else {}
+
+        named_imu_instance = (self.instance_name or "").strip().lower() == "imu"
+        default_imu_timeout = 0.0
+        if self.protocol_name == PROTOCOL_IMU_MPU6050_V1:
+            default_imu_timeout = 5.0
+        elif self.protocol_name == PROTOCOL_PEBBLE_SERIAL_V1 and named_imu_instance:
+            default_imu_timeout = 5.0
+        timeout_raw = health_cfg.get("imu_sample_timeout_seconds")
+        try:
+            timeout_value = float(timeout_raw if timeout_raw is not None else default_imu_timeout)
+        except (TypeError, ValueError):
+            timeout_value = default_imu_timeout
+        self.imu_sample_timeout_seconds = max(0.0, timeout_value)
+        self.imu_watchdog_armed = bool(
+            self.imu_sample_timeout_seconds > 0.0
+            and (
+                self.protocol_name == PROTOCOL_IMU_MPU6050_V1
+                or (self.protocol_name == PROTOCOL_PEBBLE_SERIAL_V1 and named_imu_instance)
+            )
+        )
+        self.exit_on_serial_error = bool(
+            health_cfg.get(
+                "exit_on_serial_error",
+                self.protocol_name == PROTOCOL_IMU_MPU6050_V1
+                or (self.protocol_name == PROTOCOL_PEBBLE_SERIAL_V1 and named_imu_instance),
+            )
+        )
+        self.last_imu_sample_at = time.monotonic()
 
         interval_raw = self.service_cfg.get("retained_publish_interval_seconds")
         try:
@@ -238,7 +273,11 @@ class SerialMcuBridge:
                 self._republish_charge_level_if_due()
             elif self.protocol_name == PROTOCOL_PEBBLE_SERIAL_V1:
                 self._standard_discovery_tick()
+            self._imu_watchdog_tick()
             self.stop_event.wait(0.05)
+        fatal_error = self._fatal_error_message()
+        if fatal_error:
+            raise SystemExit(fatal_error)
 
     def stop(self) -> None:
         self.stop_event.set()
@@ -289,6 +328,8 @@ class SerialMcuBridge:
         time.sleep(0.5)
         ser.reset_input_buffer()
         self.ser = ser
+        with self.telemetry_lock:
+            self.last_imu_sample_at = time.monotonic()
         logging.info("Serial connected on %s @ %d for %s", self.serial_port, self.baud, self.service_name)
 
     def _start_serial_reader(self) -> None:
@@ -304,7 +345,8 @@ class SerialMcuBridge:
                     read_size = getattr(self.ser, "in_waiting", 0) or 1
                     raw = self.ser.read(read_size)
                 except serial.SerialException as exc:
-                    logging.error("Serial read failed for %s: %s", self.service_name, exc)
+                    if self._handle_serial_failure("read", exc):
+                        return
                     time.sleep(0.5)
                     continue
                 if not raw:
@@ -315,7 +357,8 @@ class SerialMcuBridge:
             try:
                 raw = self.ser.readline()
             except serial.SerialException as exc:
-                logging.error("Serial read failed for %s: %s", self.service_name, exc)
+                if self._handle_serial_failure("read", exc):
+                    return
                 time.sleep(0.5)
                 continue
             if not raw:
@@ -448,6 +491,7 @@ class SerialMcuBridge:
 
         self.standard_discovery = payload
         self.standard_interfaces_by_id = {}
+        saw_imu_profile = False
         for interface in interfaces:
             if not isinstance(interface, dict):
                 continue
@@ -456,8 +500,13 @@ class SerialMcuBridge:
             except (KeyError, TypeError, ValueError):
                 continue
             self.standard_interfaces_by_id[interface_id] = interface
+            if self._is_imu_profile(interface.get("profile")):
+                saw_imu_profile = True
             if str(interface.get("dir") or "").strip().lower() == "in":
                 self._register_standard_command_topics(interface_id, interface)
+
+        if saw_imu_profile:
+            self._arm_imu_watchdog()
 
         if self.standard_discovery is not None:
             self._publish_json(self._standard_discovery_topic(), self.standard_discovery, qos=1, retain=True)
@@ -508,6 +557,10 @@ class SerialMcuBridge:
             logging.warning("Failed to decode interface_id=%d: %s", packet.interface_id, exc)
             return
 
+        profile = str(interface.get("profile") or "").strip().lower()
+        if self._is_imu_profile(profile):
+            self._note_imu_telemetry()
+
         generic_payload = self._standard_generic_payload(interface, packet, values)
         generic_topic = self._standard_generic_topic("outgoing", str(interface.get("name") or f"iface-{packet.interface_id}"))
         qos = 1 if is_state else 0
@@ -518,7 +571,6 @@ class SerialMcuBridge:
         if alias_topic is not None:
             alias_payload = self._standard_alias_payload(interface, packet, values, generic_payload)
             self._publish_json(alias_topic, alias_payload, qos=qos, retain=retain)
-            profile = str(interface.get("profile") or "").strip().lower()
             if profile == "imu.summary.v1":
                 with self.telemetry_lock:
                     self.last_imu_low_payload = alias_payload
@@ -691,6 +743,45 @@ class SerialMcuBridge:
             logging.debug("[%s] %s", self.service_name, line)
             return
         logging.info("[%s] %s", self.service_name, line)
+
+    @staticmethod
+    def _is_imu_profile(profile: Any) -> bool:
+        return str(profile or "").strip().lower() in {"imu.motion.v1", "imu.summary.v1"}
+
+    def _arm_imu_watchdog(self) -> None:
+        if self.imu_sample_timeout_seconds <= 0:
+            return
+        with self.telemetry_lock:
+            self.imu_watchdog_armed = True
+            self.last_imu_sample_at = time.monotonic()
+
+    def _note_imu_telemetry(self) -> None:
+        if self.imu_sample_timeout_seconds <= 0:
+            return
+        with self.telemetry_lock:
+            self.imu_watchdog_armed = True
+            self.last_imu_sample_at = time.monotonic()
+
+    def _fatal_error_message(self) -> Optional[str]:
+        with self.failure_lock:
+            return self.fatal_error
+
+    def _set_fatal_error(self, message: str) -> None:
+        should_log = False
+        with self.failure_lock:
+            if self.fatal_error is None:
+                self.fatal_error = message
+                should_log = True
+        if should_log:
+            logging.error("%s", message)
+        self.stop_event.set()
+
+    def _handle_serial_failure(self, operation: str, exc: Exception) -> bool:
+        if not self.exit_on_serial_error:
+            logging.error("Serial %s failed for %s: %s", operation, self.service_name, exc)
+            return False
+        self._set_fatal_error(f"Serial {operation} failed for {self.service_name}: {exc}")
+        return True
 
     @staticmethod
     def _parse_key_value_tokens(line: str) -> dict[str, str]:
@@ -872,6 +963,7 @@ class SerialMcuBridge:
         self.next_charge_level_republish_at = time.time() + self.retained_publish_interval_seconds
 
     def _handle_imu_high_rate_telemetry(self, data: dict[str, Any]) -> None:
+        self._note_imu_telemetry()
         motion_value = {
             "accel_mps2": _vector_payload({"x": data["ax"], "y": data["ay"], "z": data["az"]}),
             "gyro_dps": _vector_payload({"x": data["gx"], "y": data["gy"], "z": data["gz"]}),
@@ -897,6 +989,7 @@ class SerialMcuBridge:
         )
 
     def _handle_imu_low_rate_telemetry(self, data: dict[str, Any]) -> None:
+        self._note_imu_telemetry()
         with self.telemetry_lock:
             motion_value = dict(self.last_imu_motion_value or {})
 
@@ -1123,7 +1216,8 @@ class SerialMcuBridge:
                 self.ser.write(data)
                 self.ser.flush()
             except serial.SerialException as exc:
-                logging.error("Failed serial write for %s: %s", description, exc)
+                if self._handle_serial_failure(f"write ({description})", exc):
+                    return
 
     def _send_drive_stop(self, reason: str) -> None:
         self._send_serial_line("M", "0.000", "0.000")
@@ -1142,6 +1236,20 @@ class SerialMcuBridge:
             return
         self._send_drive_stop(reason="command-timeout")
         self.drive_timed_out = True
+
+    def _imu_watchdog_tick(self) -> None:
+        timeout = self.imu_sample_timeout_seconds
+        if timeout <= 0:
+            return
+        with self.telemetry_lock:
+            if not self.imu_watchdog_armed:
+                return
+            elapsed = time.monotonic() - self.last_imu_sample_at
+        if elapsed <= timeout:
+            return
+        self._set_fatal_error(
+            f"{self.service_name} IMU telemetry stalled for {elapsed:.1f}s; exiting for launcher restart"
+        )
 
 
 def _parse_args() -> argparse.Namespace:
