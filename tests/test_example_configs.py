@@ -14,6 +14,7 @@ EXAMPLE_CONFIGS = [
     REPO_ROOT / "control" / "configs" / "config.json.example",
     REPO_ROOT / "control" / "configs" / "fred.example.json",
     REPO_ROOT / "control" / "configs" / "goob.example.json",
+    REPO_ROOT / "control" / "configs" / "husky.example.json",
 ]
 
 
@@ -52,13 +53,21 @@ class ExampleConfigTests(unittest.TestCase):
         for path in EXAMPLE_CONFIGS:
             with self.subTest(config=path.name):
                 config = self._load_config(path)
+                av_cfg = service_cfg(config, "av_daemon")
+                av_enabled = bool(av_cfg.get("enabled", False))
+                video_cfg = av_cfg.get("video") if isinstance(av_cfg.get("video"), dict) else {}
+                audio_cfg = av_cfg.get("audio") if isinstance(av_cfg.get("audio"), dict) else {}
+                video_expected = av_enabled and bool(video_cfg.get("enabled", True))
+                audio_expected = av_enabled and bool(audio_cfg.get("enabled", True))
                 bridge_cfg = service_cfg(config, "mqtt_bridge")
                 video_ctl = bridge_cfg.get("video_control") if isinstance(bridge_cfg.get("video_control"), dict) else {}
                 audio_ctl = bridge_cfg.get("audio_control") if isinstance(bridge_cfg.get("audio_control"), dict) else {}
 
-                self._assert_command_script_exists(path, list(video_ctl.get("command") or []))
-                self._assert_command_script_exists(path, list(audio_ctl.get("publisher_command") or []))
-                self._assert_command_script_exists(path, list(audio_ctl.get("receiver_command") or []))
+                if video_expected:
+                    self._assert_command_script_exists(path, list(video_ctl.get("command") or []))
+                if audio_expected:
+                    self._assert_command_script_exists(path, list(audio_ctl.get("publisher_command") or []))
+                    self._assert_command_script_exists(path, list(audio_ctl.get("receiver_command") or []))
 
     def test_example_configs_reference_existing_autonomy_entrypoints(self):
         for path in EXAMPLE_CONFIGS:

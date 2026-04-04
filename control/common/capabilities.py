@@ -47,6 +47,7 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
 
     bridge_topics = mqtt_bridge_cfg.get("topics") if isinstance(mqtt_bridge_cfg.get("topics"), dict) else {}
     ros1_topics = ros1_bridge_cfg.get("topics") if isinstance(ros1_bridge_cfg.get("topics"), dict) else {}
+    ros1_drive_cfg = ros1_bridge_cfg.get("drive") if isinstance(ros1_bridge_cfg.get("drive"), dict) else {}
     ros1_telemetry_cfg = ros1_bridge_cfg.get("telemetry") if isinstance(ros1_bridge_cfg.get("telemetry"), dict) else {}
     ros1_charge_status_cfg = (
         ros1_telemetry_cfg.get("charging_status") if isinstance(ros1_telemetry_cfg.get("charging_status"), dict) else {}
@@ -82,6 +83,7 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
 
     mqtt_bridge_enabled = _truthy(mqtt_bridge_cfg.get("enabled"), False)
     ros1_bridge_enabled = _truthy(ros1_bridge_cfg.get("enabled"), False)
+    ros1_drive_enabled = ros1_bridge_enabled and _truthy(ros1_drive_cfg.get("enabled"), True)
     serial_enabled = bool(serial_base_cfg)
     ros1_charging_status_enabled = ros1_bridge_enabled and _truthy(ros1_charge_status_cfg.get("enabled"), False)
     touch_publish_enabled = _truthy(serial_telemetry_cfg.get("publish_touch_sensors"), False)
@@ -170,10 +172,11 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
             },
         },
         "drive": {
-            "available": bool(serial_enabled or ros1_bridge_enabled),
+            "available": bool(serial_enabled or ros1_drive_enabled),
+            "controls": bool(serial_enabled or ros1_drive_enabled),
             "topic": str(
                 serial_topics.get("drive_values")
-                or ros1_topics.get("drive_values")
+                or (ros1_topics.get("drive_values") if ros1_drive_enabled else "")
                 or identity.topic("incoming", "drive-values")
             ),
         },

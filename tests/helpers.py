@@ -181,6 +181,9 @@ def make_base_config(robot_id: str = "testbot") -> dict[str, Any]:
             },
             "ros1_bridge": {
                 "enabled": False,
+                "drive": {
+                    "enabled": True,
+                },
                 "topics": {
                     "drive_values": f"pebble/robots/{robot_id}/incoming/drive-values",
                     "wheel_odometry": f"pebble/robots/{robot_id}/outgoing/wheel-odometry",

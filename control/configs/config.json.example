@@ -205,6 +205,9 @@
     "ros1_bridge": {
       "enabled": false,
       "log_level": "INFO",
+      "drive": {
+        "enabled": true
+      },
       "topics": {
         "drive_values": "pebble/robots/my-robot/incoming/drive-values",
         "wheel_odometry": "pebble/robots/my-robot/outgoing/wheel-odometry",

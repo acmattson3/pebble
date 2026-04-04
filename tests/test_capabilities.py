@@ -33,6 +33,7 @@ class CapabilitiesTests(unittest.TestCase):
         self.assertTrue(value["video"]["available"])
         self.assertTrue(value["audio"]["available"])
         self.assertTrue(value["drive"]["available"])
+        self.assertTrue(value["drive"]["controls"])
         self.assertTrue(value["soundboard"]["available"])
         self.assertTrue(value["autonomy"]["available"])
         self.assertEqual(value["video"]["topic"], "pebble/robots/capbot/outgoing/front-camera")
@@ -54,6 +55,7 @@ class CapabilitiesTests(unittest.TestCase):
         self.assertFalse(value["video"]["available"])
         self.assertFalse(value["audio"]["available"])
         self.assertFalse(value["drive"]["available"])
+        self.assertFalse(value["drive"]["controls"])
         self.assertFalse(value["lights"]["solid"])
         self.assertFalse(value["telemetry"]["touch_sensors"])
         self.assertFalse(value["soundboard"]["available"])
@@ -69,7 +71,20 @@ class CapabilitiesTests(unittest.TestCase):
 
         value = build_capabilities_value(config)
         self.assertTrue(value["drive"]["available"])
+        self.assertTrue(value["drive"]["controls"])
         self.assertEqual("custom/drive", value["drive"]["topic"])
+
+    def test_drive_capability_is_disabled_when_ros1_drive_forwarding_is_disabled(self):
+        config = make_base_config("capbot")
+        config["services"]["serial_mcu_bridge"]["enabled"] = False
+        config["services"]["ros1_bridge"]["enabled"] = True
+        config["services"]["ros1_bridge"]["drive"] = {"enabled": False}
+        config["services"]["ros1_bridge"]["topics"] = {"drive_values": "custom/drive"}
+
+        value = build_capabilities_value(config)
+        self.assertFalse(value["drive"]["available"])
+        self.assertFalse(value["drive"]["controls"])
+        self.assertEqual("pebble/robots/capbot/incoming/drive-values", value["drive"]["topic"])
 
     def test_charging_status_capability_can_come_from_ros1_bridge(self):
         config = make_base_config("capbot")
@@ -121,6 +136,7 @@ class CapabilitiesTests(unittest.TestCase):
         }
         value = build_capabilities_value(config)
         self.assertTrue(value["drive"]["available"])
+        self.assertTrue(value["drive"]["controls"])
         self.assertTrue(value["lights"]["solid"])
         self.assertTrue(value["telemetry"]["touch_sensors"])
         self.assertEqual("custom/drive", value["drive"]["topic"])

@@ -218,6 +218,9 @@ class Ros1Bridge:
         )
         self.diagnostics_ros_topic = str(ros_cfg.get("diagnostics_topic") or "/diagnostics_agg")
 
+        drive_cfg = _as_dict(self.service_cfg.get("drive"))
+        self.drive_enabled = bool(drive_cfg.get("enabled", True))
+
         motion_cfg = _as_dict(self.service_cfg.get("motion"))
         self.max_linear_speed_mps = max(0.0, _parse_float(motion_cfg.get("max_linear_speed_mps"), 0.6))
         self.max_angular_speed_radps = max(0.0, _parse_float(motion_cfg.get("max_angular_speed_radps"), 1.2))
@@ -386,7 +389,8 @@ class Ros1Bridge:
         modules = self._load_ros_modules()
         self.rospy = modules.rospy
         self.rospy.init_node(self.node_name, disable_signals=True)
-        self.cmd_vel_pub = self.rospy.Publisher(self.cmd_vel_topic, modules.Twist, queue_size=1)
+        if self.drive_enabled:
+            self.cmd_vel_pub = self.rospy.Publisher(self.cmd_vel_topic, modules.Twist, queue_size=1)
 
         if self.wheel_odometry_enabled or self.localization_pose_enabled:
             self.subscribers.append(
@@ -423,7 +427,8 @@ class Ros1Bridge:
 
         self._ros_initialized = True
         logging.info(
-            "ROS initialized cmd_vel=%s odometry=%s goal=%s status=%s diagnostics=%s",
+            "ROS initialized drive_enabled=%s cmd_vel=%s odometry=%s goal=%s status=%s diagnostics=%s",
+            self.drive_enabled,
             self.cmd_vel_topic,
             self.odometry_topic,
             self.navigation_goal_ros_topic,
@@ -471,8 +476,11 @@ class Ros1Bridge:
         if rc != 0:
             logging.error("Local MQTT connect failed rc=%s", rc)
             return
-        logging.info("Local MQTT connected; subscribing drive topic.")
-        client.subscribe(self.drive_topic, qos=0)
+        if self.drive_enabled:
+            logging.info("Local MQTT connected; subscribing drive topic.")
+            client.subscribe(self.drive_topic, qos=0)
+        else:
+            logging.info("Local MQTT connected; drive forwarding disabled.")
         self.next_heartbeat_at = 0.0
         self._publish_heartbeat()
 
@@ -521,6 +529,9 @@ class Ros1Bridge:
         self._handle_drive_values(parsed)
 
     def _handle_drive_values(self, payload: Any) -> None:
+        if not self.drive_enabled:
+            logging.info("Ignoring drive payload because drive forwarding is disabled.")
+            return
         values = _unwrap_value(payload)
         if not isinstance(values, dict):
             logging.warning("Drive payload must be an object: %s", payload)
@@ -546,6 +557,8 @@ class Ros1Bridge:
         return msg
 
     def _publish_twist(self, linear_x: float, angular_z: float) -> None:
+        if not self.drive_enabled:
+            return
         self.current_linear_x = float(linear_x)
         self.current_angular_z = float(angular_z)
         if self.cmd_vel_pub is None:
@@ -554,6 +567,8 @@ class Ros1Bridge:
         self.last_cmd_vel_publish_at = time.monotonic()
 
     def _drive_watchdog_tick(self) -> None:
+        if not self.drive_enabled:
+            return
         if self.drive_timeout_seconds <= 0:
             return
         if self.last_drive_command_at is None or self.drive_timed_out:
@@ -565,6 +580,8 @@ class Ros1Bridge:
         logging.info("Issued ROS drive stop (command-timeout)")
 
     def _drive_republish_tick(self) -> None:
+        if not self.drive_enabled:
+            return
         if self.cmd_vel_publish_interval <= 0:
             return
         if self.last_drive_command_at is None or self.drive_timed_out:

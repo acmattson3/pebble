@@ -186,11 +186,12 @@ class _FakeRospy:
 
 
 class Ros1BridgeTests(unittest.TestCase):
-    def _bridge(self) -> tuple[Ros1Bridge, _FakeRospy]:
+    def _bridge(self, *, drive_enabled: bool = True) -> tuple[Ros1Bridge, _FakeRospy]:
         config = make_base_config("jackal")
         config["services"]["serial_mcu_bridge"]["enabled"] = False
         config["services"]["mqtt_bridge"]["enabled"] = False
         config["services"]["ros1_bridge"]["enabled"] = True
+        config["services"]["ros1_bridge"]["drive"] = {"enabled": drive_enabled}
         config["services"]["ros1_bridge"]["motion"] = {
             "max_linear_speed_mps": 0.8,
             "max_angular_speed_radps": 1.5,
@@ -257,6 +258,20 @@ class Ros1BridgeTests(unittest.TestCase):
         stop_msg = pub.messages[-1]
         self.assertEqual(0.0, stop_msg.linear.x)
         self.assertEqual(0.0, stop_msg.angular.z)
+
+    def test_drive_topic_is_not_subscribed_when_drive_disabled(self):
+        bridge, _fake_rospy = self._bridge(drive_enabled=False)
+
+        bridge._on_connect(bridge.client, None, {}, 0)  # type: ignore[arg-type]
+
+        self.assertEqual([], bridge.client.subscribe_calls)  # type: ignore[union-attr]
+
+    def test_drive_values_are_ignored_when_drive_disabled(self):
+        bridge, fake_rospy = self._bridge(drive_enabled=False)
+
+        bridge._handle_drive_values({"x": 0.5, "z": 0.25})
+
+        self.assertNotIn(bridge.cmd_vel_topic, fake_rospy.publishers)
 
     def test_heartbeat_publishes_to_local_mqtt_topic(self):
         bridge, _fake_rospy = self._bridge()

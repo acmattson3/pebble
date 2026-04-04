@@ -1,0 +1,223 @@
+{
+  "log_level": "INFO",
+  "robot": {
+    "system": "pebble",
+    "type": "robots",
+    "id": "husky"
+  },
+  "local_mqtt": {
+    "host": "127.0.0.1",
+    "port": 1883,
+    "keepalive": 60,
+    "username": "",
+    "password": "",
+    "tls": {
+      "enabled": false,
+      "ca_cert": "",
+      "client_cert": "",
+      "client_key": "",
+      "insecure": false,
+      "ciphers": ""
+    }
+  },
+  "services": {
+    "defaults": {
+      "retained_publish_interval_seconds": 3600
+    },
+    "launcher": {
+      "enabled": true,
+      "restart_delay_seconds": 2.0,
+      "shutdown_timeout_seconds": 8.0,
+      "log_level": "INFO",
+      "capabilities": {
+        "enabled": true,
+        "topic": "pebble/robots/husky/outgoing/capabilities",
+        "qos": 1,
+        "retain": true,
+        "publish_interval_seconds": 3600
+      },
+      "logs": {
+        "enabled": true,
+        "topic": "pebble/robots/husky/outgoing/logs",
+        "qos": 0,
+        "retain": false,
+        "min_level": "INFO",
+        "max_message_chars": 2048
+      }
+    },
+    "av_daemon": {
+      "enabled": false
+    },
+    "mqtt_bridge": {
+      "enabled": true,
+      "log_level": "INFO",
+      "remote_mqtt": {
+        "host": "",
+        "port": 1883,
+        "keepalive": 60,
+        "username": "",
+        "password": "",
+        "tls": {
+          "enabled": false,
+          "ca_cert": "",
+          "client_cert": "",
+          "client_key": "",
+          "insecure": false,
+          "ciphers": ""
+        }
+      },
+      "topics": {
+        "remote_mirror": "pebble/robots/husky/incoming/flags/remote-mirror",
+        "mqtt_audio": "pebble/robots/husky/incoming/flags/mqtt-audio",
+        "mqtt_video": "pebble/robots/husky/incoming/flags/mqtt-video",
+        "reboot": "pebble/robots/husky/incoming/flags/reboot",
+        "service_restart": "pebble/robots/husky/incoming/flags/service-restart",
+        "git_pull": "pebble/robots/husky/incoming/flags/git-pull",
+        "audio_control": "pebble/robots/husky/incoming/audio",
+        "video_control": "pebble/robots/husky/incoming/front-camera"
+      },
+      "heartbeat": {
+        "enabled": true,
+        "topic": "pebble/robots/husky/outgoing/online",
+        "interval_seconds": 0.25,
+        "qos": 1,
+        "retain": true
+      },
+      "reboot_control": {
+        "command": [
+          "sudo",
+          "-n",
+          "/sbin/reboot"
+        ],
+        "cwd": "",
+        "cooldown_seconds": 30,
+        "ignore_retained": true,
+        "env": {}
+      },
+      "service_restart_control": {
+        "command": [
+          "sudo",
+          "-n",
+          "/usr/bin/systemctl",
+          "restart",
+          "pebble-control.service"
+        ],
+        "cwd": "",
+        "cooldown_seconds": 10,
+        "ignore_retained": true,
+        "env": {}
+      }
+    },
+    "ros1_bridge": {
+      "enabled": true,
+      "log_level": "INFO",
+      "drive": {
+        "enabled": true
+      },
+      "topics": {
+        "drive_values": "pebble/robots/husky/incoming/drive-values",
+        "wheel_odometry": "pebble/robots/husky/outgoing/wheel-odometry",
+        "charging_status": "pebble/robots/husky/outgoing/charging-status",
+        "charging_level": "pebble/robots/husky/outgoing/charging-level",
+        "localization_pose": "pebble/robots/husky/outgoing/localization-pose",
+        "navigation_status": "pebble/robots/husky/outgoing/navigation-status",
+        "navigation_goal": "pebble/robots/husky/outgoing/navigation-goal",
+        "navigation_local_plan": "pebble/robots/husky/outgoing/navigation/local-plan",
+        "navigation_global_plan": "pebble/robots/husky/outgoing/navigation/global-plan",
+        "diagnostics": "pebble/robots/husky/outgoing/diagnostics"
+      },
+      "heartbeat": {
+        "enabled": false,
+        "topic": "pebble/robots/husky/outgoing/online",
+        "interval_seconds": 0.25,
+        "qos": 1,
+        "retain": true
+      },
+      "ros": {
+        "node_name": "pebble_husky_ros1_bridge",
+        "cmd_vel_topic": "/cmd_vel",
+        "cmd_vel_publish_interval_seconds": 0.05,
+        "odometry_topic": "/odometry/filtered",
+        "navigation_status_topic": "/move_base/status",
+        "navigation_goal_topic": "/move_base/current_goal",
+        "navigation_local_plan_topic": "/move_base/TrajectoryPlannerROS/local_plan",
+        "navigation_global_plan_topic": "/move_base/NavfnROS/plan",
+        "diagnostics_topic": "/diagnostics_agg"
+      },
+      "motion": {
+        "max_linear_speed_mps": 0.6,
+        "max_angular_speed_radps": 1.2
+      },
+      "telemetry": {
+        "wheel_odometry": {
+          "enabled": true,
+          "interval_seconds": 0.25,
+          "qos": 0,
+          "retain": false
+        },
+        "localization_pose": {
+          "enabled": true,
+          "interval_seconds": 0.25,
+          "qos": 0,
+          "retain": false
+        },
+        "navigation_status": {
+          "enabled": true,
+          "interval_seconds": 0.5,
+          "qos": 1,
+          "retain": true
+        },
+        "navigation_goal": {
+          "enabled": true,
+          "qos": 1,
+          "retain": true
+        },
+        "navigation_local_plan": {
+          "enabled": false,
+          "interval_seconds": 1.0,
+          "qos": 0,
+          "retain": false,
+          "max_points": 40
+        },
+        "navigation_global_plan": {
+          "enabled": false,
+          "interval_seconds": 1.0,
+          "qos": 0,
+          "retain": false,
+          "max_points": 60
+        },
+        "diagnostics": {
+          "enabled": true,
+          "interval_seconds": 1.0,
+          "qos": 1,
+          "retain": true,
+          "max_items": 8
+        },
+        "charging_level": {
+          "enabled": true,
+          "qos": 1,
+          "retain": true,
+          "status_name": "/Other/husky_node: power_status",
+          "key": "Charge (%)"
+        },
+        "charging_status": {
+          "enabled": false
+        }
+      },
+      "safety": {
+        "drive_timeout_seconds": 0.75,
+        "ignore_retained_drive": true,
+        "stop_on_shutdown": true
+      }
+    },
+    "serial_mcu_bridge": {
+      "enabled": false
+    },
+    "soundboard_handler": {
+      "enabled": false
+    },
+    "autonomy_manager": {
+      "enabled": false
+    }
+  }
+}
