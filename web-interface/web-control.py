@@ -2779,9 +2779,10 @@ def _handle_video_payload(robot_id: str, payload_bytes: bytes) -> None:
 
     _mark_robot_video_capable(robot_key)
     condition = _get_video_condition(robot_key)
-    frame_bytes, metadata = _decode_video_frame(robot_key, packet)
-    if frame_bytes is None:
+    decoded = _decode_video_frame(robot_key, packet)
+    if decoded is None:
         return
+    frame_bytes, metadata = decoded
 
     with video_cache_lock:
         entry = video_cache.setdefault(robot_key, {})
@@ -3437,6 +3438,10 @@ def _robot_options_html() -> str:
       <label>Turn <input id="trn" type="range" min="0" max="100" value="100"></label>
     </div>
     <div class="row">
+      <label>Balance <input id="bal" type="range" min="-50" max="50" value="0"></label>
+      <span id="balStatus" class="mono">Centered</span>
+    </div>
+    <div class="row">
       <button id="stopBtn">STOP</button>
     </div>
     <div id="status" class="mono">Select a component to begin.</div>
@@ -3613,6 +3618,8 @@ const odomMeta = document.getElementById('odomMeta');
 const odomCanvas = document.getElementById('odomCanvas');
 const ODOM_TRAIL_MAX_POINTS = 320;
 let imuLatest = null;
+let imuAccelBaseline = null;
+let imuAccelBaselineAt = 0;
 let odomTrail = [];
 let odomLastToken = null;
 let odomLatest = null;
@@ -6020,6 +6027,8 @@ const k = {
 const statusEl = document.getElementById('status');
 const spdEl = document.getElementById('spd');
 const trnEl = document.getElementById('trn');
+const balEl = document.getElementById('bal');
+const balStatusEl = document.getElementById('balStatus');
 const stopBtn = document.getElementById('stopBtn');
 const rebootBtn = document.getElementById('rebootBtn');
 const rebootStatusEl = document.getElementById('rebootStatus');
@@ -6053,6 +6062,41 @@ function clampValue(value, minValue, maxValue) {
 
 function applyDeadzone(value, deadzone) {
   return Math.abs(value) < deadzone ? 0 : value;
+}
+
+function driveBalanceBias() {
+  return clampValue(Number(balEl?.value || 0) / 100, -0.5, 0.5);
+}
+
+function updateDriveBalanceStatus() {
+  if (!balStatusEl) return;
+  const raw = Number(balEl?.value || 0);
+  if (!Number.isFinite(raw) || Math.abs(raw) < 0.5) {
+    balStatusEl.textContent = "Centered";
+    return;
+  }
+  const side = raw > 0 ? "Right" : "Left";
+  balStatusEl.textContent = `${side} +${Math.abs(raw).toFixed(0)}%`;
+}
+
+function applyDriveBalance(l, r) {
+  const bias = driveBalanceBias();
+  if (!Number.isFinite(bias) || Math.abs(bias) < 0.001) {
+    return [l, r];
+  }
+  let leftScale = 1;
+  let rightScale = 1;
+  if (bias > 0) {
+    leftScale = Math.max(0, 1 - bias);
+    rightScale = 1 + bias;
+  } else {
+    leftScale = 1 - bias;
+    rightScale = Math.max(0, 1 + bias);
+  }
+  const adjustedLeft = l * leftScale;
+  const adjustedRight = r * rightScale;
+  const maxMag = Math.max(1, Math.abs(adjustedLeft), Math.abs(adjustedRight));
+  return [adjustedLeft / maxMag, adjustedRight / maxMag];
 }
 
 function updateIndicators(){
@@ -6158,7 +6202,8 @@ function enqueueDriveCommand(l, r, y = 0, options = {}) {
 }
 
 function sendM(l, r, y = 0, options = {}){
-  enqueueDriveCommand(l, r, y, options);
+  const [balancedL, balancedR] = applyDriveBalance(l, r);
+  enqueueDriveCommand(balancedL, balancedR, y, options);
 }
 
 function sendStopNow() {
@@ -6382,6 +6427,10 @@ function handleKey(e, down){
 window.addEventListener("keydown", e => handleKey(e, true));
 window.addEventListener("keyup",   e => handleKey(e, false));
 stopBtn.addEventListener("click", () => { pressed.clear(); updateIndicators(); sendStopNow(); });
+if (balEl) {
+  balEl.addEventListener("input", updateDriveBalanceStatus);
+  updateDriveBalanceStatus();
+}
 if (rebootBtn) {
   rebootBtn.addEventListener("click", () => { sendRebootCommand().catch(console.error); });
 }
@@ -6614,11 +6663,58 @@ function formatVectorLine(label, value, unit) {
 
 function clearImuUI() {
   imuLatest = null;
+  imuAccelBaseline = null;
+  imuAccelBaselineAt = 0;
   if (imuOrientationEl) imuOrientationEl.textContent = "Roll: – | Pitch: –";
   if (imuAccelEl) imuAccelEl.textContent = "Accel: –";
   if (imuGyroEl) imuGyroEl.textContent = "Gyro: –";
   if (imuHealthEl) imuHealthEl.textContent = "Status: Awaiting data...";
   drawImuPlot();
+}
+
+function imuFilteredAccel() {
+  const accel = imuLatest?.accel_mps2;
+  const ax = Number(accel?.x);
+  const ay = Number(accel?.y);
+  const az = Number(accel?.z);
+  if (!Number.isFinite(ax) || !Number.isFinite(ay) || !Number.isFinite(az)) {
+    return null;
+  }
+
+  const now = Date.now() / 1000;
+  const sample = { x: ax, y: ay, z: az };
+  if (!imuAccelBaseline) {
+    imuAccelBaseline = sample;
+    imuAccelBaselineAt = now;
+    return { raw: sample, baseline: imuAccelBaseline, delta: { x: 0, y: 0, z: 0 } };
+  }
+
+  const dt = Math.max(0.001, Math.min(1.0, now - (imuAccelBaselineAt || now)));
+  imuAccelBaselineAt = now;
+  const tauSeconds = 12.0;
+  const alpha = clampValue(dt / tauSeconds, 0.0025, 0.08);
+  imuAccelBaseline = {
+    x: imuAccelBaseline.x + (sample.x - imuAccelBaseline.x) * alpha,
+    y: imuAccelBaseline.y + (sample.y - imuAccelBaseline.y) * alpha,
+    z: imuAccelBaseline.z + (sample.z - imuAccelBaseline.z) * alpha,
+  };
+
+  const deadband = 0.06;
+  function subtractNoise(value) {
+    if (!Number.isFinite(value)) return 0;
+    if (Math.abs(value) <= deadband) return 0;
+    return Math.sign(value) * (Math.abs(value) - deadband);
+  }
+
+  return {
+    raw: sample,
+    baseline: imuAccelBaseline,
+    delta: {
+      x: subtractNoise(sample.x - imuAccelBaseline.x),
+      y: subtractNoise(sample.y - imuAccelBaseline.y),
+      z: subtractNoise(sample.z - imuAccelBaseline.z),
+    },
+  };
 }
 
 function drawImuPlot() {
@@ -6681,30 +6777,47 @@ function drawImuPlot() {
   ctx.lineTo(cx, cy + radius);
   ctx.stroke();
 
-  const accel = imuLatest?.accel_mps2;
-  const ax = Number(accel?.x);
-  const ay = Number(accel?.y);
-  if (Number.isFinite(ax) && Number.isFinite(ay)) {
-    const scale = Math.max(8, radius * 0.09);
-    const dx = clampValue(ax * scale, -radius * 0.8, radius * 0.8);
-    const dy = clampValue(-ay * scale, -radius * 0.8, radius * 0.8);
+  const accelView = imuFilteredAccel();
+  if (accelView) {
+    const dx = clampValue(accelView.delta.y * (radius * 0.18), -radius * 0.8, radius * 0.8);
+    const dy = clampValue(accelView.delta.z * (radius * 0.18), -radius * 0.8, radius * 0.8);
+    const depth = accelView.delta.x;
+    const symbolRadius = clampValue(5 + (Math.abs(depth) * radius * 0.04), 5, 12);
+    const tipX = cx + dx;
+    const tipY = cy + dy;
     ctx.strokeStyle = "#dc2626";
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + dx, cy + dy);
+    ctx.lineTo(tipX, tipY);
     ctx.stroke();
-    ctx.fillStyle = "#dc2626";
-    ctx.beginPath();
-    ctx.arc(cx + dx, cy + dy, 4, 0, Math.PI * 2);
-    ctx.fill();
+
+    if (depth >= 0) {
+      ctx.strokeStyle = "#dc2626";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(tipX - symbolRadius, tipY - symbolRadius);
+      ctx.lineTo(tipX + symbolRadius, tipY + symbolRadius);
+      ctx.moveTo(tipX - symbolRadius, tipY + symbolRadius);
+      ctx.lineTo(tipX + symbolRadius, tipY - symbolRadius);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = "#dc2626";
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, symbolRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#f8fafc";
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, Math.max(2, symbolRadius * 0.38), 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   ctx.fillStyle = "#0f172a";
   ctx.font = "600 12px ui-monospace,monospace";
   ctx.fillText("Roll / Pitch", 12, 20);
   ctx.fillStyle = "#475569";
-  ctx.fillText("Accel vector", 12, 38);
+  ctx.fillText("Accel residual: Y/Z plane, X=cross/dot", 12, 38);
 }
 
 function updateImuFromTelemetry(imu) {
@@ -6734,6 +6847,10 @@ function updateImuFromTelemetry(imu) {
     let line = formatVectorLine("Accel", imu.accel_mps2, "m/s^2");
     if (Number.isFinite(accelNormG)) {
       line += ` | |a|=${accelNormG.toFixed(3)} g`;
+    }
+    const accelView = imuFilteredAccel();
+    if (accelView) {
+      line += ` | Δx=${accelView.delta.x.toFixed(2)}, Δy=${accelView.delta.y.toFixed(2)}, Δz=${accelView.delta.z.toFixed(2)}`;
     }
     imuAccelEl.textContent = line;
   }
