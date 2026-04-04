@@ -376,6 +376,8 @@ def _normalize_config(raw: Dict[str, Any]) -> Dict[str, Any]:
 
     return {
         "mqtt": mqtt_cfg,
+        "host": str(web_cfg.get("host") or "0.0.0.0"),
+        "port": _coerce_int(web_cfg.get("port"), 8080),
         "robot_discovery": web_cfg.get("robot_discovery")
         if isinstance(web_cfg.get("robot_discovery"), dict)
         else {"seed_configured": bool(normalized_robots)},
@@ -387,6 +389,8 @@ def _normalize_config(raw: Dict[str, Any]) -> Dict[str, Any]:
 
 CONFIG = _load_config()
 MQTT_CFG = CONFIG.get("mqtt", {})
+WEB_HOST = str(CONFIG.get("host") or "0.0.0.0")
+WEB_PORT = _coerce_int(CONFIG.get("port"), 8080)
 MQTT_HISTORY_CFG = CONFIG.get("mqtt_history", {}) if isinstance(CONFIG.get("mqtt_history"), dict) else {}
 REPLAY_ARCHIVE = ReplayArchive(MQTT_HISTORY_CFG) if ReplayArchive is not None else None
 ROBOT_DISCOVERY = CONFIG.get("robot_discovery", {}) if isinstance(CONFIG.get("robot_discovery"), dict) else {}
@@ -6968,7 +6972,7 @@ def main() -> None:
         ok, error = _connect_mqtt(MQTT_CFG)
         if not ok:
             logging.error("MQTT history startup connect failed: %s", error)
-    app.run(host="0.0.0.0", port=8080, debug=False)
+    app.run(host=WEB_HOST, port=WEB_PORT, debug=False)
 
 
 if __name__ == "__main__":

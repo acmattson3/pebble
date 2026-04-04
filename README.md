@@ -261,6 +261,27 @@ The UI includes soundboard and autonomy panels; autonomy start/stop publishes to
 If `web_interface.mqtt_history.enabled=true`, the UI can also persist all MQTT
 message history to MongoDB (`pymongo` dependency).
 
+## Docker Runtime
+
+The repo-root `Dockerfile` now builds a launcher-based Pebble image. The web UI
+is started through `services.web_handler`, so the container still exposes the
+same HTTP interface while also being able to run other Pebble services.
+
+Typical server usage:
+
+```bash
+docker build -t pebble .
+docker run --rm \
+  --name pebble \
+  -p 8080:8080 \
+  -v "$PWD/control/configs/config.json:/app/control/configs/config.json:ro" \
+  pebble
+```
+
+For your server deployment, point both `local_mqtt.host` and
+`services.mqtt_bridge.remote_mqtt.host` at the existing `mosquitto_broker`
+container and enable only the services you want active on this machine.
+
 ## Future Work
 
 - Expand `tests/` with deeper subsystem + integration coverage:

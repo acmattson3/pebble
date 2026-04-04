@@ -131,6 +131,8 @@ class UnifiedConfigTests(unittest.TestCase):
                 },
             },
             "web_interface": {
+                "host": "0.0.0.0",
+                "port": 8080,
                 "robot_discovery": {"seed_configured": True},
                 "robots": [{"id": "testbot", "name": "Test Bot"}],
             },
@@ -193,6 +195,8 @@ class UnifiedConfigTests(unittest.TestCase):
             normalized = module._normalize_config(cfg)
 
         self.assertIn("mqtt", normalized)
+        self.assertEqual(normalized["host"], "0.0.0.0")
+        self.assertEqual(normalized["port"], 8080)
         self.assertEqual(normalized["mqtt"]["host"], "127.0.0.1")
         self.assertEqual(len(normalized["robots"]), 1)
         self.assertEqual(normalized["robots"][0]["id"], "testbot")

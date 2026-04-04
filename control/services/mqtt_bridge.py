@@ -47,6 +47,7 @@ class MqttBridge:
             raise SystemExit("services.mqtt_bridge.remote_mqtt.host is required")
         self.remote_port = int(remote_cfg.get("port") or 1883)
         self.remote_keepalive = int(remote_cfg.get("keepalive") or 60)
+        self.same_broker_mode = self._brokers_match()
 
         self.base = self.identity.base
         self.incoming_prefix = f"{self.base}/incoming/"
@@ -133,9 +134,26 @@ class MqttBridge:
         self.recent_remote_to_local: dict[str, tuple[bytes, float]] = {}
         self.retained_local_outgoing: dict[str, tuple[bytes, int, bool]] = {}
 
+    def _brokers_match(self) -> bool:
+        if self.local_host != self.remote_host:
+            return False
+        if self.local_port != self.remote_port:
+            return False
+        if str(self.local_mqtt_cfg.get("username") or "") != str(self.remote_mqtt_cfg.get("username") or ""):
+            return False
+        local_password = self.local_mqtt_cfg.get("password")
+        remote_password = self.remote_mqtt_cfg.get("password")
+        if ("" if local_password is None else str(local_password)) != ("" if remote_password is None else str(remote_password)):
+            return False
+        local_tls = self.local_mqtt_cfg.get("tls") if isinstance(self.local_mqtt_cfg.get("tls"), dict) else {}
+        remote_tls = self.remote_mqtt_cfg.get("tls") if isinstance(self.remote_mqtt_cfg.get("tls"), dict) else {}
+        return local_tls == remote_tls
+
     def start(self) -> None:
         self._connect_local()
         self._connect_remote()
+        if self.same_broker_mode:
+            logging.info("mqtt_bridge same-broker mode enabled; mirroring disabled, heartbeat/media controls remain active.")
         while not self.stop_event.is_set():
             self._publish_heartbeat_if_due()
             self.stop_event.wait(0.05)
@@ -202,23 +220,29 @@ class MqttBridge:
             logging.error("Local MQTT connect failed rc=%s", rc)
             return
         logging.info("Local MQTT connected; subscribing bridge topics.")
-        client.subscribe(f"{self.outgoing_prefix}#", qos=1)
         client.subscribe(self.audio_control_topic, qos=1)
         client.subscribe(self.video_control_topic, qos=1)
         client.subscribe(self.reboot_flag_topic, qos=1)
         client.subscribe(self.service_restart_flag_topic, qos=1)
         client.subscribe(self.git_pull_flag_topic, qos=1)
+        if self.same_broker_mode:
+            return
+        client.subscribe(f"{self.outgoing_prefix}#", qos=1)
         self._refresh_mirror_subscription(force=True)
 
     def _on_remote_connect(self, client: mqtt.Client, _userdata: Any, _flags: dict[str, Any], rc: int) -> None:
         if rc != 0:
             logging.error("Remote MQTT connect failed rc=%s", rc)
             return
-        logging.info("Remote MQTT connected; subscribing %s#", self.incoming_prefix)
-        client.subscribe(f"{self.incoming_prefix}#", qos=1)
+        if self.same_broker_mode:
+            logging.info("Remote MQTT connected in same-broker mode; skipping mirror subscriptions.")
+        else:
+            logging.info("Remote MQTT connected; subscribing %s#", self.incoming_prefix)
+            client.subscribe(f"{self.incoming_prefix}#", qos=1)
         self.next_heartbeat_at = 0.0
         self._publish_heartbeat()
-        self._replay_retained_outgoing_to_remote()
+        if not self.same_broker_mode:
+            self._replay_retained_outgoing_to_remote()
 
     def _on_local_disconnect(self, _client: mqtt.Client, _userdata: Any, rc: int) -> None:
         if rc != mqtt.MQTT_ERR_SUCCESS:
@@ -276,6 +300,8 @@ class MqttBridge:
 
         self._handle_flag_topics(topic, parsed, retained=bool(msg.retain))
         self._handle_media_topics(topic, parsed)
+        if self.same_broker_mode:
+            return
         self._handle_standard_discovery(topic, parsed)
 
         if topic.startswith(self.outgoing_prefix):
@@ -445,6 +471,8 @@ class MqttBridge:
         return f"{self.incoming_prefix}#" if mirror_enabled else f"{self.flags_prefix}#"
 
     def _refresh_mirror_subscription(self, force: bool) -> None:
+        if self.same_broker_mode:
+            return
         client = self.local_client
         if client is None:
             return
@@ -460,6 +488,8 @@ class MqttBridge:
             self.mirror_subscription = desired
 
     def _on_remote_message(self, _client: mqtt.Client, _userdata: Any, msg: mqtt.MQTTMessage) -> None:
+        if self.same_broker_mode:
+            return
         topic = msg.topic
         if not topic.startswith(self.incoming_prefix):
             return

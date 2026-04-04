@@ -336,6 +336,16 @@ def make_base_config(robot_id: str = "testbot") -> dict[str, Any]:
                     }
                 },
             },
+            "web_handler": {
+                "enabled": False,
+                "env": {},
+            },
+        },
+        "web_interface": {
+            "log_level": "INFO",
+            "host": "0.0.0.0",
+            "port": 8080,
+            "robots": [],
         },
     }
 

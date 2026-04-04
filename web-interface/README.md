@@ -6,7 +6,7 @@ This directory contains the Pebble web UI service.
 
 - `web-control.py` - Flask server + MQTT client.
 - `requirements.txt` - Python packages for this UI.
-- `Dockerfile` - container build for web UI deployment.
+- Root `Dockerfile` - container build for launcher-based deployment.
 
 ## Run
 
@@ -22,12 +22,13 @@ Override with:
 PEBBLE_CONFIG=/path/to/config.json python3 web-control.py
 ```
 
-For Docker usage, provide `/app/control/configs/config.json` (for example with a bind mount).
+For Docker usage, provide `/app/control/configs/config.json` and let the
+launcher start `web_handler`, which wraps `web-control.py`.
 
 Example:
 
 ```bash
-docker build -f web-interface/Dockerfile -t pebble-web .
+docker build -t pebble-web .
 docker run --rm -p 8080:8080 \
   -v \"$PWD/control/configs/config.json:/app/control/configs/config.json:ro\" \
   pebble-web
@@ -40,7 +41,6 @@ services:
   pebble:
     build:
       context: .
-      dockerfile: web-interface/Dockerfile
     restart: unless-stopped
     volumes:
       - ./control/configs/config.json:/app/control/configs/config.json:ro

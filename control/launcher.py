@@ -22,25 +22,9 @@ if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from control.common.capabilities import CAPABILITIES_SCHEMA, build_capabilities_value, capabilities_topic
-from control.common.config import (
-    default_retained_publish_interval_seconds,
-    enabled_service_instances,
-    load_config,
-    log_level,
-    service_cfg,
-)
+from control.common.config import default_retained_publish_interval_seconds, enabled_service_instances, load_config, log_level, service_cfg
 from control.common.mqtt import mqtt_auth_and_tls
 from control.common.topics import identity_from_config
-
-
-SERVICE_MODULES = {
-    "av_daemon": "control.services.av_daemon",
-    "mqtt_bridge": "control.services.mqtt_bridge",
-    "ros1_bridge": "control.services.ros1_bridge",
-    "serial_mcu_bridge": "control.services.serial_mcu_bridge",
-    "soundboard_handler": "control.services.soundboard_handler",
-    "autonomy_manager": "control.services.autonomy_manager",
-}
 
 CHILD_LOG_PATTERN = re.compile(r"^\d{2}:\d{2}:\d{2}\s+\[(DEBUG|INFO|WARNING|ERROR|CRITICAL)\]\s*(.*)$")
 
@@ -320,17 +304,30 @@ class Launcher:
 
     def _enabled_children(self) -> dict[str, tuple[str, list[str]]]:
         enabled: dict[str, tuple[str, list[str]]] = {}
-        for name, module in SERVICE_MODULES.items():
-            if name != "serial_mcu_bridge":
-                if self._service_enabled(name):
-                    enabled[name] = (module, [])
+        services = self.config.get("services")
+        if not isinstance(services, dict):
+            return enabled
+
+        for name, raw_cfg in services.items():
+            if name == "defaults" or not isinstance(name, str) or not isinstance(raw_cfg, dict):
                 continue
-            for instance_name, _cfg in enabled_service_instances(self.config, "serial_mcu_bridge"):
-                child_name = name if instance_name is None else f"{name}:{instance_name}"
-                child_args: list[str] = []
-                if instance_name is not None:
-                    child_args.extend(["--instance", instance_name])
-                enabled[child_name] = (module, child_args)
+            if name == "launcher":
+                continue
+
+            module = f"control.services.{name}"
+            instances_cfg = raw_cfg.get("instances")
+            if isinstance(instances_cfg, dict):
+                for instance_name, _cfg in enabled_service_instances(self.config, name):
+                    child_name = name if instance_name is None else f"{name}:{instance_name}"
+                    child_args: list[str] = []
+                    if instance_name is not None:
+                        child_args.extend(["--instance", instance_name])
+                    enabled[child_name] = (module, child_args)
+                continue
+
+            if self._service_enabled(name):
+                enabled[name] = (module, [])
+
         return enabled
 
     def _start_child(self, name: str, module: str, extra_args: list[str]) -> None:

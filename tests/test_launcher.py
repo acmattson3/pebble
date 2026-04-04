@@ -83,6 +83,21 @@ class LauncherTests(unittest.TestCase):
             ("control.services.serial_mcu_bridge", ["--instance", "imu"]),
         )
 
+    def test_generic_enabled_service_is_launcher_managed(self):
+        config = make_base_config("launchbot")
+        config["services"]["mqtt_bridge"]["enabled"] = False
+        config["services"]["serial_mcu_bridge"]["enabled"] = False
+        config["services"]["soundboard_handler"]["enabled"] = False
+        config["services"]["autonomy_manager"]["enabled"] = False
+        config["services"]["web_handler"]["enabled"] = True
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(config))
+            launcher = Launcher(config, cfg_path)
+        enabled = launcher._enabled_children()
+        self.assertIn("web_handler", enabled)
+        self.assertEqual(enabled["web_handler"], ("control.services.web_handler", []))
+
     def test_capabilities_publisher_default_interval_is_hourly(self):
         config = make_base_config("launchbot")
         with tempfile.TemporaryDirectory() as td:

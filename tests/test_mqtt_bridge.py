@@ -223,6 +223,54 @@ class MqttBridgeTests(unittest.TestCase):
         self.assertEqual(bridge.remote_client.publish_calls[0][0], bridge.heartbeat_topic)
         self.assertEqual(len(bridge.local_client.publish_calls), 0)
 
+    def test_same_broker_mode_detected_from_matching_config(self):
+        config = make_base_config("mqbot")
+        config["local_mqtt"]["host"] = "mosquitto_broker"
+        config["local_mqtt"]["username"] = "user"
+        config["local_mqtt"]["password"] = "pass"
+        config["services"]["mqtt_bridge"]["remote_mqtt"]["host"] = "mosquitto_broker"
+        config["services"]["mqtt_bridge"]["remote_mqtt"]["username"] = "user"
+        config["services"]["mqtt_bridge"]["remote_mqtt"]["password"] = "pass"
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(config))
+            bridge = MqttBridge(config, cfg_path)
+        self.assertTrue(bridge.same_broker_mode)
+
+    def test_same_broker_mode_skips_mirroring_but_keeps_control_subscriptions(self):
+        config = make_base_config("mqbot")
+        config["local_mqtt"]["host"] = "mosquitto_broker"
+        config["services"]["mqtt_bridge"]["remote_mqtt"]["host"] = "mosquitto_broker"
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(config))
+            bridge = MqttBridge(config, cfg_path)
+
+        bridge.local_client = FakeMqttClient()
+        bridge.remote_client = FakeMqttClient()
+        bridge._on_local_connect(bridge.local_client, None, {}, 0)  # type: ignore[arg-type]
+        bridge._on_remote_connect(bridge.remote_client, None, {}, 0)  # type: ignore[arg-type]
+
+        subscribed_topics = {topic for topic, _qos in bridge.local_client.subscribe_calls}
+        self.assertIn(bridge.audio_control_topic, subscribed_topics)
+        self.assertIn(bridge.video_control_topic, subscribed_topics)
+        self.assertNotIn(f"{bridge.outgoing_prefix}#", subscribed_topics)
+        self.assertEqual([], bridge.remote_client.subscribe_calls)
+
+        bridge._on_local_message(
+            None,
+            None,
+            FakeMqttMessage(topic=f"{bridge.outgoing_prefix}status", payload=b'{"value":true}', qos=1, retain=False),
+        )  # type: ignore[arg-type]
+        bridge._on_remote_message(
+            None,
+            None,
+            FakeMqttMessage(topic=f"{bridge.incoming_prefix}drive-values", payload=b'{"value":{"x":0.1}}'),
+        )  # type: ignore[arg-type]
+
+        self.assertEqual([], bridge.remote_client.publish_calls[1:])
+        self.assertEqual([], bridge.local_client.publish_calls)
+
     def test_unknown_high_rate_topic_is_forwarded_by_default(self):
         bridge = self._bridge()
         bridge.local_client = FakeMqttClient()
