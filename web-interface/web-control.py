@@ -495,8 +495,10 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%H:%M:%S",
 )
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
 app = Flask(__name__)
+app.logger.disabled = True
 
 telemetry_cache: Dict[str, Dict[str, Any]] = {}
 telemetry_lock = threading.Lock()
@@ -514,6 +516,8 @@ AUDIO_STREAM_BUFFER_PACKETS = 40
 soundboard_cache_lock = threading.Lock()
 soundboard_files_cache: Dict[str, Dict[str, Any]] = {}
 soundboard_status_cache: Dict[str, Dict[str, Any]] = {}
+outlets_cache_lock = threading.Lock()
+outlets_status_cache: Dict[str, Dict[str, Dict[str, Any]]] = {}
 autonomy_cache_lock = threading.Lock()
 autonomy_files_cache: Dict[str, Dict[str, Any]] = {}
 autonomy_status_cache: Dict[str, Dict[str, Any]] = {}
@@ -873,6 +877,16 @@ def _soundboard_command_topic_for_robot(robot_id: str) -> str:
     return _topic(robot_id, "incoming", "soundboard-command")
 
 
+def _outlet_status_topic_for_robot(robot_id: str, outlet_id: str) -> str:
+    clean_outlet_id = str(outlet_id or "").strip().strip("/")
+    return _topic(robot_id, "outgoing", f"outlets/{clean_outlet_id}/status")
+
+
+def _outlet_power_topic_for_robot(robot_id: str, outlet_id: str) -> str:
+    clean_outlet_id = str(outlet_id or "").strip().strip("/")
+    return _topic(robot_id, "incoming", f"outlets/{clean_outlet_id}/power")
+
+
 def _autonomy_files_topic_for_robot(robot_id: str) -> str:
     robot = _get_robot(robot_id)
     if robot and robot.get("autonomyFilesTopic"):
@@ -955,6 +969,54 @@ def _robot_has_soundboard(robot_id: str) -> bool:
     if "hasSoundboard" in robot:
         return bool(robot.get("hasSoundboard"))
     return _default_capabilities_enabled(robot)
+
+
+def _robot_has_drive(robot_id: str) -> bool:
+    robot = _get_robot(robot_id)
+    if not robot:
+        return False
+    return bool(robot.get("hasDrive", False))
+
+
+def _robot_has_lights(robot_id: str) -> bool:
+    robot = _get_robot(robot_id)
+    if not robot:
+        return False
+    return bool(robot.get("hasLights", False))
+
+
+def _robot_has_imu(robot_id: str) -> bool:
+    robot = _get_robot(robot_id)
+    if not robot:
+        return False
+    return bool(robot.get("hasImu", False))
+
+
+def _robot_has_odometry(robot_id: str) -> bool:
+    robot = _get_robot(robot_id)
+    if not robot:
+        return False
+    return bool(robot.get("hasOdometry", False))
+
+
+def _robot_has_outlets(robot_id: str) -> bool:
+    robot = _get_robot(robot_id)
+    if not robot:
+        return False
+    if "hasOutlets" in robot:
+        return bool(robot.get("hasOutlets"))
+    return False
+
+
+def _robot_has_outlet_controls(robot_id: str) -> bool:
+    robot = _get_robot(robot_id)
+    if not robot:
+        return False
+    if "outletControls" in robot:
+        return bool(robot.get("outletControls"))
+    if "hasOutlets" in robot:
+        return bool(robot.get("hasOutlets"))
+    return False
 
 
 def _robot_has_soundboard_controls(robot_id: str) -> bool:
@@ -1143,6 +1205,12 @@ def _clear_soundboard_state(robot_id: str) -> None:
         soundboard_status_cache.pop(robot_key, None)
 
 
+def _clear_outlets_state(robot_id: str) -> None:
+    robot_key = _robot_key(robot_id)
+    with outlets_cache_lock:
+        outlets_status_cache.pop(robot_key, None)
+
+
 def _mark_robot_soundboard_capable(robot_id: str, controls: Optional[bool] = None) -> None:
     entry = _ensure_robot_placeholder(robot_id)
     robot_key = str(entry.get("key") or _robot_key(robot_id))
@@ -1154,6 +1222,19 @@ def _mark_robot_soundboard_capable(robot_id: str, controls: Optional[bool] = Non
         current["lastSeen"] = time.time()
         if controls is not None and "soundboardControls" not in current:
             current["soundboardControls"] = bool(controls)
+
+
+def _mark_robot_outlets_capable(robot_id: str, controls: Optional[bool] = None) -> None:
+    entry = _ensure_robot_placeholder(robot_id)
+    robot_key = str(entry.get("key") or _robot_key(robot_id))
+    with robots_lock:
+        current = discovered_robots.get(robot_key)
+        if current is None:
+            return
+        current["hasOutlets"] = True
+        current["lastSeen"] = time.time()
+        if controls is not None and "outletControls" not in current:
+            current["outletControls"] = bool(controls)
 
 
 def _clear_autonomy_state(robot_id: str) -> None:
@@ -1375,6 +1456,11 @@ def _handle_touch_payload(
     with telemetry_lock:
         entry = telemetry_cache.setdefault(robot_key, {})
         entry.update({"t0": t0, "t1": t1, "t2": t2})
+    _ensure_robot_placeholder(robot_key, component_type, system=system)
+    with robots_lock:
+        current = discovered_robots.get(robot_key)
+        if current is not None:
+            current["hasTelemetry"] = True
     _record_heartbeat_sample(
         robot_key,
         component_type=component_type,
@@ -1396,6 +1482,11 @@ def _handle_charge_payload(
     with telemetry_lock:
         entry = telemetry_cache.setdefault(robot_key, {})
         entry.update({"charging": charging})
+    _ensure_robot_placeholder(robot_key, component_type, system=system)
+    with robots_lock:
+        current = discovered_robots.get(robot_key)
+        if current is not None:
+            current["hasTelemetry"] = True
     _record_heartbeat_sample(
         robot_key,
         component_type=component_type,
@@ -1418,6 +1509,11 @@ def _handle_charge_level_payload(
     with telemetry_lock:
         entry = telemetry_cache.setdefault(robot_key, {})
         entry.update({"battery_voltage": float(value)})
+    _ensure_robot_placeholder(robot_key, component_type, system=system)
+    with robots_lock:
+        current = discovered_robots.get(robot_key)
+        if current is not None:
+            current["hasTelemetry"] = True
     _record_heartbeat_sample(
         robot_key,
         component_type=component_type,
@@ -1464,6 +1560,11 @@ def _handle_wheel_odometry_payload(
     with telemetry_lock:
         entry = telemetry_cache.setdefault(robot_key, {})
         entry["odometry"] = odom
+    _ensure_robot_placeholder(robot_key, component_type, system=system)
+    with robots_lock:
+        current = discovered_robots.get(robot_key)
+        if current is not None:
+            current["hasOdometry"] = True
     _record_heartbeat_sample(
         robot_key,
         component_type=component_type,
@@ -1560,6 +1661,11 @@ def _handle_imu_payload(
         merged = dict(entry.get("imu") or {})
         merged.update(imu)
         entry["imu"] = merged
+    _ensure_robot_placeholder(robot_key, component_type, system=system)
+    with robots_lock:
+        current = discovered_robots.get(robot_key)
+        if current is not None:
+            current["hasImu"] = True
     _record_heartbeat_sample(
         robot_key,
         component_type=component_type,
@@ -1897,6 +2003,9 @@ def _apply_robot_hints(robot_id: str, entry: Dict[str, Any]) -> None:
         return
     entry_key = str(entry.get("key") or _robot_key(robot_id))
     hint = CONFIG_ROBOT_MAP.get(entry_key) or _configured_robot(str(entry.get("id") or robot_id)) or {}
+    if hint:
+        entry.setdefault("hasDrive", True)
+        entry.setdefault("hasLights", True)
     if hint.get("name") and not entry.get("name"):
         entry["name"] = hint["name"]
     if entry_key in CONFIG_VIDEO_HINTS:
@@ -2002,6 +2111,7 @@ def _handle_infrastructure_payload(system: str, payload_bytes: bytes) -> None:
                 _clear_video_state(robot_key)
                 _clear_audio_state(robot_key)
                 _clear_soundboard_state(robot_key)
+                _clear_outlets_state(robot_key)
                 _clear_autonomy_state(robot_key)
                 _clear_component_logs(robot_key)
 
@@ -2033,12 +2143,18 @@ def _ui_robot_snapshot() -> list[Dict[str, Any]]:
                 "type": robot.get("type") or "robots",
                 "name": robot.get("name") or robot["id"],
                 "model": robot.get("model"),
+                "hasDrive": _robot_has_drive(robot_key),
+                "hasLights": _robot_has_lights(robot_key),
+                "hasImu": _robot_has_imu(robot_key),
+                "hasOdometry": _robot_has_odometry(robot_key),
                 "hasVideo": _robot_has_video(robot_key),
                 "hasControls": _robot_has_video_controls(robot_key),
                 "hasAudio": _robot_has_audio(robot_key),
                 "audioControls": _robot_has_audio_controls(robot_key),
                 "hasSoundboard": _robot_has_soundboard(robot_key),
                 "soundboardControls": _robot_has_soundboard_controls(robot_key),
+                "hasOutlets": _robot_has_outlets(robot_key),
+                "outletControls": _robot_has_outlet_controls(robot_key),
                 "hasAutonomy": _robot_has_autonomy(robot_key),
                 "autonomyControls": _robot_has_autonomy_controls(robot_key),
                 "rebootControls": _robot_has_reboot_controls(robot_key),
@@ -2174,6 +2290,82 @@ def _handle_soundboard_status_payload(robot_id: str, payload: Any) -> None:
             "timestamp": timestamp,
         }
     _mark_robot_soundboard_capable(robot_key, controls)
+
+
+def _outlet_sort_key(outlet_id: str) -> tuple[str, int, str]:
+    cleaned = str(outlet_id or "").strip()
+    prefix = cleaned.rstrip("0123456789")
+    suffix = cleaned[len(prefix) :]
+    try:
+        index = int(suffix) if suffix else -1
+    except ValueError:
+        index = -1
+    return prefix, index, cleaned
+
+
+def _handle_outlet_status_payload(robot_id: str, outlet_id: str, payload: Any) -> None:
+    if not isinstance(payload, dict):
+        return
+    clean_outlet_id = str(outlet_id or "").strip().strip("/")
+    if not clean_outlet_id:
+        return
+    value = payload.get("value") if isinstance(payload.get("value"), dict) else {}
+    if not isinstance(value, dict):
+        value = {}
+    robot_key = _robot_key(robot_id)
+    status = {
+        "id": clean_outlet_id,
+        "name": str(payload.get("label") or payload.get("name") or clean_outlet_id),
+        "profile": payload.get("profile"),
+        "interface": payload.get("interface"),
+        "device_uid": payload.get("device_uid"),
+        "timestamp": payload.get("t") or payload.get("timestamp"),
+        "bound": bool(value.get("bound", False)),
+        "reachable": bool(value.get("reachable", False)),
+        "on": bool(value.get("on", False)),
+        "raw": payload,
+        "updated_at": time.time(),
+    }
+    with outlets_cache_lock:
+        outlet_map = outlets_status_cache.setdefault(robot_key, {})
+        outlet_map[clean_outlet_id] = status
+    _mark_robot_outlets_capable(robot_key, True)
+
+
+def _outlets_payload(robot_id: str) -> Dict[str, Any]:
+    robot_key = _robot_key(robot_id)
+    with outlets_cache_lock:
+        outlet_map = {key: value.copy() for key, value in (outlets_status_cache.get(robot_key) or {}).items()}
+
+    now = time.time()
+    outlets = []
+    for outlet_id in sorted(outlet_map, key=_outlet_sort_key):
+        item = outlet_map[outlet_id]
+        updated_at = item.get("updated_at")
+        age = (now - float(updated_at)) if updated_at is not None else None
+        outlets.append(
+            {
+                "id": outlet_id,
+                "name": item.get("name") or outlet_id,
+                "profile": item.get("profile"),
+                "interface": item.get("interface"),
+                "deviceUid": item.get("device_uid"),
+                "topic": _outlet_status_topic_for_robot(robot_id, outlet_id),
+                "commandTopic": _outlet_power_topic_for_robot(robot_id, outlet_id),
+                "bound": bool(item.get("bound", False)),
+                "reachable": bool(item.get("reachable", False)),
+                "on": bool(item.get("on", False)),
+                "lastUpdateAge": age,
+            }
+        )
+
+    return {
+        "enabled": _robot_has_outlets(robot_id),
+        "controls": _robot_has_outlet_controls(robot_id),
+        "topicPrefix": _topic(robot_id, "outgoing", "outlets"),
+        "commandPrefix": _topic(robot_id, "incoming", "outlets"),
+        "outlets": outlets,
+    }
 
 
 def _soundboard_files_payload(robot_id: str) -> Dict[str, Any]:
@@ -2729,6 +2921,7 @@ def _on_mqtt_connect(client: mqtt.Client, _userdata: Any, _flags: Dict[str, Any]
         client.subscribe("+/+/+/outgoing/status", qos=1)
         client.subscribe("+/+/+/outgoing/logs", qos=1)
         client.subscribe("+/+/+/outgoing/audio", qos=0)
+        client.subscribe("+/+/+/outgoing/outlets/#", qos=1)
         client.subscribe("+/+/+/outgoing/soundboard-files", qos=1)
         client.subscribe("+/+/+/outgoing/soundboard-status", qos=1)
         client.subscribe("+/+/+/outgoing/autonomy-files", qos=1)
@@ -2871,6 +3064,10 @@ def _on_mqtt_message(_client: mqtt.Client, _userdata: Any, msg: mqtt.MQTTMessage
         _handle_soundboard_files_payload(robot_key, payload)
     elif metric == "soundboard-status":
         _handle_soundboard_status_payload(robot_key, payload)
+    elif metric.startswith("outlets/") and metric.endswith("/status"):
+        outlet_parts = metric.split("/")
+        if len(outlet_parts) >= 3 and outlet_parts[1]:
+            _handle_outlet_status_payload(robot_key, outlet_parts[1], payload)
     elif metric == "autonomy-files":
         _handle_autonomy_files_payload(robot_key, payload)
     elif metric == "autonomy-status":
@@ -3012,6 +3209,24 @@ def _robot_options_html() -> str:
   .warn { background:#fff5e0; }
   .robot-picker { display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
   .robot-picker select { min-width:10rem; }
+  .component-card { grid-column: span 3; }
+  @media (max-width: 1200px){ .component-card{ grid-column: span 2; } }
+  @media (max-width: 800px){ .component-card{ grid-column: span 1; } }
+  .component-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:8px; }
+  .component-actions button { min-width:7rem; }
+  .section-picker { display:flex; justify-content:flex-end; margin:-2px 0 12px; }
+  .section-menu { position:relative; }
+  .section-menu summary { list-style:none; cursor:pointer; padding:8px 12px; border-radius:999px; border:1px solid #bbb; background:#f8f8f8; font:600 12px/1.2 ui-monospace,monospace; }
+  .section-menu summary::-webkit-details-marker { display:none; }
+  .section-menu[open] summary { border-bottom-left-radius:12px; border-bottom-right-radius:12px; }
+  .section-menu-panel { position:absolute; right:0; top:calc(100% + 8px); min-width:260px; z-index:20; border:1px solid #d6d6d6; border-radius:14px; background:#fff; box-shadow:0 12px 30px rgba(0,0,0,.12); padding:10px; }
+  .section-menu-title { margin:0 0 8px; font:600 12px/1.2 ui-monospace,monospace; opacity:.75; }
+  .section-toggle-list { display:grid; gap:6px; }
+  .section-toggle { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin:0; padding:6px 8px; border-radius:10px; background:#fafafa; }
+  .section-toggle input { margin-top:2px; }
+  .section-toggle-copy { display:grid; gap:2px; }
+  .section-toggle-name { font:600 13px/1.2 system-ui,sans-serif; }
+  .section-toggle-mode { font:500 11px/1.2 ui-monospace,monospace; opacity:.65; }
   .odometry-card { grid-column: span 2; }
   @media (max-width: 1200px){ .odometry-card{ grid-column: span 1; } }
   .odometry-meta { margin-bottom:8px; }
@@ -3044,6 +3259,19 @@ def _robot_options_html() -> str:
   .audio-indicator .dot { width:10px; height:10px; border-radius:50%; background:#bbb; display:inline-block; }
   .audio-indicator.active { border-color:#0a6; background:#e8ffef; color:#064; }
   .audio-indicator.active .dot { background:#0a6; }
+  .outlets-card { grid-column: span 1; }
+  .outlet-list { display:grid; gap:10px; }
+  .outlet-item { border:1px solid #d6d6d6; border-radius:12px; padding:10px 12px; background:#fafafa; }
+  .outlet-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+  .outlet-name { font:700 14px/1.2 ui-monospace,monospace; }
+  .outlet-state { display:flex; gap:6px; flex-wrap:wrap; }
+  .outlet-pill { display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; border:1px solid #ccc; background:#fff; font:600 12px/1.2 ui-monospace,monospace; }
+  .outlet-pill.on { border-color:#1f8f57; background:#e9fff2; color:#145c39; }
+  .outlet-pill.off { border-color:#b64b4b; background:#fff0f0; color:#7d2525; }
+  .outlet-pill.warn { border-color:#d2a100; background:#fff9df; color:#725800; }
+  .outlet-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .outlet-actions button { min-width:7rem; }
+  .outlet-empty { padding:10px; color:#666; font:500 13px/1.3 ui-monospace,monospace; border:1px dashed #d6d6d6; border-radius:10px; background:#fafafa; }
   .soundboard-card { grid-column: span 1; }
   .soundboard-controls { display:flex; align-items:center; gap:10px; margin:8px 0; }
   .soundboard-controls button { min-width:6rem; }
@@ -3165,9 +3393,19 @@ def _robot_options_html() -> str:
       <button id="mqttDisconnect">Disconnect</button>
       <span id="mqttStatus" class="mono"></span>
     </div>
+    <div class="section-picker">
+      <details class="section-menu" id="sectionMenu">
+        <summary>Sections</summary>
+        <div class="section-menu-panel">
+          <div class="section-menu-title">Visible for selected component</div>
+          <div class="section-toggle-list" id="sectionToggleList"></div>
+        </div>
+      </details>
+    </div>
   </div>
 
-  <div class="card" id="driveCard">
+  <div class="card component-card" id="componentCard">
+    <h2>Component</h2>
     <div class="robot-picker">
       <label for="systemSelect">System:</label>
       <select id="systemSelect"></select>
@@ -3176,6 +3414,17 @@ def _robot_options_html() -> str:
       <button type="button" id="replayNavBtn" onclick="window.location.href='/replay'">Replay</button>
       <span id="activeRobot" class="mono"></span>
     </div>
+    <div class="component-actions">
+      <button id="rebootBtn">Reboot Robot</button>
+      <button id="serviceRestartBtn">Restart Service</button>
+      <button id="gitPullBtn">Git Pull</button>
+      <span id="rebootStatus" class="mono"></span>
+      <span id="serviceRestartStatus" class="mono"></span>
+      <span id="gitPullStatus" class="mono"></span>
+    </div>
+  </div>
+
+  <div class="card" id="driveCard">
     <h2><span class="desktop-only">Drive (WASD + Q/E grousers, Space=Stop)</span><span class="mobile-only">Drive Settings</span></h2>
     <div style="text-align:center" class="desktop-only">
       <div><kbd id="kW">W</kbd></div>
@@ -3189,12 +3438,6 @@ def _robot_options_html() -> str:
     </div>
     <div class="row">
       <button id="stopBtn">STOP</button>
-      <button id="rebootBtn">Reboot Robot</button>
-      <button id="serviceRestartBtn">Restart Service</button>
-      <button id="gitPullBtn">Git Pull</button>
-      <span id="rebootStatus" class="mono"></span>
-      <span id="serviceRestartStatus" class="mono"></span>
-      <span id="gitPullStatus" class="mono"></span>
     </div>
     <div id="status" class="mono">Select a component to begin.</div>
   </div>
@@ -3284,6 +3527,12 @@ def _robot_options_html() -> str:
     <div class="mono-dim" id="audioMeta"></div>
   </div>
 
+  <div class="card outlets-card" id="outletsCard">
+    <h2>Outlets</h2>
+    <div class="mono-dim" id="outletsStatus">Waiting for outlet state from component...</div>
+    <div class="outlet-list" id="outletsList"></div>
+  </div>
+
   <div class="card soundboard-card" id="soundboardCard">
     <h2>Soundboard</h2>
     <div class="mono-dim" id="soundSelection">Select a sound file.</div>
@@ -3340,14 +3589,18 @@ const mobileLayout = document.getElementById('mobileLayout');
 const mobileVideoSlot = document.getElementById('mobileVideoSlot');
 const mobileOptionsContent = document.getElementById('mobileOptionsContent');
 const connectionCard = document.getElementById('connectionCard');
+const componentCard = document.getElementById('componentCard');
 const driveCard = document.getElementById('driveCard');
 const lightsCard = document.getElementById('lightsCard');
 const touchCard = document.getElementById('touchCard');
 const imuCard = document.getElementById('imuCard');
 const odometryCard = document.getElementById('odometryCard');
+const outletsCard = document.getElementById('outletsCard');
 const soundboardCard = document.getElementById('soundboardCard');
 const autonomyCard = document.getElementById('autonomyCard');
 const logsCard = document.getElementById('logsCard');
+const sectionMenu = document.getElementById('sectionMenu');
+const sectionToggleList = document.getElementById('sectionToggleList');
 const joystickBase = document.getElementById('joystickBase');
 const joystickThumb = document.getElementById('joystickThumb');
 const joystickStatus = document.getElementById('joystickStatus');
@@ -3419,6 +3672,7 @@ function makeCardCollapsible(cardId) {
 function initCollapsibleCards() {
   [
     "connectionCard",
+    "componentCard",
     "driveCard",
     "lightsCard",
     "touchCard",
@@ -3426,6 +3680,7 @@ function initCollapsibleCards() {
     "odometryCard",
     "videoCard",
     "audioCard",
+    "outletsCard",
     "soundboardCard",
     "autonomyCard",
     "logsCard",
@@ -3619,6 +3874,36 @@ function robotHasAudioControls(id) {
   return robot ? Boolean(robot.audioControls) : false;
 }
 
+function robotHasDrive(id) {
+  const robot = findRobot(id);
+  return robot ? Boolean(robot.hasDrive) : false;
+}
+
+function robotHasLights(id) {
+  const robot = findRobot(id);
+  return robot ? Boolean(robot.hasLights) : false;
+}
+
+function robotHasImu(id) {
+  const robot = findRobot(id);
+  return robot ? Boolean(robot.hasImu) : false;
+}
+
+function robotHasOdometry(id) {
+  const robot = findRobot(id);
+  return robot ? Boolean(robot.hasOdometry) : false;
+}
+
+function robotHasOutlets(id) {
+  const robot = findRobot(id);
+  return robot ? Boolean(robot.hasOutlets) : false;
+}
+
+function robotHasOutletControls(id) {
+  const robot = findRobot(id);
+  return robot ? Boolean(robot.outletControls) : false;
+}
+
 function robotHasSoundboard(id) {
   const robot = findRobot(id);
   if (!robot) return false;
@@ -3671,6 +3956,131 @@ function robotHasGitPullControls(id) {
   if (typeof robot.gitPullControls === "boolean") return robot.gitPullControls;
   if (typeof robot.rebootControls === "boolean") return robot.rebootControls;
   return true;
+}
+
+const SECTION_DEFS = [
+  { id: "drive", label: "Drive", cardId: "driveCard" },
+  { id: "lights", label: "Lights", cardId: "lightsCard" },
+  { id: "telemetry", label: "Telemetry", cardId: "touchCard" },
+  { id: "imu", label: "IMU", cardId: "imuCard" },
+  { id: "odometry", label: "Map & Location", cardId: "odometryCard" },
+  { id: "video", label: "Front Camera", cardId: "videoCard" },
+  { id: "audio", label: "Component Audio", cardId: "audioCard" },
+  { id: "outlets", label: "Outlets", cardId: "outletsCard" },
+  { id: "soundboard", label: "Soundboard", cardId: "soundboardCard" },
+  { id: "autonomy", label: "Autonomy", cardId: "autonomyCard" },
+  { id: "logs", label: "Incoming Logs", cardId: "logsCard" },
+];
+
+function sectionStorageKey(sectionId, robotId) {
+  return `sectionOverride:${robotId || "__none__"}:${sectionId}`;
+}
+
+function getSectionOverride(sectionId, robotId) {
+  try {
+    const value = localStorage.getItem(sectionStorageKey(sectionId, robotId));
+    return value === "show" || value === "hide" ? value : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function setSectionOverride(sectionId, robotId, value) {
+  try {
+    const key = sectionStorageKey(sectionId, robotId);
+    if (value === "show" || value === "hide") {
+      localStorage.setItem(key, value);
+    } else {
+      localStorage.removeItem(key);
+    }
+  } catch (_err) {
+    // Ignore localStorage failures.
+  }
+}
+
+function sectionDefaultVisible(sectionId, robotId) {
+  if (!robotId) {
+    return ["telemetry", "logs"].includes(sectionId);
+  }
+  if (sectionId === "telemetry" || sectionId === "logs") {
+    return true;
+  }
+  if (sectionId === "drive") return robotHasDrive(robotId);
+  if (sectionId === "lights") return robotHasLights(robotId);
+  if (sectionId === "imu") return robotHasImu(robotId);
+  if (sectionId === "odometry") return robotHasOdometry(robotId);
+  if (sectionId === "video") return robotHasVideo(robotId);
+  if (sectionId === "audio") return robotHasAudio(robotId);
+  if (sectionId === "outlets") return robotHasOutlets(robotId);
+  if (sectionId === "soundboard") return robotHasSoundboard(robotId);
+  if (sectionId === "autonomy") return robotHasAutonomy(robotId);
+  return false;
+}
+
+function sectionVisible(sectionId, robotId) {
+  const override = getSectionOverride(sectionId, robotId);
+  if (override === "show") return true;
+  if (override === "hide") return false;
+  return sectionDefaultVisible(sectionId, robotId);
+}
+
+function sectionVisibilityMode(sectionId, robotId) {
+  if (getSectionOverride(sectionId, robotId) === "show") return "manual";
+  if (getSectionOverride(sectionId, robotId) === "hide") return "hidden";
+  return sectionDefaultVisible(sectionId, robotId) ? "auto" : "manual-hidden";
+}
+
+function renderSectionMenu() {
+  if (!sectionToggleList) return;
+  sectionToggleList.innerHTML = "";
+  SECTION_DEFS.forEach((section) => {
+    const row = document.createElement("label");
+    row.className = "section-toggle";
+
+    const copy = document.createElement("span");
+    copy.className = "section-toggle-copy";
+    const name = document.createElement("span");
+    name.className = "section-toggle-name";
+    name.textContent = section.label;
+    const mode = document.createElement("span");
+    mode.className = "section-toggle-mode";
+    const modeKey = sectionVisibilityMode(section.id, currentRobot);
+    mode.textContent = modeKey === "auto"
+      ? "auto"
+      : modeKey === "hidden"
+        ? "manually hidden"
+        : modeKey === "manual"
+          ? "manually shown"
+          : "hidden by capability";
+    copy.appendChild(name);
+    copy.appendChild(mode);
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = sectionVisible(section.id, currentRobot);
+    input.addEventListener("change", () => {
+      const defaultVisible = sectionDefaultVisible(section.id, currentRobot);
+      if (input.checked === defaultVisible) {
+        setSectionOverride(section.id, currentRobot, null);
+      } else {
+        setSectionOverride(section.id, currentRobot, input.checked ? "show" : "hide");
+      }
+      syncSectionVisibility();
+    });
+
+    row.appendChild(copy);
+    row.appendChild(input);
+    sectionToggleList.appendChild(row);
+  });
+}
+
+function syncSectionVisibility() {
+  SECTION_DEFS.forEach((section) => {
+    const card = document.getElementById(section.cardId);
+    if (!card) return;
+    card.classList.toggle("hidden", !sectionVisible(section.id, currentRobot));
+  });
+  renderSectionMenu();
 }
 
 const systemSelect = document.getElementById('systemSelect');
@@ -3735,6 +4145,7 @@ function renderRobotOptions(newRobots) {
   syncRebootControls();
   syncServiceRestartControls();
   syncGitPullControls();
+  syncSectionVisibility();
 }
 
 function handleRobotSelectionChanged(previousRobot) {
@@ -3742,11 +4153,16 @@ function handleRobotSelectionChanged(previousRobot) {
   syncRebootControls();
   syncServiceRestartControls();
   syncGitPullControls();
+  syncSectionVisibility();
   refreshVideoVisibility();
   refreshAudioVisibility();
   if (previousRobot !== currentRobot) {
+    resetLightsShortcutState();
     clearImuUI();
     clearOdometryUI();
+    resetOutletsState();
+    renderOutlets();
+    refreshOutlets();
     resetSoundboardState();
     renderSoundList();
     refreshSoundFiles();
@@ -3871,6 +4287,12 @@ let audioConcealmentMs = 100;
 let audioConcealedMs = 0;
 let audioConcealmentTimer = null;
 
+const outletsListEl = document.getElementById('outletsList');
+const outletsStatusEl = document.getElementById('outletsStatus');
+let outlets = [];
+let outletControlsEnabled = true;
+let outletBusyId = "";
+
 const soundboardControls = document.getElementById('soundboardControls');
 const soundPlayStopBtn = document.getElementById('soundPlayStop');
 const soundboardStatusEl = document.getElementById('soundboardStatus');
@@ -3927,17 +4349,20 @@ function applyLayoutMode(isMobile) {
   if (isMobile) {
     moveCard(videoCard, mobileVideoSlot);
     moveCard(connectionCard, mobileOptionsContent);
+    moveCard(componentCard, mobileOptionsContent);
     moveCard(driveCard, mobileOptionsContent);
     moveCard(lightsCard, mobileOptionsContent);
     moveCard(touchCard, mobileOptionsContent);
     moveCard(imuCard, mobileOptionsContent);
     moveCard(odometryCard, mobileOptionsContent);
     moveCard(audioCard, mobileOptionsContent);
+    moveCard(outletsCard, mobileOptionsContent);
     moveCard(soundboardCard, mobileOptionsContent);
     moveCard(autonomyCard, mobileOptionsContent);
     moveCard(logsCard, mobileOptionsContent);
   } else {
     moveCard(connectionCard, desktopGrid);
+    moveCard(componentCard, desktopGrid);
     moveCard(driveCard, desktopGrid);
     moveCard(lightsCard, desktopGrid);
     moveCard(touchCard, desktopGrid);
@@ -3945,6 +4370,7 @@ function applyLayoutMode(isMobile) {
     moveCard(odometryCard, desktopGrid);
     moveCard(videoCard, desktopGrid);
     moveCard(audioCard, desktopGrid);
+    moveCard(outletsCard, desktopGrid);
     moveCard(soundboardCard, desktopGrid);
     moveCard(autonomyCard, desktopGrid);
     moveCard(logsCard, desktopGrid);
@@ -4257,7 +4683,6 @@ function startVideoLoops() {
   if (!currentRobot || !robotHasVideo(currentRobot)) return;
   if (usesWebrtc(currentRobot)) return;
   if (videoStreamSuppressed) return;
-  videoCard.classList.remove('hidden');
   attachVideoStream();
   startVideoOverlayLoop();
   if (!videoStatusTimer) {
@@ -4280,7 +4705,6 @@ function attachVideoStream() {
 }
 
 function refreshVideoVisibility() {
-  videoCard.classList.remove('hidden');
   if (videoOverlayLabel) {
     videoOverlayLabel.classList.remove('hidden');
   }
@@ -4782,7 +5206,6 @@ async function toggleTalkMode() {
 }
 
 function refreshAudioVisibility() {
-  audioCard.classList.remove('hidden');
   if (!currentRobot) {
     stopAudio("Select a component to begin.", true);
     syncAudioButtons();
@@ -4800,6 +5223,163 @@ function refreshAudioVisibility() {
     audioStatusEl.textContent = "Audio ready. Press Start Audio.";
   }
   syncAudioButtons();
+}
+
+function resetOutletsState() {
+  outlets = [];
+  outletControlsEnabled = currentRobot ? robotHasOutletControls(currentRobot) : false;
+  outletBusyId = "";
+  if (outletsStatusEl) {
+    if (!currentRobot) {
+      outletsStatusEl.textContent = "Select a component to begin.";
+    } else {
+      outletsStatusEl.textContent = "Waiting for outlet state from component...";
+    }
+  }
+}
+
+function renderOutlets() {
+  if (!outletsListEl) return;
+  outletsListEl.innerHTML = "";
+  if (!currentRobot) {
+    const empty = document.createElement("div");
+    empty.className = "outlet-empty";
+    empty.textContent = "Select a component to view outlets.";
+    outletsListEl.appendChild(empty);
+    return;
+  }
+  if (!robotHasOutlets(currentRobot) && !outlets.length) {
+    const empty = document.createElement("div");
+    empty.className = "outlet-empty";
+    empty.textContent = "Outlets unavailable for this component.";
+    outletsListEl.appendChild(empty);
+    return;
+  }
+  if (!outlets.length) {
+    const empty = document.createElement("div");
+    empty.className = "outlet-empty";
+    empty.textContent = "Waiting for outlet state from component...";
+    outletsListEl.appendChild(empty);
+    return;
+  }
+
+  outlets.forEach((outlet) => {
+    const item = document.createElement("div");
+    item.className = "outlet-item";
+
+    const head = document.createElement("div");
+    head.className = "outlet-head";
+    const name = document.createElement("div");
+    name.className = "outlet-name";
+    name.textContent = outlet.name || outlet.id;
+    head.appendChild(name);
+
+    const state = document.createElement("div");
+    state.className = "outlet-state";
+    const power = document.createElement("span");
+    power.className = `outlet-pill ${outlet.on ? "on" : "off"}`;
+    power.textContent = outlet.on ? "On" : "Off";
+    state.appendChild(power);
+    const reach = document.createElement("span");
+    reach.className = `outlet-pill ${outlet.reachable ? "on" : "warn"}`;
+    reach.textContent = outlet.reachable ? "Reachable" : "Unreachable";
+    state.appendChild(reach);
+    const bound = document.createElement("span");
+    bound.className = `outlet-pill ${outlet.bound ? "on" : "warn"}`;
+    bound.textContent = outlet.bound ? "Bound" : "Unbound";
+    state.appendChild(bound);
+    head.appendChild(state);
+    item.appendChild(head);
+
+    const actions = document.createElement("div");
+    actions.className = "outlet-actions";
+    const toggleBtn = document.createElement("button");
+    toggleBtn.type = "button";
+    toggleBtn.textContent = outlet.on ? "Turn Off" : "Turn On";
+    toggleBtn.disabled = !outletControlsEnabled || outletBusyId === outlet.id;
+    toggleBtn.addEventListener("click", () => {
+      toggleOutlet(outlet.id, !outlet.on).catch(console.error);
+    });
+    actions.appendChild(toggleBtn);
+
+    const meta = document.createElement("span");
+    meta.className = "mono";
+    if (typeof outlet.lastUpdateAge === "number") {
+      meta.textContent = `${outlet.lastUpdateAge.toFixed(1)}s ago`;
+    } else {
+      meta.textContent = outlet.commandTopic || "";
+    }
+    actions.appendChild(meta);
+    item.appendChild(actions);
+    outletsListEl.appendChild(item);
+  });
+}
+
+async function refreshOutlets() {
+  if (!currentRobot) {
+    resetOutletsState();
+    renderOutlets();
+    return;
+  }
+  try {
+    const { ok, data } = await fetchJson(`/robots/${currentRobot}/outlets?ts=${Date.now()}`);
+    if (!ok) throw new Error(data.error || "outlets");
+    outletControlsEnabled = typeof data.controls === "boolean"
+      ? data.controls
+      : robotHasOutletControls(currentRobot);
+    const items = Array.isArray(data.outlets) ? data.outlets.filter(item => item && typeof item.id === "string") : [];
+    outlets = items;
+    if (findRobot(currentRobot)) {
+      const robot = findRobot(currentRobot);
+      if (robot) {
+        robot.hasOutlets = Boolean(data.enabled || items.length);
+        robot.outletControls = outletControlsEnabled;
+      }
+    }
+    if (!items.length) {
+      outletsStatusEl.textContent = robotHasOutlets(currentRobot)
+        ? "Waiting for outlet state from component..."
+        : "Outlets unavailable for this component.";
+    } else if (!outletControlsEnabled) {
+      outletsStatusEl.textContent = "Outlet state available; remote toggles disabled.";
+    } else {
+      outletsStatusEl.textContent = `${items.length} outlet${items.length === 1 ? "" : "s"} available.`;
+    }
+    syncSectionVisibility();
+    renderOutlets();
+  } catch (err) {
+    console.error(err);
+    if (outletsStatusEl) {
+      outletsStatusEl.textContent = "Outlet status unavailable.";
+    }
+  }
+}
+
+async function toggleOutlet(outletId, on) {
+  if (!currentRobot || !outletId || outletBusyId) return;
+  outletBusyId = outletId;
+  if (outletsStatusEl) {
+    outletsStatusEl.textContent = `${on ? "Turning on" : "Turning off"} ${outletId}...`;
+  }
+  renderOutlets();
+  try {
+    const { ok, data } = await fetchJson(`/robots/${currentRobot}/outlets/${encodeURIComponent(outletId)}/power`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ on }),
+    });
+    if (!ok) {
+      throw new Error(data.error || "Failed to toggle outlet.");
+    }
+  } catch (err) {
+    console.error(err);
+    if (outletsStatusEl) {
+      outletsStatusEl.textContent = `${err.message || err}`;
+    }
+  } finally {
+    outletBusyId = "";
+    await refreshOutlets();
+  }
 }
 
 function selectedSoundIsPlaying() {
@@ -5785,7 +6365,9 @@ function handleKey(e, down){
       return;
     }
     if (key === "F") {
-      toggleVideoFullscreen();
+      if (currentRobot && robotHasLights(currentRobot)) {
+        (lightsShortcutEnabled ? sendLightsOff() : sendF_fromColor()).catch(console.error);
+      }
       return;
     }
   }
@@ -5815,6 +6397,11 @@ setInterval(() => { if (pressed.size) { const [L,R,Y] = mix(); sendM(L,R,Y); } }
 const colorEl = document.getElementById('color');
 const flashTEl = document.getElementById('flashT');
 const lightStatusEl = document.getElementById('lightStatus');
+let lightsShortcutEnabled = false;
+
+function resetLightsShortcutState() {
+  lightsShortcutEnabled = false;
+}
 
 function hexToRgb01(hex) {
   const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
@@ -5963,6 +6550,7 @@ async function sendGitPullCommand() {
 async function sendL_fromColor() {
   const {r,g,b} = hexToRgb01(colorEl.value);
   await commandRobot("l", { b, g, r });
+  lightsShortcutEnabled = true;
   lightStatusEl.textContent = `${robotName(currentRobot)} → L ${b.toFixed(3)} ${g.toFixed(3)} ${r.toFixed(3)}`;
 }
 
@@ -5971,16 +6559,19 @@ async function sendF_fromColor() {
   let period = Number(flashTEl.value);
   if (!isFinite(period) || period <= 0) period = 2.0;
   await commandRobot("f", { b, g, r, period });
+  lightsShortcutEnabled = true;
   lightStatusEl.textContent = `${robotName(currentRobot)} → F ${b.toFixed(3)} ${g.toFixed(3)} ${r.toFixed(3)} ${period.toFixed(2)}`;
+}
+
+async function sendLightsOff() {
+  await commandRobot("l", { b:0, g:0, r:0 });
+  lightsShortcutEnabled = false;
+  lightStatusEl.textContent = `${robotName(currentRobot)} → L 0.000 0.000 0.000`;
 }
 
 document.getElementById('btnSolid').addEventListener("click", () => { sendL_fromColor().catch(console.error); });
 document.getElementById('btnFlash').addEventListener("click", () => { sendF_fromColor().catch(console.error); });
-document.getElementById('btnOff').addEventListener("click", () => {
-  commandRobot("l", { b:0, g:0, r:0 }).then(() => {
-    lightStatusEl.textContent = `${robotName(currentRobot)} → L 0.000 0.000 0.000`;
-  }).catch(console.error);
-});
+document.getElementById('btnOff').addEventListener("click", () => { sendLightsOff().catch(console.error); });
 
 // Telemetry
 const chg = document.getElementById('chg');
@@ -6326,6 +6917,7 @@ renderRobotOptions(robots);
 handleRobotSelectionChanged(null);
 refreshRobotList();
 setInterval(refreshRobotList, 2000);
+setInterval(refreshOutlets, 1500);
 setInterval(refreshSoundboardStatus, 1000);
 setInterval(refreshSoundFiles, 5000);
 setInterval(refreshAutonomyStatus, 1000);
@@ -6590,6 +7182,41 @@ def stop_soundboard_file(robot_id: str):
     if not ok:
         return jsonify({"status": "mqtt-unavailable"}), 503
     return jsonify({"status": "ok", "topic": _soundboard_command_topic_for_robot(robot_id)})
+
+
+@app.route("/robots/<robot_id>/outlets")
+def get_outlets(robot_id: str):
+    _ensure_robot(robot_id)
+    return jsonify(_outlets_payload(robot_id))
+
+
+@app.route("/robots/<robot_id>/outlets/<outlet_id>/power", methods=["POST"])
+def set_outlet_power(robot_id: str, outlet_id: str):
+    _ensure_robot(robot_id)
+    if not _robot_has_outlet_controls(robot_id):
+        return jsonify({"status": "unsupported"}), 403
+    clean_outlet_id = str(outlet_id or "").strip().strip("/")
+    if not clean_outlet_id:
+        abort(400, description="Outlet id is required.")
+
+    payload = request.get_json(force=True, silent=True) or {}
+    desired = _coerce_bool(payload.get("on"))
+    if desired is None:
+        with outlets_cache_lock:
+            current = (outlets_status_cache.get(_robot_key(robot_id)) or {}).get(clean_outlet_id) or {}
+        desired = not bool(current.get("on", False))
+
+    ok = _publish_command(_outlet_power_topic_for_robot(robot_id, clean_outlet_id), {"on": desired}, qos=1)
+    if not ok:
+        return jsonify({"status": "mqtt-unavailable"}), 503
+    return jsonify(
+        {
+            "status": "ok",
+            "outlet": clean_outlet_id,
+            "on": desired,
+            "topic": _outlet_power_topic_for_robot(robot_id, clean_outlet_id),
+        }
+    )
 
 
 @app.route("/robots/<robot_id>/autonomy/files")
