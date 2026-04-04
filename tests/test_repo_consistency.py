@@ -22,8 +22,10 @@ DOCUMENTED_PATHS = {
     ],
     "firmware/README.md": [
         ("firmware/MINILAMP_seeed-xiao-c6/private_config.h.example", "firmware/MINILAMP_seeed-xiao-c6/private_config.h.example"),
+        ("firmware/HS105_seeed-xiao-c3/private_config.h.example", "firmware/HS105_seeed-xiao-c3/private_config.h.example"),
         ("firmware/BUMPERBOT_wemos/private_config.h.example", "firmware/BUMPERBOT_wemos/private_config.h.example"),
         ("firmware/flash-goob-firmware.sh", "firmware/flash-goob-firmware.sh"),
+        ("firmware/flash-hs105-firmware.sh", "firmware/flash-hs105-firmware.sh"),
         ("firmware/flash-fred-firmware.sh", "firmware/flash-fred-firmware.sh"),
         ("firmware/flash-minilamp-firmware.sh", "firmware/flash-minilamp-firmware.sh"),
         ("firmware/flash-bumperbot-wemos-firmware.sh", "firmware/flash-bumperbot-wemos-firmware.sh"),

@@ -1,0 +1,54 @@
+#pragma once
+
+// Router-hosted Wi-Fi network that the ESP32-C3 joins as a station client.
+// Put your real values in private_config.h, which is gitignored.
+#define WIFI_STA_SSID "Pebble"
+#define WIFI_STA_PSK "replace-me"
+
+// Static IPv4 config for the ESP32-C3 itself.
+#define WIFI_STA_IP_1 192
+#define WIFI_STA_IP_2 168
+#define WIFI_STA_IP_3 1
+#define WIFI_STA_IP_4 10
+
+#define WIFI_STA_GATEWAY_1 192
+#define WIFI_STA_GATEWAY_2 168
+#define WIFI_STA_GATEWAY_3 1
+#define WIFI_STA_GATEWAY_4 1
+
+#define WIFI_STA_SUBNET_1 255
+#define WIFI_STA_SUBNET_2 255
+#define WIFI_STA_SUBNET_3 255
+#define WIFI_STA_SUBNET_4 0
+
+// Static outlet IPs. These define the Pebble slot mapping directly:
+// o1 -> OUTLET_O1_IP_*
+// o2 -> OUTLET_O2_IP_*
+// o3 -> OUTLET_O3_IP_*
+// o4 -> OUTLET_O4_IP_*
+#define OUTLET_O1_IP_1 192
+#define OUTLET_O1_IP_2 168
+#define OUTLET_O1_IP_3 1
+#define OUTLET_O1_IP_4 101
+
+#define OUTLET_O2_IP_1 192
+#define OUTLET_O2_IP_2 168
+#define OUTLET_O2_IP_3 1
+#define OUTLET_O2_IP_4 102
+
+#define OUTLET_O3_IP_1 192
+#define OUTLET_O3_IP_2 168
+#define OUTLET_O3_IP_3 1
+#define OUTLET_O3_IP_4 103
+
+#define OUTLET_O4_IP_1 192
+#define OUTLET_O4_IP_2 168
+#define OUTLET_O4_IP_3 1
+#define OUTLET_O4_IP_4 104
+
+// Serial and network timing.
+#define SERIAL_BAUD 115200UL
+#define WIFI_STA_CONNECT_TIMEOUT_MS 10000UL
+#define WIFI_STA_RETRY_INTERVAL_MS 5000UL
+#define TP_LINK_TCP_TIMEOUT_MS 2000UL
+#define TP_LINK_POLL_INTERVAL_MS 1500UL

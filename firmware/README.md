@@ -29,6 +29,9 @@ target `pebble_serial_v1` rather than inventing a one-off text protocol.
     - `Nano A5 -> GY-521 SCL`
     - `GY-521 AD0 -> GND`
     - `GY-521 INT` left disconnected
+- `firmware/HS105_seeed-xiao-c3/`
+  - USB-serial station-mode bridge for four TP-Link HS105 outlets.
+  - The XIAO ESP32-C3 joins a router-hosted Wi-Fi LAN as a normal client, talks to four statically addressed HS105 plugs over the legacy Kasa LAN protocol on port `9999`, and exposes four logical outlet slots over `pebble_serial_v1`.
 - `firmware/MINILAMP_seeed-xiao-c6/`
   - Reference firmware for the original MiniLAMP platform.
 - `firmware/BUMPERBOT_wemos/`
@@ -47,6 +50,18 @@ cp firmware/MINILAMP_seeed-xiao-c6/private_config.h.example \
 
 Then edit `private_config.h` with local Wi-Fi/MQTT credentials and any TLS settings.
 `private_config.h` is gitignored so secrets are not committed.
+
+For the HS105 XIAO ESP32-C3 bridge firmware, create a private config header:
+
+```bash
+cp firmware/HS105_seeed-xiao-c3/private_config.h.example \
+   firmware/HS105_seeed-xiao-c3/private_config.h
+```
+
+Then edit `private_config.h` with:
+- the router SSID/PSK for the LAN the XIAO should join
+- the XIAO's own static IP, gateway, and subnet
+- the static IP for each outlet slot (`o1`..`o4`)
 
 For the BumperBot reference firmware, create a separate private config header:
 
@@ -75,6 +90,7 @@ arduino-cli core install Seeeduino:samd
 Reference flash scripts (from repo root):
 ```bash
 ./firmware/flash-goob-firmware.sh
+./firmware/flash-hs105-firmware.sh
 ./firmware/flash-fred-firmware.sh
 ./firmware/flash-minilamp-firmware.sh
 ./firmware/flash-bumperbot-wemos-firmware.sh
@@ -87,6 +103,7 @@ Reference flash scripts (from repo root):
 Override as needed, e.g.:
 ```bash
 PORT=/dev/ttyACM1 FQBN=Seeeduino:samd:seeed_XIAO_m0 ./firmware/flash-fred-firmware.sh
+PORT=/dev/ttyACM0 FQBN=esp32:esp32:XIAO_ESP32C3 ./firmware/flash-hs105-firmware.sh
 PORT=/dev/ttyACM0 FQBN=esp32:esp32:XIAO_ESP32C6 ./firmware/flash-minilamp-firmware.sh
 PORT=/dev/ttyUSB0 FQBN=esp8266:esp8266:d1_mini ./firmware/flash-bumperbot-wemos-firmware.sh
 ```
