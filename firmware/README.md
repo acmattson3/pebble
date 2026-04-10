@@ -32,6 +32,15 @@ target `pebble_serial_v1` rather than inventing a one-off text protocol.
 - `firmware/HS105_seeed-xiao-c3/`
   - USB-serial station-mode bridge for four TP-Link HS105 outlets.
   - The XIAO ESP32-C3 joins a router-hosted Wi-Fi LAN as a normal client, talks to four statically addressed HS105 plugs over the legacy Kasa LAN protocol on port `9999`, and exposes four logical outlet slots over `pebble_serial_v1`.
+- `firmware/MIP_seeed-xiao-esp32s3-sense/`
+  - Direct MQTT firmware for a Seeeduino XIAO ESP32-S3 Sense with camera, wired to a WowWee MiP robot UART.
+  - The sketch publishes Pebble-standard MQTT topics itself rather than using `serial_mcu_bridge`, because the XIAO owns Wi-Fi, MQTT, camera capture, and the MiP UART link.
+  - Wiring:
+    - `XIAO D6 / GPIO43 TX -> MiP RX`
+    - `XIAO D7 / GPIO44 RX -> MiP TX`
+    - common ground between XIAO and MiP
+  - Do not power the XIAO directly from the MiP raw battery rail; use a suitable regulator/buck supply.
+  - MQTT video is intentionally low bandwidth: off by default, 1 FPS, low resolution, keyframe-only, no delta frames.
 - `firmware/MINILAMP_seeed-xiao-c6/`
   - Reference firmware for the original MiniLAMP platform.
 - `firmware/BUMPERBOT_wemos/`
@@ -63,6 +72,20 @@ Then edit `private_config.h` with:
 - the XIAO's own static IP, gateway, and subnet
 - the static IP for each outlet slot (`o1`..`o4`)
 
+For the MiP XIAO ESP32-S3 Sense firmware, create a private config header:
+
+```bash
+cp firmware/MIP_seeed-xiao-esp32s3-sense/private_config.h.example \
+   firmware/MIP_seeed-xiao-esp32s3-sense/private_config.h
+```
+
+Then edit `private_config.h` with:
+- Wi-Fi and MQTT credentials
+- robot identity (`SYSTEM_NAME`, `ROBOT_ID`, `ROBOT_NAME`)
+- optional TLS settings
+- MiP UART baud/probe settings
+- MQTT keepalive, video rate/quality, and MQTT packet buffer size
+
 For the BumperBot reference firmware, create a separate private config header:
 
 ```bash
@@ -91,6 +114,7 @@ Reference flash scripts (from repo root):
 ```bash
 ./firmware/flash-goob-firmware.sh
 ./firmware/flash-hs105-firmware.sh
+./firmware/flash-mip-firmware.sh
 ./firmware/flash-fred-firmware.sh
 ./firmware/flash-minilamp-firmware.sh
 ./firmware/flash-bumperbot-wemos-firmware.sh
@@ -104,6 +128,7 @@ Override as needed, e.g.:
 ```bash
 PORT=/dev/ttyACM1 FQBN=Seeeduino:samd:seeed_XIAO_m0 ./firmware/flash-fred-firmware.sh
 PORT=/dev/ttyACM0 FQBN=esp32:esp32:XIAO_ESP32C3 ./firmware/flash-hs105-firmware.sh
+PORT=/dev/ttyACM0 FQBN=esp32:esp32:XIAO_ESP32S3:PSRAM=opi ./firmware/flash-mip-firmware.sh
 PORT=/dev/ttyACM0 FQBN=esp32:esp32:XIAO_ESP32C6 ./firmware/flash-minilamp-firmware.sh
 PORT=/dev/ttyUSB0 FQBN=esp8266:esp8266:d1_mini ./firmware/flash-bumperbot-wemos-firmware.sh
 ```

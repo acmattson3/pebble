@@ -11,6 +11,16 @@ control/configs/config.json
 !control/configs/*.example.json
 control/secrets/
 firmware/*/private_config.h
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+.codex
+.codex/
 
 # Local logs and data captures
 *.log

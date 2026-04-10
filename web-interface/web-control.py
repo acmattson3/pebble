@@ -498,7 +498,8 @@ logging.basicConfig(
 logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
 app = Flask(__name__)
-app.logger.disabled = True
+if hasattr(app, "logger"):
+    app.logger.disabled = True
 
 telemetry_cache: Dict[str, Dict[str, Any]] = {}
 telemetry_lock = threading.Lock()
@@ -1786,6 +1787,37 @@ def _handle_capabilities_payload(
             if isinstance(status_topic, str) and status_topic.strip():
                 entry["autonomyStatusTopic"] = status_topic.strip()
 
+        drive = value.get("drive") if isinstance(value.get("drive"), dict) else None
+        if drive is not None:
+            drive_available = _coerce_bool(drive.get("available"))
+            drive_controls = _coerce_bool(drive.get("controls"))
+            if drive_available is not None:
+                entry["hasDrive"] = bool(drive_available if drive_controls is None else drive_available and drive_controls)
+
+        lights = value.get("lights") if isinstance(value.get("lights"), dict) else None
+        if lights is not None:
+            solid_available = _coerce_bool(lights.get("solid"))
+            flash_available = _coerce_bool(lights.get("flash"))
+            if solid_available is not None or flash_available is not None:
+                entry["hasLights"] = bool(solid_available or flash_available)
+
+        telemetry = value.get("telemetry") if isinstance(value.get("telemetry"), dict) else None
+        if telemetry is not None:
+            touch_available = _coerce_bool(telemetry.get("touch_sensors"))
+            charging_available = _coerce_bool(telemetry.get("charging_status"))
+            odometry_available = _coerce_bool(
+                telemetry.get("wheel_odometry")
+                if telemetry.get("wheel_odometry") is not None
+                else telemetry.get("odometry")
+            )
+            imu_available = _coerce_bool(telemetry.get("imu"))
+            if touch_available is not None or charging_available is not None:
+                entry["hasTelemetry"] = bool(touch_available or charging_available)
+            if odometry_available is not None:
+                entry["hasOdometry"] = bool(odometry_available)
+            if imu_available is not None:
+                entry["hasImu"] = bool(imu_available)
+
         system = value.get("system") if isinstance(value.get("system"), dict) else None
         reboot = None
         if system is not None and isinstance(system.get("reboot"), dict):
@@ -1874,6 +1906,53 @@ def _heartbeat_has_nonzero_timestamp(payload: Dict[str, Any]) -> bool:
     return False
 
 
+def _heartbeat_explicit_online(payload: Dict[str, Any]) -> Optional[bool]:
+    candidates: list[Dict[str, Any]] = []
+    value = payload.get("value")
+    if isinstance(value, dict):
+        candidates.append(value)
+    candidates.append(payload)
+
+    for item in candidates:
+        online = _coerce_bool(item.get("online"))
+        if online is not None:
+            return online
+        for key in ("status", "state"):
+            raw = item.get(key)
+            if not isinstance(raw, str):
+                continue
+            token = raw.strip().lower()
+            if token in {"online", "up", "connected"}:
+                return True
+            if token in {"offline", "down", "disconnected"}:
+                return False
+    return None
+
+
+def _record_heartbeat_explicit_state(
+    robot_id: str,
+    component_type: Optional[str],
+    online: bool,
+    system: Optional[str] = None,
+) -> None:
+    robot_key = _robot_key(robot_id)
+    received_at = time.time()
+    with telemetry_lock:
+        entry = telemetry_cache.setdefault(robot_key, {})
+        entry["heartbeat_topic_received_at"] = received_at
+        entry["heartbeat_explicit_online"] = online
+        entry["heartbeat_explicit_state_received_at"] = received_at
+
+    placeholder = _ensure_robot_placeholder(robot_key, component_type, system=system)
+    resolved_key = str(placeholder.get("key") or robot_key)
+    with robots_lock:
+        entry = discovered_robots.get(resolved_key)
+        if entry is None:
+            return
+        entry["lastSeen"] = received_at
+        _apply_robot_hints(resolved_key, entry)
+
+
 def _record_heartbeat_sample(
     robot_id: str,
     component_type: Optional[str],
@@ -1894,6 +1973,8 @@ def _record_heartbeat_sample(
         explicit_received_at = _coerce_float(entry.get("heartbeat_topic_received_at"))
         if explicit:
             entry["heartbeat_topic_received_at"] = received_at
+            entry["heartbeat_explicit_online"] = True
+            entry["heartbeat_explicit_state_received_at"] = received_at
         elif explicit_received_at is not None and (received_at - explicit_received_at) <= HEARTBEAT_TOPIC_FRESH_SECONDS:
             # If explicit heartbeat packets are active, ignore telemetry fallback samples.
             return
@@ -1943,6 +2024,20 @@ def _heartbeat_window_seconds(avg_latency_ms: Optional[float], avg_interval_s: O
 
 def _heartbeat_connection_state(entry: Dict[str, Any], now: Optional[float] = None) -> Dict[str, Any]:
     now_s = now if now is not None else time.time()
+    explicit_online = entry.get("heartbeat_explicit_online")
+    explicit_state_received_at = _coerce_float(entry.get("heartbeat_explicit_state_received_at"))
+    if explicit_online is False:
+        age_s = None if explicit_state_received_at is None else max(0.0, now_s - explicit_state_received_at)
+        return {
+            "status": "offline",
+            "online": False,
+            "offline_for_s": age_s,
+            "age_s": age_s,
+            "window_s": None,
+            "interval_s": _coerce_float(entry.get("heartbeat_interval_avg_s")),
+            "latency_ms": _coerce_float(entry.get("heartbeat_latency_ms")),
+            "latency_avg_ms": _coerce_float(entry.get("heartbeat_latency_avg_ms")),
+        }
     received_at = _coerce_float(entry.get("heartbeat_received_at"))
     avg_latency_ms = _coerce_float(entry.get("heartbeat_latency_avg_ms"))
     avg_interval_s = _coerce_float(entry.get("heartbeat_interval_avg_s"))
@@ -1990,6 +2085,10 @@ def _handle_heartbeat_payload(
     component_type: Optional[str] = None,
     system: Optional[str] = None,
 ) -> None:
+    explicit_online = _heartbeat_explicit_online(payload)
+    if explicit_online is False:
+        _record_heartbeat_explicit_state(robot_id, component_type, False, system=system)
+        return
     # Backward compatibility: accept legacy payloads, but only treat messages
     # with a real timestamp as heartbeats. This ignores old online/offline tags.
     if not _heartbeat_has_nonzero_timestamp(payload):

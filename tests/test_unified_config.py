@@ -222,6 +222,14 @@ class UnifiedConfigTests(unittest.TestCase):
                     "audio": {"available": True, "controls": True},
                     "soundboard": {"available": False, "controls": False},
                     "autonomy": {"available": True, "controls": True},
+                    "drive": {"available": True, "controls": True},
+                    "lights": {"solid": True, "flash": False},
+                    "telemetry": {
+                        "touch_sensors": False,
+                        "charging_status": True,
+                        "wheel_odometry": True,
+                        "imu": True,
+                    },
                 },
             }
             module._handle_capabilities_payload("testbot", payload, "robots")
@@ -237,6 +245,11 @@ class UnifiedConfigTests(unittest.TestCase):
         self.assertFalse(robot.get("soundboardControls"))
         self.assertTrue(robot.get("hasAutonomy"))
         self.assertTrue(robot.get("autonomyControls"))
+        self.assertTrue(robot.get("hasDrive"))
+        self.assertTrue(robot.get("hasLights"))
+        self.assertTrue(robot.get("hasTelemetry"))
+        self.assertTrue(robot.get("hasOdometry"))
+        self.assertTrue(robot.get("hasImu"))
 
     def test_web_capability_values_are_not_overridden_by_config_hints(self):
         cfg = self._runtime_cfg()
@@ -432,6 +445,35 @@ class UnifiedConfigTests(unittest.TestCase):
         systems = {(item["system"], item["id"], item["key"]) for item in snapshot}
         self.assertIn(("pebble", "testbot", "pebble:robots:testbot"), systems)
         self.assertIn(("pebblebot", "testbot", "pebblebot:robots:testbot"), systems)
+
+    def test_web_last_will_offline_payload_marks_robot_offline(self):
+        cfg = self._runtime_cfg()
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            module = self._load_web_module(cfg_path)
+
+            online_msg = types.SimpleNamespace(
+                topic="pebble/robots/mip/outgoing/online",
+                payload=json.dumps({"t": 1_800_000_000.0, "online": True, "status": "online"}).encode("utf-8"),
+                qos=1,
+                retain=True,
+            )
+            offline_msg = types.SimpleNamespace(
+                topic="pebble/robots/mip/outgoing/online",
+                payload=json.dumps({"online": False, "status": "offline"}).encode("utf-8"),
+                qos=1,
+                retain=True,
+            )
+
+            module._on_mqtt_message(None, None, online_msg)
+            module._on_mqtt_message(None, None, offline_msg)
+            snapshot = module._ui_robot_snapshot()
+
+        mip = next(item for item in snapshot if item["key"] == "pebble:robots:mip")
+        self.assertFalse(mip["online"])
+        self.assertEqual("offline", mip["connectionStatus"])
 
     def test_web_mqtt_connect_subscribes_all_systems(self):
         cfg = self._runtime_cfg()

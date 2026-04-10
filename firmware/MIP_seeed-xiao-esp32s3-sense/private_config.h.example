@@ -1,0 +1,69 @@
+#pragma once
+
+// Copy this file to private_config.h and fill in local values.
+// private_config.h is ignored by git.
+
+// --------- Wi-Fi ---------
+#define WIFI_SSID "REPLACE_WIFI_SSID"
+#define WIFI_PASS "REPLACE_WIFI_PASSWORD"
+
+// --------- MQTT ---------
+#define MQTT_HOST "REPLACE_MQTT_HOST"
+#define MQTT_PORT 1883
+#define MQTT_USER ""
+#define MQTT_PASS ""
+
+// Set this large enough for low-resolution JPEG frames encoded as JSON.
+// PubSubClient's default packet size is too small for MQTT video.
+#define MQTT_PACKET_BUFFER_SIZE 24576
+#define MQTT_KEEPALIVE_SECONDS 30
+
+// --------- MQTT TLS ---------
+// Set to 1 for TLS, usually with MQTT_PORT 8883.
+#define MQTT_USE_TLS 0
+#define MQTT_TLS_INSECURE 0
+#define MQTT_CA_CERT R"EOF(
+-----BEGIN CERTIFICATE-----
+YOUR_CA_CERT_HERE
+-----END CERTIFICATE-----
+)EOF"
+
+// --------- Pebble identity ---------
+#define SYSTEM_NAME "pebble"
+#define ROBOT_ID "mip"
+#define ROBOT_NAME "MiP"
+
+// --------- MiP UART ---------
+// XIAO ESP32-S3 Sense hardware serial pins:
+// D6/GPIO43 -> MiP RX
+// D7/GPIO44 -> MiP TX
+#define MIP_UART_TX_PIN D6
+#define MIP_UART_RX_PIN D7
+#define MIP_UART_BAUD 115200UL
+#define MIP_UART_PROBE_ALTERNATE_BAUD 1
+#define MIP_UART_ALTERNATE_BAUD 9600UL
+
+// If steering is backwards in the web UI, flip this to 1.
+#define MIP_TURN_INVERT 0
+
+// Conservative command safety.
+#define DRIVE_REFRESH_MS 50UL
+#define DRIVE_TIMEOUT_MS 750UL
+
+// Best-effort odometry integration parameters.
+#define MIP_ODOM_MAX_TURN_RADPS 2.4f
+
+// --------- Camera / MQTT video ---------
+// Keep this low; MQTT video is intended to be off by default and low bandwidth.
+#define MQTT_VIDEO_ENABLED_BY_DEFAULT 0
+#define MQTT_VIDEO_INTERVAL_MS 1000UL
+#define CAMERA_FRAME_SIZE FRAMESIZE_QQVGA
+// OV2640 lower values are higher quality. Keep quality low enough that the
+// JSON payload fits MQTT_PACKET_BUFFER_SIZE.
+#define CAMERA_JPEG_QUALITY 38
+
+// --------- Remote controls ---------
+#define ALLOW_REMOTE_REBOOT 1
+
+// --------- Debug ---------
+#define DEBUG_LOGS 0
