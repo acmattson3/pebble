@@ -46,6 +46,18 @@
 #define MIP_UART_ALTERNATE_BAUD 9600UL
 #endif
 
+#ifndef MIP_UART_TX_ONLY_FALLBACK_ALTERNATE
+#define MIP_UART_TX_ONLY_FALLBACK_ALTERNATE 0
+#endif
+
+#ifndef MIP_UART_SPARKFUN_WAKE
+#define MIP_UART_SPARKFUN_WAKE 1
+#endif
+
+#ifndef MIP_UART_APPEND_ZERO
+#define MIP_UART_APPEND_ZERO 1
+#endif
+
 #ifndef MIP_TURN_INVERT
 #define MIP_TURN_INVERT 0
 #endif
@@ -68,6 +80,10 @@
 
 #ifndef MQTT_VIDEO_ENABLED_BY_DEFAULT
 #define MQTT_VIDEO_ENABLED_BY_DEFAULT 0
+#endif
+
+#ifndef MIP_CAMERA_ENABLED
+#define MIP_CAMERA_ENABLED 0
 #endif
 
 #ifndef MQTT_VIDEO_INTERVAL_MS
@@ -114,7 +130,7 @@
 
 namespace {
 
-const char FIRMWARE_VERSION[] = "2026.04.10";
+const char FIRMWARE_VERSION[] = "2026.04.10.4";
 const char CAPABILITIES_SCHEMA[] = "pebble-capabilities/v1";
 const char MQTT_OFFLINE_PAYLOAD[] = "{\"online\":false,\"status\":\"offline\"}";
 
@@ -149,6 +165,7 @@ const uint8_t MIP_CMD_GET_HEAD_LEDS = 0x8B;
 
 const uint8_t MIP_SOUND_SHORT_MUTE_FOR_STOP = 105;
 const uint8_t MIP_SOUND_MAX_BUILTIN = 106;
+const uint8_t MIP_GET_UP_FROM_EITHER = 0x02;
 
 #if MQTT_USE_TLS
 WiFiClientSecure wifiClient;
@@ -191,11 +208,16 @@ unsigned long lastDriveCommandMs = 0;
 unsigned long lastDriveRefreshMs = 0;
 unsigned long lastMipResponseMs = 0;
 unsigned long lastOdomPollMs = 0;
+unsigned long lastGetUpMs = 0;
 
 int8_t targetVelocity = 0;
 int8_t targetTurnRate = 0;
 bool driveActive = false;
 bool driveStoppedForTimeout = true;
+uint32_t mqttMessageCount = 0;
+uint32_t driveCommandCount = 0;
+uint32_t lightsCommandCount = 0;
+uint32_t getUpCommandCount = 0;
 
 uint32_t mipBaud = MIP_UART_BAUD;
 bool mipRxOk = false;
@@ -429,6 +451,15 @@ void publishLog(const char *level, const char *message) {
   publishJsonDocument(topicLogs, doc, false);
 }
 
+void publishLogf(const char *level, const char *fmt, ...) {
+  char buffer[192];
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf(buffer, sizeof(buffer), fmt, args);
+  va_end(args);
+  publishLog(level, buffer);
+}
+
 uint8_t mipExpectedFrameLength(uint8_t cmd) {
   switch (cmd) {
     case MIP_CMD_GET_GESTURE_RESPONSE:
@@ -582,8 +613,20 @@ void processMipIncoming(unsigned long budgetMs) {
 bool mipSend(const uint8_t *request, size_t length) {
   if (length == 0) return false;
   size_t written = Serial1.write(request, length);
+#if MIP_UART_APPEND_ZERO
+  written += Serial1.write((uint8_t)0x00);
+  length += 1;
+#endif
   Serial1.flush();
   return written == length;
+}
+
+void mipSendSparkFunWake() {
+#if MIP_UART_SPARKFUN_WAKE
+  const uint8_t wake[] = {'T', 'T', 'M', ':', 'O', 'K', '\r', '\n'};
+  mipSend(wake, sizeof(wake));
+  delay(100);
+#endif
 }
 
 bool mipRequestResponse(const uint8_t *request, size_t requestLength, uint8_t expectedCmd,
@@ -617,6 +660,14 @@ bool mipQuery(uint8_t cmd, uint8_t *response, size_t responseSize, size_t &respo
 void mipStop() {
   uint8_t command[1] = {MIP_CMD_STOP};
   mipSend(command, sizeof(command));
+}
+
+void mipGetUpEither() {
+  uint8_t command[2] = {MIP_CMD_GET_UP, MIP_GET_UP_FROM_EITHER};
+  if (mipSend(command, sizeof(command))) {
+    lastGetUpMs = millis();
+    ++getUpCommandCount;
+  }
 }
 
 uint8_t encodeVelocity(int8_t velocity) {
@@ -660,13 +711,13 @@ void mipFlashChestLed(uint8_t red, uint8_t green, uint8_t blue, uint16_t onMs, u
 }
 
 void mipPlaySound(uint8_t soundIndex, uint8_t repeatCount = 0) {
-  uint8_t command[18];
-  command[0] = MIP_CMD_PLAY_SOUND;
-  for (uint8_t i = 0; i < 8; ++i) {
-    command[1 + i * 2] = (i == 0) ? soundIndex : MIP_SOUND_SHORT_MUTE_FOR_STOP;
-    command[1 + i * 2 + 1] = 0;
-  }
-  command[17] = repeatCount;
+  (void)repeatCount;
+  uint8_t command[4] = {
+    MIP_CMD_PLAY_SOUND,
+    soundIndex,
+    0x00,
+    0x00,
+  };
   mipSend(command, sizeof(command));
 }
 
@@ -701,6 +752,7 @@ bool beginMipUartAt(uint32_t baud, bool probe) {
   delay(80);
   while (Serial1.available() > 0) Serial1.read();
   mipBaud = baud;
+  mipSendSparkFunWake();
   mipStop();
   if (!probe) return true;
   return queryMipStatus(120);
@@ -713,14 +765,20 @@ void beginMipUart() {
   if (!gotResponse && MIP_UART_ALTERNATE_BAUD != MIP_UART_BAUD) {
     gotResponse = beginMipUartAt(MIP_UART_ALTERNATE_BAUD, true);
     if (!gotResponse) {
+#if MIP_UART_TX_ONLY_FALLBACK_ALTERNATE
+      beginMipUartAt(MIP_UART_ALTERNATE_BAUD, false);
+#else
       beginMipUartAt(MIP_UART_BAUD, false);
+#endif
     }
   }
 #endif
   if (gotResponse) {
     queryMipStartupInfo();
+    publishLogf("INFO", "MiP UART RX OK at %lu baud", (unsigned long)mipBaud);
     debugf("MiP UART RX OK at %lu", (unsigned long)mipBaud);
   } else {
+    publishLogf("WARNING", "MiP UART no response; TX-only mode at %lu baud", (unsigned long)mipBaud);
     debugf("MiP UART TX-only/no response at %lu", (unsigned long)mipBaud);
   }
 }
@@ -770,9 +828,15 @@ void handleDrivePayload(JsonVariant payload) {
   int turnSign = MIP_TURN_INVERT ? -1 : 1;
   targetVelocity = (int8_t)clampi((int)lroundf(z * 32.0f), -32, 32);
   targetTurnRate = (int8_t)clampi((int)lroundf(x * 32.0f * turnSign), -32, 32);
+  ++driveCommandCount;
   lastDriveCommandMs = millis();
   driveActive = true;
   driveStoppedForTimeout = false;
+  if ((targetVelocity != 0 || targetTurnRate != 0) &&
+      mipPosition != 0x02 &&
+      (lastGetUpMs == 0 || (millis() - lastGetUpMs) > 5000UL)) {
+    mipGetUpEither();
+  }
   mipContinuousDrive(targetVelocity, targetTurnRate);
   lastDriveRefreshMs = millis();
 }
@@ -782,7 +846,9 @@ void handleLightsSolidPayload(JsonVariant payload) {
   uint8_t blue = colorByte(v["b"]);
   uint8_t green = colorByte(v["g"]);
   uint8_t red = colorByte(v["r"]);
+  ++lightsCommandCount;
   mipSetChestLed(red, green, blue);
+  publishLogf("INFO", "lights solid r=%u g=%u b=%u", (unsigned int)red, (unsigned int)green, (unsigned int)blue);
 }
 
 void handleLightsFlashPayload(JsonVariant payload) {
@@ -792,7 +858,11 @@ void handleLightsFlashPayload(JsonVariant payload) {
   uint8_t red = colorByte(v["r"]);
   float periodSeconds = clampf(v["period"] | 2.0f, 0.05f, 30.0f);
   uint16_t halfPeriodMs = (uint16_t)clampi((int)lroundf(periodSeconds * 500.0f), 20, 5100);
+  ++lightsCommandCount;
   mipFlashChestLed(red, green, blue, halfPeriodMs, halfPeriodMs);
+  publishLogf("INFO", "lights flash r=%u g=%u b=%u period_ms=%u",
+              (unsigned int)red, (unsigned int)green, (unsigned int)blue,
+              (unsigned int)(halfPeriodMs * 2));
 }
 
 bool equalIgnoreCase(const char *lhs, const char *rhs) {
@@ -834,6 +904,7 @@ const char *soundNameForIndex(uint8_t index) {
 }
 
 void publishSoundboardStatus();
+bool initCamera();
 
 void handleSoundboardPayload(JsonVariant payload) {
   JsonVariant v = unwrapValue(payload);
@@ -858,6 +929,7 @@ void handleSoundboardPayload(JsonVariant payload) {
     soundPlaying = false;
     currentSoundIndex = 0;
     currentSoundFile[0] = '\0';
+    publishLog("INFO", "soundboard stop");
     publishSoundboardStatus();
     return;
   }
@@ -871,15 +943,44 @@ void handleSoundboardPayload(JsonVariant payload) {
   soundPlaying = true;
   currentSoundIndex = (uint8_t)soundIndex;
   snprintf(currentSoundFile, sizeof(currentSoundFile), "%s", soundNameForIndex(currentSoundIndex));
+  publishLogf("INFO", "soundboard play index=%u file=%s",
+              (unsigned int)currentSoundIndex, currentSoundFile);
   publishSoundboardStatus();
 }
 
 void handleVideoControlPayload(JsonVariant payload) {
   bool enabled = false;
   if (!jsonBoolValue(payload, enabled)) return;
-  videoEnabled = enabled;
-  if (videoEnabled && (!cameraReady || !mqttLargeBufferReady)) {
-    publishLog("WARNING", "video requested but camera or MQTT buffer is not ready");
+  if (!MIP_CAMERA_ENABLED) {
+    videoEnabled = false;
+    cameraReady = false;
+    publishLog("WARNING", "video command ignored because camera support is disabled");
+    return;
+  }
+  if (!enabled) {
+    videoEnabled = false;
+#if MIP_CAMERA_ENABLED
+    if (cameraReady) {
+      esp_camera_deinit();
+      cameraReady = false;
+    }
+#endif
+    publishLog("INFO", "video disabled");
+    return;
+  }
+  if (!mqttLargeBufferReady) {
+    videoEnabled = false;
+    publishLog("WARNING", "video requested but MQTT buffer is not ready");
+    return;
+  }
+  if (!cameraReady) {
+    cameraReady = initCamera();
+  }
+  videoEnabled = cameraReady;
+  if (!cameraReady) {
+    publishLog("WARNING", "video requested but camera init failed");
+  } else {
+    publishLog("INFO", "video enabled");
   }
 }
 
@@ -897,6 +998,7 @@ void handleRebootPayload(JsonVariant payload) {
 }
 
 void onMqttMessage(char *rawTopic, byte *payload, unsigned int length) {
+  ++mqttMessageCount;
   StaticJsonDocument<1024> doc;
   DeserializationError err = deserializeJson(doc, payload, length);
   if (err) {
@@ -934,7 +1036,7 @@ void publishHeartbeat() {
 }
 
 void publishCapabilities() {
-  StaticJsonDocument<3072> doc;
+  StaticJsonDocument<6144> doc;
   uint64_t t = unixMillis();
   doc["schema"] = CAPABILITIES_SCHEMA;
   if (t != 0) doc["t"] = t;
@@ -947,12 +1049,14 @@ void publishCapabilities() {
   identity["model"] = "wowwee_mip_xiao_esp32s3_sense";
 
   JsonObject video = value.createNestedObject("video");
-  video["available"] = cameraReady && mqttLargeBufferReady;
-  video["controls"] = true;
+  video["available"] = MIP_CAMERA_ENABLED && mqttLargeBufferReady;
+  video["controls"] = MIP_CAMERA_ENABLED;
   video["topic"] = topicVideo;
   video["command_topic"] = topicVideoControl;
   video["flag_topic"] = topicVideoFlag;
   video["overlays_topic"] = topicVideoOverlays;
+  video["encoding"] = "jpeg";
+  video["transport"] = "binary_mqtt";
   video["width"] = 160;
   video["height"] = 120;
   video["fps"] = 1;
@@ -989,8 +1093,11 @@ void publishCapabilities() {
   drive["available"] = true;
   drive["controls"] = true;
   drive["topic"] = topicDrive;
+  drive["command_topic"] = topicDrive;
 
   JsonObject lights = value.createNestedObject("lights");
+  lights["available"] = true;
+  lights["controls"] = true;
   lights["solid"] = true;
   lights["flash"] = true;
   lights["solid_topic"] = topicLightsSolid;
@@ -1032,8 +1139,15 @@ void publishStatus() {
   value["firmware_version"] = FIRMWARE_VERSION;
   value["video_enabled"] = videoEnabled;
   value["camera_ready"] = cameraReady;
+  value["mqtt_large_buffer_ready"] = mqttLargeBufferReady;
   value["mip_baud"] = mipBaud;
   value["mip_rx_ok"] = mipRxOk;
+  value["mqtt_message_count"] = mqttMessageCount;
+  value["drive_command_count"] = driveCommandCount;
+  value["lights_command_count"] = lightsCommandCount;
+  value["get_up_command_count"] = getUpCommandCount;
+  value["target_velocity"] = targetVelocity;
+  value["target_turn_rate"] = targetTurnRate;
   if (isfinite(mipBatteryVolts)) value["battery_v"] = mipBatteryVolts;
   if (mipPosition != 0xFF) {
     value["position_code"] = mipPosition;
@@ -1191,6 +1305,7 @@ bool base64Encode(const uint8_t *input, size_t inputLength, char *&output, size_
 }
 
 bool initCamera() {
+  if (!MIP_CAMERA_ENABLED) return false;
   camera_config_t config;
   memset(&config, 0, sizeof(config));
   config.ledc_channel = LEDC_CHANNEL_0;
@@ -1233,6 +1348,7 @@ bool initCamera() {
 }
 
 void publishVideoFrame() {
+  if (!MIP_CAMERA_ENABLED) return;
   if (!videoEnabled || !cameraReady || !mqttLargeBufferReady || !mqtt.connected()) return;
   camera_fb_t *fb = esp_camera_fb_get();
   if (!fb) {
@@ -1240,47 +1356,30 @@ void publishVideoFrame() {
     return;
   }
 
-  uint8_t *zlibPayload = nullptr;
-  size_t zlibLength = 0;
-  char *base64Payload = nullptr;
-  size_t base64Length = 0;
-  bool ok = zlibStoredWrap(fb->buf, fb->len, zlibPayload, zlibLength) &&
-            base64Encode(zlibPayload, zlibLength, base64Payload, base64Length);
+  size_t payloadLength = fb->len;
+  if (payloadLength + topicVideo.length() + 16 >= MQTT_PACKET_BUFFER_SIZE) {
+    publishLogf("WARNING", "video frame exceeds MQTT packet buffer jpeg_bytes=%u",
+                (unsigned int)payloadLength);
+    esp_camera_fb_return(fb);
+    return;
+  }
+  bool ok = mqtt.publish(topicVideo.c_str(), fb->buf, fb->len, false);
   esp_camera_fb_return(fb);
-  if (zlibPayload) free(zlibPayload);
-  if (!ok || !base64Payload) {
-    if (base64Payload) free(base64Payload);
-    publishLog("WARNING", "video frame encode failed");
-    return;
-  }
-
-  String payload;
-  payload.reserve(base64Length + 128);
-  payload += "{\"id\":";
-  payload += String(++videoFrameId);
-  payload += ",\"keyframe\":true,\"data\":\"";
-  payload += base64Payload;
-  payload += "\",\"timestamp\":";
-  double ts = unixSecondsDouble();
-  payload += String(ts > 0.0 ? ts : ((double)millis() / 1000.0), 3);
-  payload += "}";
-  free(base64Payload);
-
-  if (payload.length() + topicVideo.length() + 16 >= MQTT_PACKET_BUFFER_SIZE) {
+  if (!ok) {
     publishLog("WARNING", "video frame exceeds MQTT packet buffer");
-    return;
   }
-  publishString(topicVideo, payload, false);
 }
 
 void connectWifi() {
   if (WiFi.status() == WL_CONNECTED) return;
   mipStop();
+  publishLog("WARNING", "WiFi disconnected; reconnecting");
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED) {
     delay(250);
   }
+  publishLogf("INFO", "WiFi connected ip=%s", WiFi.localIP().toString().c_str());
 }
 
 void configureMqttTls() {
@@ -1330,6 +1429,7 @@ void connectMqtt() {
       subscribeTopics();
       publishStartupState();
     } else {
+      publishLogf("WARNING", "MQTT connect failed state=%d", mqtt.state());
       delay(1000);
     }
   }
@@ -1386,7 +1486,10 @@ void telemetryTick() {
     odomOk = queryMipOdometer(50);
   }
   if (!statusOk && !odomOk && lastMipResponseMs > 0 && (now - lastMipResponseMs) > 5000UL) {
-    mipRxOk = false;
+    if (mipRxOk) {
+      mipRxOk = false;
+      publishLog("WARNING", "MiP UART RX lost");
+    }
   }
   updateOdometryFromMip();
   publishStatus();
@@ -1406,7 +1509,7 @@ void periodicPublishTick() {
     publishSoundboardFiles();
     publishChargingStatus();
   }
-  if (videoEnabled && (now - lastVideoMs) >= MQTT_VIDEO_INTERVAL_MS) {
+  if (MIP_CAMERA_ENABLED && videoEnabled && (now - lastVideoMs) >= MQTT_VIDEO_INTERVAL_MS) {
     lastVideoMs = now;
     publishVideoFrame();
   }
@@ -1420,8 +1523,7 @@ void setup() {
   setupTopics();
 
   beginMipUart();
-  cameraReady = initCamera();
-
+  mipGetUpEither();
   connectWifi();
   ensureTimeSync();
   configureMqttTls();

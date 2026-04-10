@@ -2870,18 +2870,26 @@ def _handle_video_payload(robot_id: str, payload_bytes: bytes) -> None:
     if not VIDEO_SUPPORT:
         return
     robot_key = _robot_key(robot_id)
-    try:
-        packet = json.loads(payload_bytes.decode("utf-8"))
-    except json.JSONDecodeError:
-        logging.debug("Non-JSON video payload from %s", robot_id)
-        return
 
     _mark_robot_video_capable(robot_key)
     condition = _get_video_condition(robot_key)
-    decoded = _decode_video_frame(robot_key, packet)
-    if decoded is None:
-        return
-    frame_bytes, metadata = decoded
+    frame_bytes: Optional[bytes] = None
+    metadata: Dict[str, Any] = {}
+
+    if len(payload_bytes) >= 2 and payload_bytes[0] == 0xFF and payload_bytes[1] == 0xD8:
+        frame_bytes = payload_bytes
+        metadata = {"keyframe": True, "transport": "binary_jpeg", "timestamp": time.time()}
+    else:
+        try:
+            packet = json.loads(payload_bytes.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            logging.debug("Unsupported video payload from %s", robot_id)
+            return
+
+        decoded = _decode_video_frame(robot_key, packet)
+        if decoded is None:
+            return
+        frame_bytes, metadata = decoded
 
     with video_cache_lock:
         entry = video_cache.setdefault(robot_key, {})

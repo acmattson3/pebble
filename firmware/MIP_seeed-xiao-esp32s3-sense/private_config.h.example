@@ -42,6 +42,11 @@ YOUR_CA_CERT_HERE
 #define MIP_UART_BAUD 115200UL
 #define MIP_UART_PROBE_ALTERNATE_BAUD 1
 #define MIP_UART_ALTERNATE_BAUD 9600UL
+// SparkFun's MiP ProMini Pack Arduino library uses 115200, sends
+// "TTM:OK\r\n" on startup, and appends 0x00 after command packets.
+#define MIP_UART_TX_ONLY_FALLBACK_ALTERNATE 0
+#define MIP_UART_SPARKFUN_WAKE 1
+#define MIP_UART_APPEND_ZERO 1
 
 // If steering is backwards in the web UI, flip this to 1.
 #define MIP_TURN_INVERT 0
@@ -54,7 +59,12 @@ YOUR_CA_CERT_HERE
 #define MIP_ODOM_MAX_TURN_RADPS 2.4f
 
 // --------- Camera / MQTT video ---------
-// Keep this low; MQTT video is intended to be off by default and low bandwidth.
+// Disabled by default for the MiP build. The XIAO ESP32-S3 Sense camera uses
+// GPIO10, 40, 39, 48, 11, 12, 14, 16, 18, 17, 15, 38, 47, and 13, which
+// consumes many broken-out XIAO pins and can destabilize MiP wiring/debugging.
+#define MIP_CAMERA_ENABLED 0
+// If enabled, keep this low; MQTT video is intended to be off by default and
+// low bandwidth.
 #define MQTT_VIDEO_ENABLED_BY_DEFAULT 0
 #define MQTT_VIDEO_INTERVAL_MS 1000UL
 #define CAMERA_FRAME_SIZE FRAMESIZE_QQVGA
