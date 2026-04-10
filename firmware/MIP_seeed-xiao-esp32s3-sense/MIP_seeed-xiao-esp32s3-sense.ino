@@ -98,6 +98,14 @@
 #define CAMERA_JPEG_QUALITY 38
 #endif
 
+#ifndef MIP_CAMERA_VFLIP
+#define MIP_CAMERA_VFLIP 1
+#endif
+
+#ifndef MIP_SOUND_DEFAULT_VOLUME
+#define MIP_SOUND_DEFAULT_VOLUME 7
+#endif
+
 #ifndef MIP_ODOM_MAX_TURN_RADPS
 #define MIP_ODOM_MAX_TURN_RADPS 2.4f
 #endif
@@ -130,7 +138,7 @@
 
 namespace {
 
-const char FIRMWARE_VERSION[] = "2026.04.10.4";
+const char FIRMWARE_VERSION[] = "2026.04.10.6";
 const char CAPABILITIES_SCHEMA[] = "pebble-capabilities/v1";
 const char MQTT_OFFLINE_PAYLOAD[] = "{\"online\":false,\"status\":\"offline\"}";
 
@@ -151,6 +159,7 @@ const uint8_t MIP_CMD_DRIVE_FORWARD = 0x71;
 const uint8_t MIP_CMD_DRIVE_BACKWARD = 0x72;
 const uint8_t MIP_CMD_TURN_LEFT = 0x73;
 const uint8_t MIP_CMD_TURN_RIGHT = 0x74;
+const uint8_t MIP_CMD_SET_GAME_MODE = 0x76;
 const uint8_t MIP_CMD_STOP = 0x77;
 const uint8_t MIP_CMD_CONTINUOUS_DRIVE = 0x78;
 const uint8_t MIP_CMD_GET_STATUS = 0x79;
@@ -165,7 +174,9 @@ const uint8_t MIP_CMD_GET_HEAD_LEDS = 0x8B;
 
 const uint8_t MIP_SOUND_SHORT_MUTE_FOR_STOP = 105;
 const uint8_t MIP_SOUND_MAX_BUILTIN = 106;
+const uint8_t MIP_SOUND_VOLUME_7 = 0xFE;
 const uint8_t MIP_GET_UP_FROM_EITHER = 0x02;
+const uint8_t MIP_GAME_MODE_APP = 0x01;
 
 #if MQTT_USE_TLS
 WiFiClientSecure wifiClient;
@@ -182,6 +193,7 @@ String topicVideoControl;
 String topicVideoFlag;
 String topicRebootFlag;
 String topicSoundboardCommand;
+String topicMipRawCommand;
 String topicAutonomyCommand;
 String topicHeartbeat;
 String topicCapabilities;
@@ -220,6 +232,8 @@ uint32_t lightsCommandCount = 0;
 uint32_t getUpCommandCount = 0;
 
 uint32_t mipBaud = MIP_UART_BAUD;
+uint8_t mipTxPin = MIP_UART_TX_PIN;
+uint8_t mipRxPin = MIP_UART_RX_PIN;
 bool mipRxOk = false;
 uint8_t mipPosition = 0xFF;
 float mipBatteryVolts = NAN;
@@ -610,15 +624,19 @@ void processMipIncoming(unsigned long budgetMs) {
   } while ((long)(deadline - millis()) >= 0);
 }
 
-bool mipSend(const uint8_t *request, size_t length) {
+bool mipSendRaw(const uint8_t *request, size_t length, bool appendZero) {
   if (length == 0) return false;
   size_t written = Serial1.write(request, length);
-#if MIP_UART_APPEND_ZERO
-  written += Serial1.write((uint8_t)0x00);
-  length += 1;
-#endif
+  if (appendZero) {
+    written += Serial1.write((uint8_t)0x00);
+    length += 1;
+  }
   Serial1.flush();
   return written == length;
+}
+
+bool mipSend(const uint8_t *request, size_t length) {
+  return mipSendRaw(request, length, MIP_UART_APPEND_ZERO != 0);
 }
 
 void mipSendSparkFunWake() {
@@ -659,6 +677,11 @@ bool mipQuery(uint8_t cmd, uint8_t *response, size_t responseSize, size_t &respo
 
 void mipStop() {
   uint8_t command[1] = {MIP_CMD_STOP};
+  mipSend(command, sizeof(command));
+}
+
+void mipSetGameModeApp() {
+  uint8_t command[2] = {MIP_CMD_SET_GAME_MODE, MIP_GAME_MODE_APP};
   mipSend(command, sizeof(command));
 }
 
@@ -711,13 +734,18 @@ void mipFlashChestLed(uint8_t red, uint8_t green, uint8_t blue, uint16_t onMs, u
 }
 
 void mipPlaySound(uint8_t soundIndex, uint8_t repeatCount = 0) {
-  (void)repeatCount;
-  uint8_t command[4] = {
-    MIP_CMD_PLAY_SOUND,
-    soundIndex,
-    0x00,
-    0x00,
-  };
+  mipSetGameModeApp();
+  uint8_t command[18];
+  command[0] = MIP_CMD_PLAY_SOUND;
+  command[1] = MIP_SOUND_VOLUME_7;
+  command[2] = 0x00;
+  command[3] = soundIndex;
+  command[4] = 0x00;
+  for (uint8_t i = 2; i < 8; ++i) {
+    command[1 + i * 2] = MIP_SOUND_SHORT_MUTE_FOR_STOP;
+    command[1 + i * 2 + 1] = 0x00;
+  }
+  command[17] = repeatCount;
   mipSend(command, sizeof(command));
 }
 
@@ -741,6 +769,7 @@ bool queryMipOdometer(unsigned long timeoutMs = 80) {
 void queryMipStartupInfo() {
   uint8_t response[8];
   size_t length = 0;
+  mipSetVolume(MIP_SOUND_DEFAULT_VOLUME);
   mipQuery(MIP_CMD_GET_SOFTWARE_VERSION, response, sizeof(response), length, 120);
   mipQuery(MIP_CMD_GET_HARDWARE_INFO, response, sizeof(response), length, 120);
   mipQuery(MIP_CMD_GET_VOLUME, response, sizeof(response), length, 120);
@@ -748,11 +777,12 @@ void queryMipStartupInfo() {
 
 bool beginMipUartAt(uint32_t baud, bool probe) {
   Serial1.end();
-  Serial1.begin(baud, SERIAL_8N1, MIP_UART_RX_PIN, MIP_UART_TX_PIN);
+  Serial1.begin(baud, SERIAL_8N1, mipRxPin, mipTxPin);
   delay(80);
   while (Serial1.available() > 0) Serial1.read();
   mipBaud = baud;
   mipSendSparkFunWake();
+  mipSetGameModeApp();
   mipStop();
   if (!probe) return true;
   return queryMipStatus(120);
@@ -760,6 +790,8 @@ bool beginMipUartAt(uint32_t baud, bool probe) {
 
 void beginMipUart() {
   mipRxOk = false;
+  mipTxPin = MIP_UART_TX_PIN;
+  mipRxPin = MIP_UART_RX_PIN;
   bool gotResponse = beginMipUartAt(MIP_UART_BAUD, true);
 #if MIP_UART_PROBE_ALTERNATE_BAUD
   if (!gotResponse && MIP_UART_ALTERNATE_BAUD != MIP_UART_BAUD) {
@@ -781,6 +813,35 @@ void beginMipUart() {
     publishLogf("WARNING", "MiP UART no response; TX-only mode at %lu baud", (unsigned long)mipBaud);
     debugf("MiP UART TX-only/no response at %lu", (unsigned long)mipBaud);
   }
+}
+
+int hexValue(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+  if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+  return -1;
+}
+
+bool parseHexBytes(const char *hex, uint8_t *out, size_t outSize, size_t &outLen) {
+  outLen = 0;
+  int highNibble = -1;
+  for (const char *p = hex; p != nullptr && *p != '\0'; ++p) {
+    if (isspace((unsigned char)*p) || *p == ':' || *p == '-' || *p == ',') continue;
+    if (highNibble < 0 && *p == '0' && (p[1] == 'x' || p[1] == 'X')) {
+      ++p;
+      continue;
+    }
+    int v = hexValue(*p);
+    if (v < 0) return false;
+    if (highNibble < 0) {
+      highNibble = v;
+      continue;
+    }
+    if (outLen >= outSize) return false;
+    out[outLen++] = (uint8_t)((highNibble << 4) | v);
+    highNibble = -1;
+  }
+  return highNibble < 0 && outLen > 0;
 }
 
 bool jsonBoolValue(JsonVariant value, bool &out) {
@@ -939,6 +1000,7 @@ void handleSoundboardPayload(JsonVariant payload) {
     publishLog("WARNING", "soundboard command missing known MiP sound file");
     return;
   }
+  mipSetVolume(MIP_SOUND_DEFAULT_VOLUME);
   mipPlaySound((uint8_t)soundIndex, 0);
   soundPlaying = true;
   currentSoundIndex = (uint8_t)soundIndex;
@@ -946,6 +1008,112 @@ void handleSoundboardPayload(JsonVariant payload) {
   publishLogf("INFO", "soundboard play index=%u file=%s",
               (unsigned int)currentSoundIndex, currentSoundFile);
   publishSoundboardStatus();
+}
+
+void handleMipRawPayload(JsonVariant payload) {
+  JsonVariant v = unwrapValue(payload);
+  uint8_t bytes[32];
+  size_t byteCount = 0;
+  bool appendZero = MIP_UART_APPEND_ZERO != 0;
+  uint8_t requestedTxPin = mipTxPin;
+  uint8_t requestedRxPin = mipRxPin;
+  uint32_t requestedBaud = mipBaud;
+  bool reconfigureUart = false;
+
+  if (v.is<const char *>()) {
+    if (!parseHexBytes(v.as<const char *>(), bytes, sizeof(bytes), byteCount)) {
+      publishLog("WARNING", "mip raw command invalid hex string");
+      return;
+    }
+  } else if (v.is<JsonObject>()) {
+    JsonObject obj = v.as<JsonObject>();
+    if (obj["append_zero"].is<bool>()) appendZero = obj["append_zero"].as<bool>();
+    if (obj["terminator"].is<bool>()) appendZero = obj["terminator"].as<bool>();
+    if (obj["swap_d6_d7"].is<bool>() && obj["swap_d6_d7"].as<bool>()) {
+      requestedTxPin = MIP_UART_RX_PIN;
+      requestedRxPin = MIP_UART_TX_PIN;
+      reconfigureUart = true;
+    }
+    if (obj["tx_pin"].is<int>()) {
+      int tx = obj["tx_pin"].as<int>();
+      if (tx < 0 || tx > 48) {
+        publishLog("WARNING", "mip raw command tx_pin outside valid range");
+        return;
+      }
+      requestedTxPin = (uint8_t)tx;
+      reconfigureUart = true;
+    }
+    if (obj["rx_pin"].is<int>()) {
+      int rx = obj["rx_pin"].as<int>();
+      if (rx < 0 || rx > 48) {
+        publishLog("WARNING", "mip raw command rx_pin outside valid range");
+        return;
+      }
+      requestedRxPin = (uint8_t)rx;
+      reconfigureUart = true;
+    }
+    if (obj["baud"].is<int>()) {
+      int baud = obj["baud"].as<int>();
+      if (baud < 1200 || baud > 1000000) {
+        publishLog("WARNING", "mip raw command baud outside valid range");
+        return;
+      }
+      requestedBaud = (uint32_t)baud;
+      reconfigureUart = true;
+    }
+
+    if (obj["hex"].is<const char *>()) {
+      if (!parseHexBytes(obj["hex"].as<const char *>(), bytes, sizeof(bytes), byteCount)) {
+        publishLog("WARNING", "mip raw command invalid hex field");
+        return;
+      }
+    } else if (obj["bytes"].is<JsonArray>()) {
+      JsonArray arr = obj["bytes"].as<JsonArray>();
+      if (arr.size() == 0 || arr.size() > sizeof(bytes)) {
+        publishLog("WARNING", "mip raw command invalid byte count");
+        return;
+      }
+      for (JsonVariant item : arr) {
+        if (!item.is<int>()) {
+          publishLog("WARNING", "mip raw command contains non-integer byte");
+          return;
+        }
+        int value = item.as<int>();
+        if (value < 0 || value > 255) {
+          publishLog("WARNING", "mip raw command byte outside 0..255");
+          return;
+        }
+        bytes[byteCount++] = (uint8_t)value;
+      }
+    }
+  }
+
+  if (byteCount == 0) {
+    publishLog("WARNING", "mip raw command missing bytes");
+    return;
+  }
+
+  if (reconfigureUart) {
+    Serial1.end();
+    mipTxPin = requestedTxPin;
+    mipRxPin = requestedRxPin;
+    mipBaud = requestedBaud;
+    mipRxOk = false;
+    Serial1.begin(mipBaud, SERIAL_8N1, mipRxPin, mipTxPin);
+    delay(80);
+    while (Serial1.available() > 0) Serial1.read();
+    mipSendSparkFunWake();
+    mipSetGameModeApp();
+    publishLogf("INFO", "MiP UART reconfigured tx=%u rx=%u baud=%lu",
+                (unsigned int)mipTxPin, (unsigned int)mipRxPin, (unsigned long)mipBaud);
+  }
+
+  if (!mipSendRaw(bytes, byteCount, appendZero)) {
+    publishLog("WARNING", "mip raw command UART write failed");
+    return;
+  }
+  publishLogf("INFO", "mip raw command sent bytes=%u append_zero=%s",
+              (unsigned int)byteCount, appendZero ? "true" : "false");
 }
 
 void handleVideoControlPayload(JsonVariant payload) {
@@ -1019,6 +1187,8 @@ void onMqttMessage(char *rawTopic, byte *payload, unsigned int length) {
     handleRebootPayload(root);
   } else if (incomingTopic == topicSoundboardCommand) {
     handleSoundboardPayload(root);
+  } else if (incomingTopic == topicMipRawCommand) {
+    handleMipRawPayload(root);
   }
 }
 
@@ -1071,6 +1241,7 @@ void publishCapabilities() {
   soundboard["command_topic"] = topicSoundboardCommand;
   soundboard["files_topic"] = topicSoundboardFiles;
   soundboard["status_topic"] = topicSoundboardStatus;
+  soundboard["raw_mip_command_topic"] = topicMipRawCommand;
 
   JsonObject autonomy = value.createNestedObject("autonomy");
   autonomy["available"] = false;
@@ -1141,6 +1312,8 @@ void publishStatus() {
   value["camera_ready"] = cameraReady;
   value["mqtt_large_buffer_ready"] = mqttLargeBufferReady;
   value["mip_baud"] = mipBaud;
+  value["mip_tx_pin"] = mipTxPin;
+  value["mip_rx_pin"] = mipRxPin;
   value["mip_rx_ok"] = mipRxOk;
   value["mqtt_message_count"] = mqttMessageCount;
   value["drive_command_count"] = driveCommandCount;
@@ -1344,6 +1517,10 @@ bool initCamera() {
     debugf("camera init failed: 0x%08x", (unsigned int)err);
     return false;
   }
+  sensor_t *sensor = esp_camera_sensor_get();
+  if (sensor) {
+    sensor->set_vflip(sensor, MIP_CAMERA_VFLIP ? 1 : 0);
+  }
   return true;
 }
 
@@ -1410,6 +1587,7 @@ void subscribeTopics() {
   mqtt.subscribe(topicVideoFlag.c_str(), 1);
   mqtt.subscribe(topicRebootFlag.c_str(), 1);
   mqtt.subscribe(topicSoundboardCommand.c_str(), 1);
+  mqtt.subscribe(topicMipRawCommand.c_str(), 0);
   mqtt.subscribe(topicAutonomyCommand.c_str(), 1);
 }
 
@@ -1444,6 +1622,7 @@ void setupTopics() {
   topicVideoFlag = topic("incoming", "flags/mqtt-video");
   topicRebootFlag = topic("incoming", "flags/reboot");
   topicSoundboardCommand = topic("incoming", "soundboard-command");
+  topicMipRawCommand = topic("incoming", "mip-raw");
   topicAutonomyCommand = topic("incoming", "autonomy-command");
   topicHeartbeat = topic("outgoing", "online");
   topicCapabilities = topic("outgoing", "capabilities");
