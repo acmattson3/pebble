@@ -69,12 +69,13 @@ Keyframe path:
 - Receiver stores this as reference frame.
 
 Delta path:
-- Compute per-pixel delta against previous sent frame:
-  - `raw_delta = current.astype(int16) - previous.astype(int16)`
+- Compute per-pixel delta against the sender's last reconstructed reference frame:
+  - `raw_delta = current.astype(int16) - reference.astype(int16)`
 - Shift to unsigned byte domain:
   - `encoded_delta = clip(raw_delta + 128, 0, 255).astype(uint8)`
 - JPEG encode `encoded_delta`, then zlib + base64.
 - Publish with `keyframe: false`.
+- Sender updates its reference from the JPEG-decoded payload it actually transmitted.
 
 Receiver reconstruction:
 - Decode payload image to `decoded`.

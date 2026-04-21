@@ -226,7 +226,7 @@ def run_profile(profile_name: str, *, config_path: str, cli_args: Optional[argpa
             continue
 
         frame_id = 0
-        last_frame = None
+        reference_frame: Optional[np.ndarray] = None
         last_send_time = 0.0
         start_time = time.time()
         frame_index = 0
@@ -249,17 +249,16 @@ def run_profile(profile_name: str, *, config_path: str, cli_args: Optional[argpa
                     now = time.time()
 
                 if frame_duration == 0 or now - last_send_time >= frame_duration:
-                    is_keyframe = (frame_id % keyframe_interval) == 0
-                    frame_to_send = _prepare_frame(frame, last_frame, is_keyframe)
+                    is_keyframe = reference_frame is None or (frame_id % keyframe_interval) == 0
+                    frame_to_send = _prepare_frame(frame, reference_frame, is_keyframe)
                     charging_indicator.decorate(frame_to_send)
 
                     if _ensure_mqtt_connection(client, mqtt_cfg):
-                        payload = _encode_payload(frame_to_send, frame_id, is_keyframe, jpeg_quality)
+                        payload, decoded_frame = _encode_payload(frame_to_send, frame_id, is_keyframe, jpeg_quality)
                         client.publish(topic, payload)
-
-                    last_frame = frame.copy()
-                    last_send_time = now
-                    frame_id += 1
+                        reference_frame = _reconstruct_published_frame(reference_frame, decoded_frame, is_keyframe)
+                        last_send_time = now
+                        frame_id += 1
 
                 frame_index += 1
         except Exception as exc:
@@ -333,6 +332,19 @@ def _prepare_frame(frame: np.ndarray, last_frame: Any, is_keyframe: bool) -> np.
     return delta
 
 
+def _reconstruct_published_frame(
+    reference_frame: Optional[np.ndarray],
+    decoded_frame: np.ndarray,
+    is_keyframe: bool,
+) -> np.ndarray:
+    if is_keyframe or reference_frame is None:
+        return decoded_frame.copy()
+
+    delta = decoded_frame.astype(np.int16) - 128
+    base_frame = reference_frame.astype(np.int16)
+    return np.clip(base_frame + delta, 0, 255).astype(np.uint8)
+
+
 def _extract_rotation(transform_config: Any) -> Optional[int]:
     if not isinstance(transform_config, dict) or not transform_config:
         return None
@@ -377,11 +389,14 @@ def _resize_for_publish(frame: np.ndarray, width: int, height: int) -> np.ndarra
     return cv2.resize(frame, (int(width), int(height)), interpolation=interpolation)
 
 
-def _encode_payload(frame: np.ndarray, frame_id: int, is_keyframe: bool, jpeg_quality: int) -> str:
+def _encode_payload(frame: np.ndarray, frame_id: int, is_keyframe: bool, jpeg_quality: int) -> tuple[str, np.ndarray]:
     encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), int(jpeg_quality)]
     success, jpeg = cv2.imencode(".jpg", frame, encode_params)
     if not success:
         raise RuntimeError("Failed to encode frame as JPEG.")
+    decoded = cv2.imdecode(jpeg, cv2.IMREAD_COLOR)
+    if decoded is None:
+        raise RuntimeError("Failed to decode locally encoded JPEG frame.")
 
     compressed = zlib.compress(jpeg.tobytes())
     encoded = base64.b64encode(compressed).decode()
@@ -391,7 +406,7 @@ def _encode_payload(frame: np.ndarray, frame_id: int, is_keyframe: bool, jpeg_qu
         "data": encoded,
         "timestamp": time.time(),
     }
-    return json.dumps(payload)
+    return json.dumps(payload), decoded
 
 
 def _resolve_brokers(default_broker: Optional[str], override_cfg: Optional[Dict[str, Any]]) -> List[str]:
