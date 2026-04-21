@@ -175,8 +175,9 @@ def run_profile(profile_name: str, *, config_path: str, cli_args: Optional[argpa
     mqtt_cfg = profile["mqtt"]
     source_cfg = profile.get("source") if isinstance(profile.get("source"), dict) else {}
     encoding_cfg = profile["encoding"]
+    robot_cfg = profile.get("robot") if isinstance(profile.get("robot"), dict) else {}
 
-    robot_id = _pick_str(getattr(cli_args, "robot_id", None), profile_name) or profile_name
+    robot_id = _pick_str(getattr(cli_args, "robot_id", None), robot_cfg.get("id")) or profile_name
     topic = _resolve_topic(getattr(cli_args, "topic", None), mqtt_cfg.get("topic"), robot_id)
 
     target_fps = float(encoding_cfg["target_fps"])
