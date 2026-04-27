@@ -4,13 +4,11 @@
 from __future__ import annotations
 
 import argparse
-import base64
-import json
 import ssl
+import struct
 import subprocess
 import sys
 import time
-import zlib
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -27,12 +25,16 @@ from control.common.mqtt import create_client
 
 try:
     import RPi.GPIO as GPIO  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - optional dependency
+except Exception:  # pragma: no cover - optional dependency may be partially broken
     GPIO = None
 
 
 _GPIO_INITIALIZED = False
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[1] / "control" / "configs" / "config.json"
+VIDEO_MAGIC = b"PBVD"
+VIDEO_FRAME_JPEG = 1
+VIDEO_FRAME_DELTA_JPEG = 2
+VIDEO_PACKET_HEADER = struct.Struct("!4sBBBIQ")
 
 
 def _parse_args() -> argparse.Namespace:
@@ -175,8 +177,9 @@ def run_profile(profile_name: str, *, config_path: str, cli_args: Optional[argpa
     mqtt_cfg = profile["mqtt"]
     source_cfg = profile.get("source") if isinstance(profile.get("source"), dict) else {}
     encoding_cfg = profile["encoding"]
+    robot_cfg = profile.get("robot") if isinstance(profile.get("robot"), dict) else {}
 
-    robot_id = _pick_str(getattr(cli_args, "robot_id", None), profile_name) or profile_name
+    robot_id = _pick_str(getattr(cli_args, "robot_id", None), robot_cfg.get("id")) or profile_name
     topic = _resolve_topic(getattr(cli_args, "topic", None), mqtt_cfg.get("topic"), robot_id)
 
     target_fps = float(encoding_cfg["target_fps"])
@@ -389,24 +392,26 @@ def _resize_for_publish(frame: np.ndarray, width: int, height: int) -> np.ndarra
     return cv2.resize(frame, (int(width), int(height)), interpolation=interpolation)
 
 
-def _encode_payload(frame: np.ndarray, frame_id: int, is_keyframe: bool, jpeg_quality: int) -> tuple[str, np.ndarray]:
+def _encode_payload(frame: np.ndarray, frame_id: int, is_keyframe: bool, jpeg_quality: int) -> tuple[bytes, np.ndarray]:
     encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), int(jpeg_quality)]
     success, jpeg = cv2.imencode(".jpg", frame, encode_params)
     if not success:
         raise RuntimeError("Failed to encode frame as JPEG.")
-    decoded = cv2.imdecode(jpeg, cv2.IMREAD_COLOR)
+    jpeg_bytes = jpeg.tobytes()
+    decoded = cv2.imdecode(np.frombuffer(jpeg_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
     if decoded is None:
         raise RuntimeError("Failed to decode locally encoded JPEG frame.")
 
-    compressed = zlib.compress(jpeg.tobytes())
-    encoded = base64.b64encode(compressed).decode()
-    payload = {
-        "id": frame_id,
-        "keyframe": is_keyframe,
-        "data": encoded,
-        "timestamp": time.time(),
-    }
-    return json.dumps(payload), decoded
+    frame_type = VIDEO_FRAME_JPEG if is_keyframe else VIDEO_FRAME_DELTA_JPEG
+    header = VIDEO_PACKET_HEADER.pack(
+        VIDEO_MAGIC,
+        1,
+        frame_type,
+        0,
+        int(frame_id) & 0xFFFFFFFF,
+        int(time.time() * 1000),
+    )
+    return header + jpeg_bytes, decoded
 
 
 def _resolve_brokers(default_broker: Optional[str], override_cfg: Optional[Dict[str, Any]]) -> List[str]:
@@ -493,8 +498,12 @@ class ChargingIndicator:
             self.enabled = False
             return
 
-        _ensure_gpio_setup()
-        GPIO.setup(self.pin, GPIO.IN)
+        try:
+            _ensure_gpio_setup()
+            GPIO.setup(self.pin, GPIO.IN)
+        except Exception as exc:
+            print(f"Failed to initialize charging indicator GPIO: {exc}. Disabling overlay.")
+            self.enabled = False
 
     def decorate(self, frame: np.ndarray) -> None:
         if not self.enabled:
@@ -503,6 +512,7 @@ class ChargingIndicator:
             is_charging = GPIO.input(self.pin) == GPIO.HIGH
         except Exception as exc:  # pragma: no cover - depends on hardware
             print(f"Failed to read charging pin: {exc}")
+            self.enabled = False
             return
         if is_charging:
             cv2.circle(frame, tuple(map(int, self.position)), int(self.radius), tuple(map(int, self.color)), -1)
