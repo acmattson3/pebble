@@ -138,7 +138,7 @@
 
 namespace {
 
-const char FIRMWARE_VERSION[] = "2026.04.10.6";
+const char FIRMWARE_VERSION[] = "2026.04.10.7";
 const char CAPABILITIES_SCHEMA[] = "pebble-capabilities/v1";
 const char MQTT_OFFLINE_PAYLOAD[] = "{\"online\":false,\"status\":\"offline\"}";
 
@@ -177,6 +177,8 @@ const uint8_t MIP_SOUND_MAX_BUILTIN = 106;
 const uint8_t MIP_SOUND_VOLUME_7 = 0xFE;
 const uint8_t MIP_GET_UP_FROM_EITHER = 0x02;
 const uint8_t MIP_GAME_MODE_APP = 0x01;
+
+const uint16_t CAMERA_TARGET_FPS = MQTT_VIDEO_INTERVAL_MS > 0 ? (uint16_t)(1000UL / MQTT_VIDEO_INTERVAL_MS) : 0;
 
 #if MQTT_USE_TLS
 WiFiClientSecure wifiClient;
@@ -509,6 +511,26 @@ const char *positionName(uint8_t position) {
     case 0x05: return "face_down_on_tray";
     case 0x06: return "on_back_with_kickstand";
     default: return "unknown";
+  }
+}
+
+uint16_t cameraFrameWidth() {
+  switch (CAMERA_FRAME_SIZE) {
+    case FRAMESIZE_QQVGA: return 160;
+    case FRAMESIZE_QVGA: return 320;
+    case FRAMESIZE_VGA: return 640;
+    case FRAMESIZE_SVGA: return 800;
+    default: return 0;
+  }
+}
+
+uint16_t cameraFrameHeight() {
+  switch (CAMERA_FRAME_SIZE) {
+    case FRAMESIZE_QQVGA: return 120;
+    case FRAMESIZE_QVGA: return 240;
+    case FRAMESIZE_VGA: return 480;
+    case FRAMESIZE_SVGA: return 600;
+    default: return 0;
   }
 }
 
@@ -1227,9 +1249,9 @@ void publishCapabilities() {
   video["overlays_topic"] = topicVideoOverlays;
   video["encoding"] = "jpeg";
   video["transport"] = "binary_mqtt";
-  video["width"] = 160;
-  video["height"] = 120;
-  video["fps"] = 1;
+  video["width"] = cameraFrameWidth();
+  video["height"] = cameraFrameHeight();
+  video["fps"] = CAMERA_TARGET_FPS;
 
   JsonObject audio = value.createNestedObject("audio");
   audio["available"] = false;
