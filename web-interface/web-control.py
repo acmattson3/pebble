@@ -18,7 +18,6 @@ import struct
 import sys
 import threading
 import time
-import zlib
 from collections import deque
 from pathlib import Path
 from typing import Any, Deque, Dict, Optional
@@ -58,6 +57,10 @@ else:
 AUDIO_MAGIC = b"PBAT"
 AUDIO_CODEC_PCM_S16LE = 1
 AUDIO_PACKET_HEADER = struct.Struct("!4sBBBBHHIQ")
+VIDEO_MAGIC = b"PBVD"
+VIDEO_FRAME_JPEG = 1
+VIDEO_FRAME_DELTA_JPEG = 2
+VIDEO_PACKET_HEADER = struct.Struct("!4sBBBIQ")
 
 
 def _coerce_int(value: Any, default: int) -> int:
@@ -2873,23 +2876,10 @@ def _handle_video_payload(robot_id: str, payload_bytes: bytes) -> None:
 
     _mark_robot_video_capable(robot_key)
     condition = _get_video_condition(robot_key)
-    frame_bytes: Optional[bytes] = None
-    metadata: Dict[str, Any] = {}
-
-    if len(payload_bytes) >= 2 and payload_bytes[0] == 0xFF and payload_bytes[1] == 0xD8:
-        frame_bytes = payload_bytes
-        metadata = {"keyframe": True, "transport": "binary_jpeg", "timestamp": time.time()}
-    else:
-        try:
-            packet = json.loads(payload_bytes.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            logging.debug("Unsupported video payload from %s", robot_id)
-            return
-
-        decoded = _decode_video_frame(robot_key, packet)
-        if decoded is None:
-            return
-        frame_bytes, metadata = decoded
+    decoded = _decode_video_frame(robot_key, payload_bytes)
+    if decoded is None:
+        return
+    frame_bytes, metadata = decoded
 
     with video_cache_lock:
         entry = video_cache.setdefault(robot_key, {})
@@ -2898,19 +2888,71 @@ def _handle_video_payload(robot_id: str, payload_bytes: bytes) -> None:
         condition.notify_all()
 
 
-def _decode_video_frame(robot_id: str, packet: Dict[str, Any]) -> Optional[tuple[bytes, Dict[str, Any]]]:
+def _decode_video_frame(robot_id: str, payload_bytes: bytes) -> Optional[tuple[bytes, Dict[str, Any]]]:
     if not VIDEO_SUPPORT:
         return None
     robot_key = _robot_key(robot_id)
-    encoded = packet.get("data")
-    if not encoded:
-        return None
+    jpeg_bytes: bytes
+    frame_id: Optional[int]
+    is_keyframe: bool
+    timestamp_ms: Optional[int]
+    transport = "unknown"
 
-    try:
-        compressed = base64.b64decode(encoded)
-        jpeg_bytes = zlib.decompress(compressed)
-    except (base64.binascii.Error, zlib.error) as exc:
-        logging.debug("Compressed frame invalid for %s: %s", robot_id, exc)
+    if len(payload_bytes) >= VIDEO_PACKET_HEADER.size:
+        try:
+            magic, version, frame_type, _flags, raw_frame_id, raw_timestamp_ms = VIDEO_PACKET_HEADER.unpack(
+                payload_bytes[: VIDEO_PACKET_HEADER.size]
+            )
+        except struct.error:
+            magic = b""
+        if magic == VIDEO_MAGIC:
+            if version != 1:
+                logging.debug("Unsupported video packet version %s for %s", version, robot_id)
+                return None
+            if frame_type not in (VIDEO_FRAME_JPEG, VIDEO_FRAME_DELTA_JPEG):
+                logging.debug("Unsupported video frame type %s for %s", frame_type, robot_id)
+                return None
+            jpeg_bytes = payload_bytes[VIDEO_PACKET_HEADER.size :]
+            if not jpeg_bytes:
+                return None
+            frame_id = int(raw_frame_id)
+            is_keyframe = frame_type == VIDEO_FRAME_JPEG
+            timestamp_ms = int(raw_timestamp_ms)
+            transport = "pbvd"
+        elif payload_bytes[0] == 0xFF and payload_bytes[1] == 0xD8:
+            jpeg_bytes = payload_bytes
+            frame_id = None
+            is_keyframe = True
+            timestamp_ms = int(time.time() * 1000)
+            transport = "binary_jpeg"
+        else:
+            try:
+                packet = json.loads(payload_bytes.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                logging.debug("Unsupported video payload from %s", robot_id)
+                return None
+            encoded = packet.get("data")
+            if not encoded:
+                return None
+            try:
+                jpeg_bytes = base64.b64decode(encoded)
+            except base64.binascii.Error as exc:
+                logging.debug("Legacy frame invalid for %s: %s", robot_id, exc)
+                return None
+            frame_id = _coerce_int(packet.get("id"), 0)
+            is_keyframe = bool(packet.get("keyframe"))
+            timestamp_value = _coerce_float(packet.get("timestamp"))
+            timestamp_ms = int(timestamp_value * 1000) if timestamp_value is not None and timestamp_value < 10_000_000_000 else (
+                int(timestamp_value) if timestamp_value is not None else None
+            )
+            transport = "legacy_json"
+    elif len(payload_bytes) >= 2 and payload_bytes[0] == 0xFF and payload_bytes[1] == 0xD8:
+        jpeg_bytes = payload_bytes
+        frame_id = None
+        is_keyframe = True
+        timestamp_ms = int(time.time() * 1000)
+        transport = "binary_jpeg"
+    else:
         return None
 
     frame_array = np.frombuffer(jpeg_bytes, dtype=np.uint8)
@@ -2919,7 +2961,6 @@ def _decode_video_frame(robot_id: str, packet: Dict[str, Any]) -> Optional[tuple
         logging.debug("cv2.imdecode returned None for %s", robot_id)
         return None
 
-    is_keyframe = bool(packet.get("keyframe"))
     last_frame = video_last_frames.get(robot_key)
     if not is_keyframe and last_frame is None:
         logging.debug("Dropping delta frame before keyframe for %s", robot_id)
@@ -2940,12 +2981,13 @@ def _decode_video_frame(robot_id: str, packet: Dict[str, Any]) -> Optional[tuple
         return None
 
     metadata: Dict[str, Any] = {
-        "id": packet.get("id"),
+        "id": frame_id,
         "keyframe": is_keyframe,
-        "timestamp": packet.get("timestamp"),
+        "timestamp": timestamp_ms,
+        "transport": transport,
     }
     if metadata["timestamp"] is not None:
-        metadata["latency_ms"] = int((time.time() - float(metadata["timestamp"])) * 1000)
+        metadata["latency_ms"] = max(0, int(time.time() * 1000) - int(metadata["timestamp"]))
 
     return encoded_frame.tobytes(), metadata
 
