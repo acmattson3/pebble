@@ -30,8 +30,9 @@ target `pebble_serial_v1` rather than inventing a one-off text protocol.
     - `GY-521 AD0 -> GND`
     - `GY-521 INT` left disconnected
 - `firmware/HS105_seeed-xiao-c3/`
-  - USB-serial station-mode bridge for four TP-Link HS105 outlets.
+  - Legacy USB-serial station-mode bridge for four TP-Link HS105 outlets.
   - The XIAO ESP32-C3 joins a router-hosted Wi-Fi LAN as a normal client, talks to four statically addressed HS105 plugs over the legacy Kasa LAN protocol on port `9999`, and exposes four logical outlet slots over `pebble_serial_v1`.
+  - Current Mind runtime no longer starts this bridge. Keep this target only as an archived reference for how the old smart-switch path worked.
 - `firmware/MIP_seeed-xiao-esp32s3-sense/`
   - Direct MQTT firmware for a Seeeduino XIAO ESP32-S3 Sense with camera, wired to a WowWee MiP robot UART.
   - The sketch publishes Pebble-standard MQTT topics itself rather than using `serial_mcu_bridge`, because the XIAO owns Wi-Fi, MQTT, camera capture, and the MiP UART link.
@@ -71,6 +72,13 @@ Then edit `private_config.h` with:
 - the router SSID/PSK for the LAN the XIAO should join
 - the XIAO's own static IP, gateway, and subnet
 - the static IP for each outlet slot (`o1`..`o4`)
+
+Legacy smart-switch communication path:
+- The XIAO ESP32-C3 connected to the same router LAN as the TP-Link HS105 smart plugs.
+- Each plug had a static IPv4 address configured in `private_config.h`; slot names `o1` through `o4` mapped directly to those addresses.
+- Pebble host commands reached the C3 over USB serial using `pebble_serial_v1` command interfaces such as `outlets/o1/power`.
+- The C3 translated each command into the HS105 local Kasa TCP protocol on port `9999`, sending `system.set_relay_state` and polling `system.get_sysinfo` for relay state.
+- The C3 reported outlet status back to Pebble as retained `pebble_serial_v1` state interfaces such as `outlets/o1/status`.
 
 For the MiP XIAO ESP32-S3 Sense firmware, create a private config header:
 
