@@ -26,7 +26,7 @@ from control.common.config import (
     log_level,
     service_instance_cfg,
 )
-from control.common.mqtt import mqtt_auth_and_tls
+from control.common.mqtt import create_client, mqtt_auth_and_tls
 from control.common.odometry_shm import OdometryRawShmWriter
 from control.common.topics import identity_from_config
 from control.services.serial_standard import (
@@ -1037,7 +1037,8 @@ class SerialMcuBridge:
             self._handle_charge_level_telemetry(float(data["v"]))
 
     def _connect_local_mqtt(self) -> None:
-        client = mqtt.Client()
+        suffix = f"serial-{self.instance_name}" if self.instance_name else "serial"
+        client = create_client(client_id=f"{self.identity.base}-{suffix}")
         mqtt_auth_and_tls(client, self.local_mqtt_cfg, self.config_path.parent)
         client.on_connect = self._on_connect
         client.on_disconnect = self._on_disconnect

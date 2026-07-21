@@ -23,7 +23,7 @@ if __package__ is None or __package__ == "":
 
 from control.common.capabilities import CAPABILITIES_SCHEMA, build_capabilities_value, capabilities_topic
 from control.common.config import default_retained_publish_interval_seconds, enabled_service_instances, load_config, log_level, service_cfg
-from control.common.mqtt import mqtt_auth_and_tls
+from control.common.mqtt import create_client, mqtt_auth_and_tls
 from control.common.topics import identity_from_config
 
 CHILD_LOG_PATTERN = re.compile(r"^\d{2}:\d{2}:\d{2}\s+\[(DEBUG|INFO|WARNING|ERROR|CRITICAL)\]\s*(.*)$")
@@ -56,7 +56,7 @@ class LauncherLogsPublisher:
     def start(self) -> None:
         if not self.enabled:
             return
-        client = mqtt.Client(client_id=f"{self.identity.base}-launcher-logs")
+        client = create_client(client_id=f"{self.identity.base}-launcher-logs")
         mqtt_auth_and_tls(client, self.local_cfg, self.config_path.parent)
         client.reconnect_delay_set(min_delay=1, max_delay=30)
         self.client = client
@@ -157,7 +157,7 @@ class LauncherCapabilitiesPublisher:
     def start(self) -> None:
         if not self.enabled:
             return
-        client = mqtt.Client(client_id=f"{self.identity.base}-launcher-caps")
+        client = create_client(client_id=f"{self.identity.base}-launcher-caps")
         mqtt_auth_and_tls(client, self.local_cfg, self.config_path.parent)
         client.on_connect = self._on_connect
         client.on_disconnect = self._on_disconnect

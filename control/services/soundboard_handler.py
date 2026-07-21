@@ -22,7 +22,7 @@ if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from control.common.config import default_retained_publish_interval_seconds, load_config, log_level, service_cfg
-from control.common.mqtt import mqtt_auth_and_tls
+from control.common.mqtt import create_client, mqtt_auth_and_tls
 from control.common.topics import identity_from_config
 
 
@@ -104,7 +104,7 @@ class SoundboardHandler:
             self.client = None
 
     def _connect_local_mqtt(self) -> None:
-        client = mqtt.Client()
+        client = create_client(client_id=f"{self.identity.base}-soundboard")
         mqtt_auth_and_tls(client, self.local_mqtt_cfg, self.config_path.parent)
         client.on_connect = self._on_connect
         client.on_disconnect = self._on_disconnect
