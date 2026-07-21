@@ -1,24 +1,13 @@
 from __future__ import annotations
 
-import base64
-import bisect
 import datetime
 import json
 import logging
-import math
 import re
 import threading
 import time
-import zlib
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
-
-try:
-    import cv2  # type: ignore
-    import numpy as np  # type: ignore
-except ImportError:  # pragma: no cover - optional dependency
-    cv2 = None
-    np = None
+from typing import Any, Callable, Dict, Iterable, List, Optional
 
 try:
     from pymongo import ASCENDING, DESCENDING, MongoClient
@@ -28,15 +17,53 @@ except ImportError:  # pragma: no cover - optional dependency
     MongoClient = None
 
 
-VIDEO_SUPPORT = cv2 is not None and np is not None
-AUDIO_PACKET_HEADER_SIZE = 24
-AUDIO_MAGIC = b"PBAT"
 SESSION_GAP_SECONDS = 120.0
 SESSION_PAD_SECONDS = 5.0
-VIDEO_STALE_SECONDS = 5.0
 DISCOVERY_BATCH_SIZE = 5000
 DISCOVERY_STATE_ID = "default"
 REPLAY_PAGE_PATH = Path(__file__).resolve().parent / "replay_page.html"
+SESSION_EVENT_LIMIT = 500
+REPLAY_SYSTEM_ID = "replay"
+
+SESSION_ACTIVITY_TOPIC_QUERY: Dict[str, Any] = {
+    "$or": [
+        {"topic": {"$regex": r"/incoming/flags/mqtt-video$"}},
+        {"topic": {"$regex": r"/incoming/flags/mqtt-audio$"}},
+        {"topic": {"$regex": r"/incoming/drive-values$"}},
+        {"topic": {"$regex": r"/incoming/lights-solid$"}},
+        {"topic": {"$regex": r"/incoming/lights-flash$"}},
+        {"topic": {"$regex": r"/incoming/soundboard-command$"}},
+        {"topic": {"$regex": r"/outgoing/soundboard-status$"}},
+        {"topic": {"$regex": r"/incoming/autonomy-command$"}},
+        {"topic": {"$regex": r"/outgoing/autonomy-status$"}},
+        {"topic": {"$regex": r"/incoming/front-camera$"}},
+        {"topic": {"$regex": r"/incoming/audio$"}},
+        {"topic": {"$regex": r"/incoming/flags/reboot$"}},
+        {"topic": {"$regex": r"/incoming/flags/service-restart$"}},
+        {"topic": {"$regex": r"/incoming/flags/git-pull$"}},
+    ]
+}
+SESSION_ACTIVITY_INCOMING_METRICS = {
+    "flags/mqtt-video",
+    "flags/mqtt-audio",
+    "drive-values",
+    "lights-solid",
+    "lights-flash",
+    "soundboard-command",
+    "autonomy-command",
+    "front-camera",
+    "audio",
+    "flags/reboot",
+    "flags/service-restart",
+    "flags/git-pull",
+}
+SESSION_ACTIVITY_OUTGOING_METRICS = {
+    "front-camera",
+    "audio",
+    "soundboard-status",
+    "autonomy-status",
+}
+MEDIA_ACTIVITY_TAGS = {"front-camera", "audio"}
 
 
 def _utc_now() -> datetime.datetime:
@@ -126,7 +153,7 @@ def _normalize_bool_payload(payload: Any) -> Optional[bool]:
 
 def _parse_component_topic(topic: str) -> Optional[Dict[str, str]]:
     parts = topic.split("/")
-    if len(parts) < 5 or parts[0] != "pebble":
+    if len(parts) < 5:
         return None
     return {
         "system": parts[0],
@@ -135,6 +162,26 @@ def _parse_component_topic(topic: str) -> Optional[Dict[str, str]]:
         "direction": parts[3],
         "metric": "/".join(parts[4:]),
     }
+
+
+def _rewrite_system_id(topic: str, system_id: str = REPLAY_SYSTEM_ID) -> Optional[str]:
+    parts = topic.split("/")
+    if len(parts) < 5:
+        return None
+    parts[0] = system_id
+    return "/".join(parts)
+
+
+def _is_session_activity_topic(topic: str) -> bool:
+    parsed = _parse_component_topic(topic)
+    if not parsed:
+        return False
+    metric = parsed["metric"]
+    if parsed["direction"] == "incoming":
+        return metric in SESSION_ACTIVITY_INCOMING_METRICS
+    if parsed["direction"] == "outgoing":
+        return metric in SESSION_ACTIVITY_OUTGOING_METRICS
+    return False
 
 
 def _is_meaningful_drive(payload: Any) -> bool:
@@ -146,6 +193,67 @@ def _is_meaningful_drive(payload: Any) -> bool:
         if value is not None and abs(value) > 0.02:
             return True
     return False
+
+
+def _action_from_payload(payload: Any) -> str:
+    if isinstance(payload, dict):
+        action = payload.get("action")
+        if isinstance(action, str) and action.strip():
+            return action.strip().lower()
+    return ""
+
+
+def _event_state_text(value: Optional[bool]) -> str:
+    if value is True:
+        return "on"
+    if value is False:
+        return "off"
+    return ""
+
+
+def _event_from_activity(doc: Dict[str, Any], tags: Iterable[str]) -> Optional[Dict[str, Any]]:
+    topic = str(doc.get("topic") or "")
+    parsed = _parse_component_topic(topic)
+    ts_epoch = _dt_to_epoch(doc.get("ts"))
+    if not parsed or ts_epoch is None:
+        return None
+    payload = _payload_json(doc)
+    metric = parsed["metric"]
+    direction = parsed["direction"]
+    tag_list = sorted(tags)
+    primary = tag_list[0] if tag_list else metric.replace("/", "-")
+    state = ""
+    detail = ""
+
+    if metric in {"flags/mqtt-video", "flags/mqtt-audio", "front-camera", "audio"}:
+        state = _event_state_text(_normalize_bool_payload(payload))
+    if isinstance(payload, dict):
+        action = _action_from_payload(payload)
+        if action:
+            state = action
+        file_value = payload.get("file")
+        if isinstance(file_value, str) and file_value.strip():
+            detail = file_value.strip()
+        elif isinstance(payload.get("error"), str):
+            detail = str(payload["error"]).strip()
+
+    label_parts = [parsed["component_id"], primary.replace("-", " ")]
+    if state:
+        label_parts.append(state)
+    if detail:
+        label_parts.append(detail)
+    if direction == "incoming" and primary not in {"drive", "lights"}:
+        label_parts.insert(1, "command")
+
+    return {
+        "ts": ts_epoch,
+        "component_id": parsed["component_id"],
+        "component_type": parsed["component_type"],
+        "topic": topic,
+        "kind": primary,
+        "state": state,
+        "label": " ".join(label_parts),
+    }
 
 
 def _classify_activity(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -172,7 +280,7 @@ def _classify_activity(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         tags.add(metric)
     elif metric in {"front-camera", "audio"} and parsed["direction"] == "incoming":
         state = _normalize_bool_payload(payload)
-        if state:
+        if state is not None:
             tags.add(f"{metric}-command")
         else:
             return None
@@ -182,7 +290,7 @@ def _classify_activity(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         tags.add("soundboard")
     elif metric == "soundboard-status":
         state = _normalize_bool_payload(payload)
-        if state or (isinstance(payload, dict) and payload.get("error")):
+        if state is not None or (isinstance(payload, dict) and payload.get("error")):
             tags.add("soundboard")
         else:
             return None
@@ -190,7 +298,7 @@ def _classify_activity(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         tags.add("autonomy")
     elif metric == "autonomy-status":
         state = _normalize_bool_payload(payload)
-        if state or (isinstance(payload, dict) and payload.get("error")):
+        if state is not None or (isinstance(payload, dict) and payload.get("error")):
             tags.add("autonomy")
         else:
             return None
@@ -198,14 +306,6 @@ def _classify_activity(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         state = _normalize_bool_payload(payload)
         if state:
             tags.add(metric.split("/")[-1])
-        else:
-            return None
-    elif metric == "logs":
-        if not isinstance(payload, dict):
-            return None
-        level = str(payload.get("level") or "").upper()
-        if level in {"WARNING", "ERROR", "CRITICAL"}:
-            tags.add("logs")
         else:
             return None
     else:
@@ -220,6 +320,24 @@ def _classify_activity(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "component_type": component_type,
         "topic": topic,
         "tags": sorted(tags),
+    }
+
+
+def _public_event_from_doc(doc: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    activity = _classify_activity(doc)
+    if activity is None:
+        return None
+    event = _event_from_activity(doc, activity["tags"])
+    if event is None:
+        return None
+    return {
+        "ts": _isoformat(event["ts"]),
+        "componentId": event["component_id"],
+        "componentType": event["component_type"],
+        "topic": event["topic"],
+        "kind": event["kind"],
+        "state": event["state"],
+        "label": event["label"],
     }
 
 
@@ -263,12 +381,16 @@ def _pending_from_activity(activity: Dict[str, Any]) -> Dict[str, Any]:
 def _merge_activity_into_pending(pending: Dict[str, Any], activity: Dict[str, Any]) -> None:
     component_id = str(activity["component_id"])
     pending["last_event_ts"] = float(activity["ts"])
-    pending["event_count"] = int(pending["event_count"]) + 1
     pending["component_ids"].add(component_id)
     pending["component_types"][component_id] = str(activity["component_type"])
     counts = pending["activity_counts"]
+    media_tags = set(activity["tags"]) & MEDIA_ACTIVITY_TAGS
+    count_event = not (media_tags and all(int(counts.get(tag, 0)) > 0 for tag in media_tags))
+    if count_event:
+        pending["event_count"] = int(pending["event_count"]) + 1
     for tag in activity["tags"]:
-        counts[tag] = int(counts.get(tag, 0)) + 1
+        if count_event or tag not in MEDIA_ACTIVITY_TAGS:
+            counts[tag] = int(counts.get(tag, 0)) + 1
 
 
 class ReplayArchive:
@@ -288,11 +410,8 @@ class ReplayArchive:
             "updated": None,
             "sessionsDiscovered": 0,
         }
-        self._video_preload_lock = threading.Lock()
-        self._video_preload_jobs: Dict[str, Dict[str, Any]] = {}
-        self._video_preload_order: List[str] = []
-        self._stream_lock = threading.Lock()
-        self._active_stream_tokens: Dict[str, str] = {}
+        self._republish_lock = threading.Lock()
+        self._republish_job: Optional[Dict[str, Any]] = None
 
     def _connect(self) -> Optional[Any]:
         if not self.enabled:
@@ -345,173 +464,49 @@ class ReplayArchive:
             raise RuntimeError("Replay archive unavailable")
         return db["replay_discovery_state"]
 
-    def _touch_video_job(self, session_id: str) -> None:
-        if session_id in self._video_preload_order:
-            self._video_preload_order.remove(session_id)
-        self._video_preload_order.append(session_id)
-        while len(self._video_preload_order) > 2:
-            oldest = self._video_preload_order.pop(0)
-            self._video_preload_jobs.pop(oldest, None)
-
-    def start_video_preload(self, session_id: str, component_ids: Optional[List[str]] = None) -> bool:
-        session = self.get_session(session_id)
-        if not session or not VIDEO_SUPPORT:
-            return False
-        selected = component_ids or list(session.get("componentIds") or [])
-        component_map = {item.get("id"): item.get("type") or "robots" for item in session.get("components") or []}
-        with self._video_preload_lock:
-            job = self._video_preload_jobs.get(session_id)
-            if job and job.get("thread") and job["thread"].is_alive():
-                for component_id in selected:
-                    job["components"].setdefault(
-                        component_id,
-                        {
-                            "type": component_map.get(component_id, "robots"),
-                            "state": "queued",
-                            "progress": 0.0,
-                            "processedFrames": 0,
-                            "totalFrames": 0,
-                            "frames": [],
-                            "timestamps": [],
-                            "error": None,
-                        },
-                    )
-                self._touch_video_job(session_id)
-                return False
-            components = {}
-            for component_id in selected:
-                components[component_id] = {
-                    "type": component_map.get(component_id, "robots"),
-                    "state": "queued",
-                    "progress": 0.0,
-                    "processedFrames": 0,
-                    "totalFrames": 0,
-                    "frames": [],
-                    "timestamps": [],
-                    "error": None,
-                }
-            job = {
-                "session": session,
-                "components": components,
-                "startedAt": _isoformat(_utc_now()),
-            }
-            thread = threading.Thread(
-                target=self._run_video_preload,
-                args=(session_id,),
-                name=f"replay-video-preload-{session_id}",
-                daemon=True,
-            )
-            job["thread"] = thread
-            self._video_preload_jobs[session_id] = job
-            self._touch_video_job(session_id)
-            thread.start()
-            return True
-
-    def video_preload_status(self, session_id: str) -> Dict[str, Any]:
-        with self._video_preload_lock:
-            job = self._video_preload_jobs.get(session_id)
-            if not job:
-                return {"sessionId": session_id, "components": {}, "running": False}
-            components = {}
-            running = False
-            for component_id, info in job.get("components", {}).items():
-                state = str(info.get("state") or "queued")
-                if state in {"queued", "loading"}:
-                    running = True
-                components[component_id] = {
-                    "state": state,
-                    "progress": float(info.get("progress") or 0.0),
-                    "processedFrames": int(info.get("processedFrames") or 0),
-                    "totalFrames": int(info.get("totalFrames") or 0),
-                    "error": info.get("error"),
-                }
-            return {"sessionId": session_id, "components": components, "running": running}
-
-    def _run_video_preload(self, session_id: str) -> None:
-        session = self.get_session(session_id)
-        if not session:
-            return
-        start_s = _dt_to_epoch(datetime.datetime.fromisoformat(str(session["startTs"]))) or 0.0
-        end_s = _dt_to_epoch(datetime.datetime.fromisoformat(str(session["endTs"]))) or start_s
-        history = self._history()
-        component_map = {item.get("id"): item.get("type") or "robots" for item in session.get("components") or []}
-
-        for component_id, current_info in list((self._video_preload_jobs.get(session_id) or {}).get("components", {}).items()):
-            component_type = component_map.get(component_id, current_info.get("type") or "robots")
-            topic = f"pebble/{component_type}/{component_id}/outgoing/front-camera"
-            docs = list(
-                history.find(
-                    {"topic": topic, "ts": {"$gte": _epoch_to_dt(start_s), "$lte": _epoch_to_dt(end_s)}},
-                    {"ts": 1, "payload": 1},
-                ).sort("ts", 1)
-            )
-            with self._video_preload_lock:
-                job = self._video_preload_jobs.get(session_id)
-                if not job:
-                    return
-                info = job["components"].setdefault(component_id, {})
-                info["totalFrames"] = len(docs)
-                info["state"] = "loading"
-
-            if not docs:
-                with self._video_preload_lock:
-                    job = self._video_preload_jobs.get(session_id)
-                    if not job:
-                        return
-                    info = job["components"].setdefault(component_id, {})
-                    info["state"] = "no-video"
-                    info["progress"] = 100.0
+    def _systems_for_session_doc(self, doc: Dict[str, Any]) -> List[str]:
+        start_s = _dt_to_epoch(doc.get("start_ts"))
+        end_s = _dt_to_epoch(doc.get("end_ts"))
+        if start_s is None or end_s is None:
+            return []
+        components = list(doc.get("components") or [])
+        if not components:
+            for component_id in doc.get("component_ids") or []:
+                components.append({"id": component_id, "type": "robots"})
+        topics = []
+        for component in components:
+            component_id = str(component.get("id") or "")
+            component_type = str(component.get("type") or "robots")
+            if not component_id:
                 continue
+            topics.append(
+                {
+                    "topic": {
+                        "$regex": rf"^[^/]+/{re.escape(component_type)}/{re.escape(component_id)}/"
+                    }
+                }
+            )
+        if not topics:
+            return []
+        systems: set[str] = set()
+        cursor = self._history().find(
+            {
+                "$or": topics,
+                "ts": {"$gte": _epoch_to_dt(start_s), "$lte": _epoch_to_dt(end_s)},
+            },
+            {"topic": 1},
+        ).limit(2000)
+        for item in cursor:
+            parsed = _parse_component_topic(str(item.get("topic") or ""))
+            if parsed:
+                systems.add(parsed["system"])
+        return sorted(systems)
 
-            last_frame = None
-            frames: List[bytes] = []
-            timestamps: List[float] = []
-            try:
-                for index, doc in enumerate(docs, start=1):
-                    packet = _payload_json(doc)
-                    if not isinstance(packet, dict) or not packet.get("data"):
-                        continue
-                    compressed = base64.b64decode(packet["data"])
-                    jpeg_bytes = zlib.decompress(compressed)
-                    frame_array = np.frombuffer(jpeg_bytes, dtype=np.uint8)
-                    packet_frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
-                    if packet_frame is None:
-                        continue
-                    if bool(packet.get("keyframe")) or last_frame is None:
-                        reconstructed = packet_frame
-                    else:
-                        delta = packet_frame.astype(np.int16) - 128
-                        reconstructed = np.clip(last_frame.astype(np.int16) + delta, 0, 255).astype(np.uint8)
-                    last_frame = reconstructed
-                    ok, encoded = cv2.imencode(".jpg", reconstructed)
-                    if not ok:
-                        continue
-                    frames.append(encoded.tobytes())
-                    timestamps.append(float(_dt_to_epoch(doc.get("ts")) or start_s))
-                    with self._video_preload_lock:
-                        job = self._video_preload_jobs.get(session_id)
-                        if not job:
-                            return
-                        info = job["components"].setdefault(component_id, {})
-                        info["frames"] = frames
-                        info["timestamps"] = timestamps
-                        info["processedFrames"] = index
-                        info["progress"] = 100.0 * (index / max(1, len(docs)))
-                with self._video_preload_lock:
-                    job = self._video_preload_jobs.get(session_id)
-                    if not job:
-                        return
-                    info = job["components"].setdefault(component_id, {})
-                    info["state"] = "ready"
-                    info["progress"] = 100.0
-            except Exception as exc:
-                with self._video_preload_lock:
-                    job = self._video_preload_jobs.get(session_id)
-                    if not job:
-                        return
-                    info = job["components"].setdefault(component_id, {})
-                    info["state"] = "error"
-                    info["error"] = str(exc)
+    def _default_system_for_session(self, session: Dict[str, Any]) -> str:
+        systems = list(session.get("sourceSystems") or [])
+        if systems:
+            return str(systems[0])
+        return "pebble"
 
     def start_discovery(self) -> bool:
         if not self.is_available():
@@ -537,6 +532,17 @@ class ReplayArchive:
             status["pendingSession"] = bool(state_doc.get("pending_session"))
         return status
 
+    def _activity_topic_query(self, history: Any) -> Dict[str, Any]:
+        try:
+            topics = history.distinct("topic")
+        except Exception:
+            self.logger.exception("Failed to list replay activity topics; falling back to regex discovery query")
+            return dict(SESSION_ACTIVITY_TOPIC_QUERY)
+        exact_topics = sorted(str(topic) for topic in topics if _is_session_activity_topic(str(topic)))
+        if not exact_topics:
+            return dict(SESSION_ACTIVITY_TOPIC_QUERY)
+        return {"topic": {"$in": exact_topics}}
+
     def _run_discovery(self) -> None:
         discovered = 0
         try:
@@ -550,25 +556,7 @@ class ReplayArchive:
                 pending["component_ids"] = set(pending.get("component_ids") or [])
                 pending["component_types"] = dict(pending.get("component_types") or {})
                 pending["activity_counts"] = dict(pending.get("activity_counts") or {})
-            query: Dict[str, Any] = {
-                "$or": [
-                    {"topic": {"$regex": r"/incoming/flags/mqtt-video$"}},
-                    {"topic": {"$regex": r"/incoming/flags/mqtt-audio$"}},
-                    {"topic": {"$regex": r"/incoming/drive-values$"}},
-                    {"topic": {"$regex": r"/incoming/lights-solid$"}},
-                    {"topic": {"$regex": r"/incoming/lights-flash$"}},
-                    {"topic": {"$regex": r"/incoming/soundboard-command$"}},
-                    {"topic": {"$regex": r"/outgoing/soundboard-status$"}},
-                    {"topic": {"$regex": r"/incoming/autonomy-command$"}},
-                    {"topic": {"$regex": r"/outgoing/autonomy-status$"}},
-                    {"topic": {"$regex": r"/outgoing/logs$"}},
-                    {"topic": {"$regex": r"/incoming/front-camera$"}},
-                    {"topic": {"$regex": r"/incoming/audio$"}},
-                    {"topic": {"$regex": r"/incoming/flags/reboot$"}},
-                    {"topic": {"$regex": r"/incoming/flags/service-restart$"}},
-                    {"topic": {"$regex": r"/incoming/flags/git-pull$"}},
-                ]
-            }
+            query = self._activity_topic_query(history)
             if isinstance(last_scanned_ts, datetime.datetime):
                 query["ts"] = {"$gt": last_scanned_ts}
 
@@ -647,10 +635,13 @@ class ReplayArchive:
                     "id": str(doc.get("_id")),
                     "startTs": _isoformat(doc.get("start_ts")),
                     "endTs": _isoformat(doc.get("end_ts")),
+                    "firstEventTs": _isoformat(doc.get("first_event_ts")),
+                    "lastEventTs": _isoformat(doc.get("last_event_ts")),
                     "durationS": float(doc.get("duration_s") or 0.0),
                     "eventCount": int(doc.get("event_count") or 0),
                     "componentIds": list(doc.get("component_ids") or []),
                     "components": list(doc.get("components") or []),
+                    "sourceSystems": self._systems_for_session_doc(doc),
                     "activityCounts": dict(doc.get("activity_counts") or {}),
                 }
             )
@@ -666,514 +657,222 @@ class ReplayArchive:
             return None
         if not doc:
             return None
+        source_systems = self._systems_for_session_doc(doc)
         return {
             "id": str(doc.get("_id")),
             "startTs": _isoformat(doc.get("start_ts")),
             "endTs": _isoformat(doc.get("end_ts")),
+            "firstEventTs": _isoformat(doc.get("first_event_ts")),
+            "lastEventTs": _isoformat(doc.get("last_event_ts")),
             "durationS": float(doc.get("duration_s") or 0.0),
             "eventCount": int(doc.get("event_count") or 0),
             "componentIds": list(doc.get("component_ids") or []),
             "components": list(doc.get("components") or []),
+            "sourceSystems": source_systems,
             "activityCounts": dict(doc.get("activity_counts") or {}),
         }
 
-    def frame_step_time(self, session_id: str, at_s: float, direction: str, component_ids: Iterable[str]) -> Optional[float]:
-        if not self.is_available():
-            return None
-        session = self.get_session(session_id)
-        if not session:
-            return None
-        candidates = list(component_ids) or list(session.get("componentIds") or [])
-        with self._video_preload_lock:
-            job = self._video_preload_jobs.get(session_id)
-            if job:
-                best_cached: Optional[float] = None
-                for component_id in candidates:
-                    info = (job.get("components") or {}).get(component_id) or {}
-                    timestamps = list(info.get("timestamps") or [])
-                    if not timestamps:
-                        continue
-                    if direction == "next":
-                        idx = bisect.bisect_right(timestamps, at_s)
-                        if idx >= len(timestamps):
-                            continue
-                        candidate = timestamps[idx]
-                        best_cached = candidate if best_cached is None else min(best_cached, candidate)
-                    else:
-                        idx = bisect.bisect_left(timestamps, at_s) - 1
-                        if idx < 0:
-                            continue
-                        candidate = timestamps[idx]
-                        best_cached = candidate if best_cached is None else max(best_cached, candidate)
-                if best_cached is not None:
-                    return best_cached
-        history = self._history()
-        best: Optional[float] = None
-        sort_dir = 1 if direction == "next" else -1
-        comparator = "$gt" if direction == "next" else "$lt"
-        component_map = {item.get("id"): item.get("type") or "robots" for item in session.get("components") or []}
-        for component_id in candidates:
-            component_type = component_map.get(component_id, "robots")
-            topic = f"pebble/{component_type}/{component_id}/outgoing/front-camera"
-            doc = history.find_one(
-                {"topic": topic, "ts": {comparator: _epoch_to_dt(at_s)}},
-                {"ts": 1},
-                sort=[("ts", sort_dir)],
-            )
-            epoch = _dt_to_epoch(doc.get("ts")) if doc else None
-            if epoch is None:
-                continue
-            if best is None:
-                best = epoch
-            elif direction == "next":
-                best = min(best, epoch)
-            else:
-                best = max(best, epoch)
-        return best
+    def _synthetic_session_events(self, session: Dict[str, Any]) -> List[Dict[str, Any]]:
+        first_ts = session.get("firstEventTs") or session.get("startTs")
+        last_ts = session.get("lastEventTs") or session.get("endTs")
+        events: List[Dict[str, Any]] = []
+        counts = dict(session.get("activityCounts") or {})
+        for component in session.get("components") or []:
+            component_id = str(component.get("id") or "")
+            component_type = str(component.get("type") or "robots")
+            for kind in ("audio", "front-camera"):
+                if int(counts.get(kind) or 0) <= 0:
+                    continue
+                name = "video" if kind == "front-camera" else kind
+                events.append(
+                    {
+                        "ts": first_ts,
+                        "componentId": component_id,
+                        "componentType": component_type,
+                        "topic": "",
+                        "kind": kind,
+                        "state": "start",
+                        "label": f"{component_id} {name} start",
+                    }
+                )
+                events.append(
+                    {
+                        "ts": last_ts,
+                        "componentId": component_id,
+                        "componentType": component_type,
+                        "topic": "",
+                        "kind": kind,
+                        "state": "stop",
+                        "label": f"{component_id} {name} stop",
+                    }
+                )
+        return events
 
-    def _latest_doc_before(self, topic: str, at_s: float) -> Optional[Dict[str, Any]]:
-        return self._history().find_one({"topic": topic, "ts": {"$lte": _epoch_to_dt(at_s)}}, sort=[("ts", -1)])
-
-    def _recent_logs(self, component_id: str, component_type: str, session_start_s: float, at_s: float, limit: int = 12) -> List[Dict[str, Any]]:
-        topic = f"pebble/{component_type}/{component_id}/outgoing/logs"
-        cursor = (
-            self._history()
-            .find({"topic": topic, "ts": {"$gte": _epoch_to_dt(session_start_s), "$lte": _epoch_to_dt(at_s)}})
-            .sort("ts", -1)
-            .limit(max(1, limit))
-        )
-        items: List[Dict[str, Any]] = []
-        for doc in cursor:
-            payload = _payload_json(doc)
-            items.append(
-                {
-                    "ts": _isoformat(doc.get("ts")),
-                    "level": payload.get("level") if isinstance(payload, dict) else None,
-                    "service": payload.get("service") if isinstance(payload, dict) else None,
-                    "message": payload.get("message") if isinstance(payload, dict) else (_payload_text(doc) or ""),
-                }
-            )
-        items.reverse()
-        return items
-
-    def _heartbeat_state(self, component_id: str, component_type: str, at_s: float) -> Dict[str, Any]:
-        topic = f"pebble/{component_type}/{component_id}/outgoing/online"
-        cursor = list(
-            self._history()
-            .find({"topic": topic, "ts": {"$lte": _epoch_to_dt(at_s)}}, {"ts": 1, "payload": 1})
-            .sort("ts", -1)
-            .limit(8)
-        )
-        if not cursor:
-            return {"status": "unknown", "online": None, "ageS": None}
-        times = [_dt_to_epoch(doc.get("ts")) for doc in reversed(cursor)]
-        times = [t for t in times if t is not None]
-        latest = times[-1] if times else None
-        if latest is None:
-            return {"status": "unknown", "online": None, "ageS": None}
-        avg_interval = None
-        if len(times) >= 2:
-            diffs = [b - a for a, b in zip(times[:-1], times[1:]) if b > a]
-            if diffs:
-                avg_interval = sum(diffs) / len(diffs)
-        window = max(1.0, 4.0 * avg_interval) if avg_interval is not None else 2.0
-        age = max(0.0, at_s - latest)
-        online = age <= window
-        return {
-            "status": "online" if online else "offline",
-            "online": online,
-            "ageS": age,
-            "intervalS": avg_interval,
-        }
-
-    def _capabilities_state(self, component_id: str, component_type: str, at_s: float) -> Dict[str, Any]:
-        topic = f"pebble/{component_type}/{component_id}/outgoing/capabilities"
-        doc = self._latest_doc_before(topic, at_s)
-        payload = _payload_json(doc or {}) if doc else None
-        value = payload.get("value") if isinstance(payload, dict) and isinstance(payload.get("value"), dict) else payload
-        return value if isinstance(value, dict) else {}
-
-    def _component_snapshot(self, component_id: str, component_type: str, at_s: float, session_start_s: float) -> Dict[str, Any]:
-        capabilities = self._capabilities_state(component_id, component_type, at_s)
-        prefix = f"pebble/{component_type}/{component_id}"
-        charging_doc = self._latest_doc_before(f"{prefix}/outgoing/charging-status", at_s)
-        charge_level_doc = self._latest_doc_before(f"{prefix}/outgoing/charging-level", at_s)
-        drive_doc = self._latest_doc_before(f"{prefix}/incoming/drive-values", at_s)
-        light_solid_doc = self._latest_doc_before(f"{prefix}/incoming/lights-solid", at_s)
-        light_flash_doc = self._latest_doc_before(f"{prefix}/incoming/lights-flash", at_s)
-        autonomy_doc = self._latest_doc_before(f"{prefix}/outgoing/autonomy-status", at_s)
-        soundboard_doc = self._latest_doc_before(f"{prefix}/outgoing/soundboard-status", at_s)
-        video_flag_doc = self._latest_doc_before(f"{prefix}/incoming/flags/mqtt-video", at_s)
-        audio_flag_doc = self._latest_doc_before(f"{prefix}/incoming/flags/mqtt-audio", at_s)
-        odom_doc = self._latest_doc_before(f"{prefix}/outgoing/wheel-odometry", at_s)
-        overlay_doc = self._latest_doc_before(f"{prefix}/outgoing/video-overlays", at_s)
-        audio_doc = self._latest_doc_before(f"{prefix}/outgoing/audio", at_s)
-        video_doc = self._latest_doc_before(f"{prefix}/outgoing/front-camera", at_s)
-
-        charging_payload = _payload_json(charging_doc or {}) if charging_doc else None
-        charge_level_payload = _payload_json(charge_level_doc or {}) if charge_level_doc else None
-        drive_payload = _payload_json(drive_doc or {}) if drive_doc else None
-        light_solid_payload = _payload_json(light_solid_doc or {}) if light_solid_doc else None
-        light_flash_payload = _payload_json(light_flash_doc or {}) if light_flash_doc else None
-        autonomy_payload = _payload_json(autonomy_doc or {}) if autonomy_doc else None
-        soundboard_payload = _payload_json(soundboard_doc or {}) if soundboard_doc else None
-        odom_payload = _payload_json(odom_doc or {}) if odom_doc else None
-        overlay_payload = _payload_json(overlay_doc or {}) if overlay_doc else None
-
-        latest_light_doc = None
-        latest_light_payload: Optional[Dict[str, Any]] = None
-        light_mode = None
-        for candidate_doc, mode, candidate_payload in (
-            (light_solid_doc, "solid", light_solid_payload),
-            (light_flash_doc, "flash", light_flash_payload),
-        ):
-            if candidate_doc is None:
-                continue
-            if latest_light_doc is None or (candidate_doc.get("ts") and candidate_doc.get("ts") > latest_light_doc.get("ts")):
-                latest_light_doc = candidate_doc
-                latest_light_payload = candidate_payload if isinstance(candidate_payload, dict) else None
-                light_mode = mode
-
-        drive_values = drive_payload.get("value") if isinstance(drive_payload, dict) and isinstance(drive_payload.get("value"), dict) else drive_payload
-        if not isinstance(drive_values, dict):
-            drive_values = {}
-        drive_age = None
-        if drive_doc and drive_doc.get("ts"):
-            drive_age = at_s - float(_dt_to_epoch(drive_doc.get("ts")) or at_s)
-        if drive_age is not None and drive_age > 1.0:
-            drive_values = {"x": 0.0, "z": 0.0, "y": 0.0}
-
-        heartbeat = self._heartbeat_state(component_id, component_type, at_s)
-        video_flag = _normalize_bool_payload(_payload_json(video_flag_doc or {}) if video_flag_doc else None)
-        audio_flag = _normalize_bool_payload(_payload_json(audio_flag_doc or {}) if audio_flag_doc else None)
-        video_active = bool(video_flag) or (
-            video_doc is not None and (_dt_to_epoch(video_doc.get("ts")) or 0.0) >= (at_s - 2.0)
-        )
-        audio_active = bool(audio_flag) or (
-            audio_doc is not None and (_dt_to_epoch(audio_doc.get("ts")) or 0.0) >= (at_s - 1.0)
-        )
-        charging_value = None
-        if isinstance(charging_payload, dict):
-            charging_value = _normalize_bool_payload(charging_payload)
-        battery_voltage = None
-        if isinstance(charge_level_payload, dict):
-            value = charge_level_payload.get("value")
-            if isinstance(value, (int, float)):
-                battery_voltage = float(value)
-
-        autonomy_state = autonomy_payload.get("value") if isinstance(autonomy_payload, dict) and isinstance(autonomy_payload.get("value"), dict) else autonomy_payload
-        soundboard_state = soundboard_payload.get("value") if isinstance(soundboard_payload, dict) and isinstance(soundboard_payload.get("value"), dict) else soundboard_payload
-        odom_values = odom_payload.get("value") if isinstance(odom_payload, dict) and isinstance(odom_payload.get("value"), dict) else odom_payload
-
-        return {
-            "id": component_id,
-            "name": component_id,
-            "type": component_type,
-            "heartbeat": heartbeat,
-            "charging": charging_value,
-            "batteryVoltage": battery_voltage,
-            "drive": {
-                "x": float(drive_values.get("x") or 0.0),
-                "z": float(drive_values.get("z") or 0.0),
-                "y": float(drive_values.get("y") or 0.0),
-                "active": _is_meaningful_drive(drive_values),
-            },
-            "lights": {
-                "mode": light_mode,
-                "value": latest_light_payload or {},
-            },
-            "video": {
-                "available": bool(capabilities.get("video")) or video_doc is not None,
-                "active": video_active,
-                "displayed": False,
-                "lastFrameTs": _isoformat(video_doc.get("ts")) if video_doc else None,
-            },
-            "audio": {
-                "available": bool(capabilities.get("audio")) or audio_doc is not None,
-                "active": audio_active,
-                "selected": False,
-                "lastPacketTs": _isoformat(audio_doc.get("ts")) if audio_doc else None,
-            },
-            "autonomy": autonomy_state if isinstance(autonomy_state, dict) else {},
-            "soundboard": soundboard_state if isinstance(soundboard_state, dict) else {},
-            "odometry": odom_values if isinstance(odom_values, dict) else {},
-            "overlays": overlay_payload if isinstance(overlay_payload, dict) else {},
-            "logs": self._recent_logs(component_id, component_type, session_start_s, at_s),
-        }
-
-    def snapshot(self, session_id: str, at_s: float, component_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+    def session_events(self, session_id: str, limit: int = SESSION_EVENT_LIMIT) -> List[Dict[str, Any]]:
         session = self.get_session(session_id)
         if not session:
             raise KeyError("Unknown session")
-        selected = component_ids or list(session.get("componentIds") or [])
-        session_start_s = _dt_to_epoch(datetime.datetime.fromisoformat(str(session["startTs"]))) or at_s
+        start_s = _dt_to_epoch(datetime.datetime.fromisoformat(str(session["startTs"])))
+        end_s = _dt_to_epoch(datetime.datetime.fromisoformat(str(session["endTs"])))
+        if start_s is None or end_s is None:
+            return []
         component_map = {item.get("id"): item.get("type") or "robots" for item in session.get("components") or []}
-        components = [
-            self._component_snapshot(component_id, component_map.get(component_id, "robots"), at_s, session_start_s)
-            for component_id in selected
-        ]
-        for component in components:
-            component["video"]["displayed"] = True
-            component["audio"]["selected"] = False
-        return {
-            "session": session,
-            "at": _isoformat(at_s),
-            "components": components,
-        }
-
-    def reconstruct_video_frame(self, component_id: str, at_s: float, session_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        if not self.is_available() or not VIDEO_SUPPORT:
-            return None
-        if session_id:
-            with self._video_preload_lock:
-                job = self._video_preload_jobs.get(session_id)
-                if job:
-                    info = (job.get("components") or {}).get(component_id) or {}
-                    timestamps = list(info.get("timestamps") or [])
-                    frames = list(info.get("frames") or [])
-                    if timestamps and frames:
-                        index = bisect.bisect_right(timestamps, at_s) - 1
-                        if index >= 0 and (at_s - timestamps[index]) <= VIDEO_STALE_SECONDS:
-                            return {
-                                "jpeg": frames[index],
-                                "metadata": {
-                                    "sourceTs": _isoformat(timestamps[index]),
-                                    "preloaded": True,
-                                },
-                            }
-        topic_pattern = re.compile(rf"^pebble/[^/]+/{re.escape(component_id)}/outgoing/front-camera$")
-        history = self._history()
-        cursor = (
-            history.find({"topic": {"$regex": topic_pattern.pattern}, "ts": {"$lte": _epoch_to_dt(at_s)}}, {"ts": 1, "payload": 1})
-            .sort("ts", -1)
-            .limit(2000)
-        )
-        docs = list(cursor)
-        docs.reverse()
-        last_keyframe_index = None
-        decoded_packets: List[tuple[Dict[str, Any], Dict[str, Any]]] = []
-        for index, doc in enumerate(docs):
-            packet = _payload_json(doc)
-            if isinstance(packet, dict):
-                decoded_packets.append((doc, packet))
-                if bool(packet.get("keyframe")):
-                    last_keyframe_index = index
-        if last_keyframe_index is None:
-            return None
-        frame = None
-        metadata: Dict[str, Any] = {}
-        latest_frame_ts: Optional[float] = None
-        for doc, packet in decoded_packets[last_keyframe_index:]:
-            encoded = packet.get("data")
-            if not encoded:
-                continue
-            try:
-                compressed = base64.b64decode(encoded)
-                jpeg_bytes = zlib.decompress(compressed)
-            except (base64.binascii.Error, zlib.error):
-                continue
-            frame_array = np.frombuffer(jpeg_bytes, dtype=np.uint8)
-            packet_frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
-            if packet_frame is None:
-                continue
-            if bool(packet.get("keyframe")) or frame is None:
-                frame = packet_frame
-            else:
-                delta = packet_frame.astype(np.int16) - 128
-                frame = np.clip(frame.astype(np.int16) + delta, 0, 255).astype(np.uint8)
-            metadata = {
-                "sourceTs": _isoformat(doc.get("ts")),
-                "packetTimestamp": packet.get("timestamp"),
-                "id": packet.get("id"),
-                "keyframe": bool(packet.get("keyframe")),
-            }
-            latest_frame_ts = _dt_to_epoch(doc.get("ts"))
-        if frame is None or latest_frame_ts is None or (at_s - latest_frame_ts) > VIDEO_STALE_SECONDS:
-            return None
-        ok, encoded_frame = cv2.imencode(".jpg", frame)
-        if not ok:
-            return None
-        return {"jpeg": encoded_frame.tobytes(), "metadata": metadata}
-
-    def _decode_replay_packet(
-        self, packet: Dict[str, Any], last_frame: Optional[Any]
-    ) -> Optional[tuple[bytes, Any, Dict[str, Any]]]:
-        encoded = packet.get("data")
-        if not encoded:
-            return None
-        try:
-            compressed = base64.b64decode(encoded)
-            jpeg_bytes = zlib.decompress(compressed)
-        except (base64.binascii.Error, zlib.error):
-            return None
-        frame_array = np.frombuffer(jpeg_bytes, dtype=np.uint8)
-        frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
-        if frame is None:
-            return None
-        is_keyframe = bool(packet.get("keyframe"))
-        if not is_keyframe and last_frame is None:
-            return None
-        if is_keyframe or last_frame is None:
-            reconstructed = frame
-        else:
-            delta = frame.astype(np.int16) - 128
-            reconstructed = np.clip(last_frame.astype(np.int16) + delta, 0, 255).astype(np.uint8)
-        ok, encoded_frame = cv2.imencode(".jpg", reconstructed)
-        if not ok:
-            return None
-        metadata = {
-            "id": packet.get("id"),
-            "keyframe": is_keyframe,
-            "timestamp": packet.get("timestamp"),
-        }
-        return encoded_frame.tobytes(), reconstructed, metadata
-
-    def replay_video_stream(self, session_id: str, component_id: str, start_s: float, token: str):
-        if not self.is_available() or not VIDEO_SUPPORT:
-            return
-        session = self.get_session(session_id)
-        if not session:
-            return
-        self.register_stream_token(session_id, component_id, token)
-        component_map = {item.get("id"): item.get("type") or "robots" for item in session.get("components") or []}
-        component_type = component_map.get(component_id, "robots")
-        topic = f"pebble/{component_type}/{component_id}/outgoing/front-camera"
-        end_s = _dt_to_epoch(datetime.datetime.fromisoformat(str(session["endTs"]))) or start_s
-        history = self._history()
-
-        previous_docs = list(
-            history.find({"topic": topic, "ts": {"$lte": _epoch_to_dt(start_s)}}, {"ts": 1, "payload": 1})
-            .sort("ts", -1)
-            .limit(1000)
-        )
-        previous_docs.reverse()
-        seed_docs: List[Dict[str, Any]] = []
-        last_keyframe_index = None
-        for index, doc in enumerate(previous_docs):
-            packet = _payload_json(doc)
-            if isinstance(packet, dict) and bool(packet.get("keyframe")):
-                last_keyframe_index = index
-        if last_keyframe_index is not None:
-            seed_docs = previous_docs[last_keyframe_index:]
-
-        boundary = b"--frame\r\n"
-        last_frame = None
-        seeded_frame: Optional[bytes] = None
-        seeded_frame_ts: Optional[float] = None
-
-        try:
-            for doc in seed_docs:
-                if not self.stream_token_active(session_id, component_id, token):
-                    return
-                packet = _payload_json(doc)
-                if not isinstance(packet, dict):
-                    continue
-                decoded = self._decode_replay_packet(packet, last_frame)
-                if decoded is None:
-                    continue
-                jpeg_bytes, last_frame, _metadata = decoded
-                seeded_frame = jpeg_bytes
-                seeded_frame_ts = _dt_to_epoch(doc.get("ts"))
-
-            if seeded_frame is not None and seeded_frame_ts is not None and (start_s - seeded_frame_ts) <= VIDEO_STALE_SECONDS:
-                if not self.stream_token_active(session_id, component_id, token):
-                    return
-                yield (
-                    boundary
-                    + b"Content-Type: image/jpeg\r\n"
-                    + f"Content-Length: {len(seeded_frame)}\r\n\r\n".encode("ascii")
-                    + seeded_frame
-                    + b"\r\n"
-                )
-
-            future_docs = history.find(
-                {"topic": topic, "ts": {"$gt": _epoch_to_dt(start_s), "$lte": _epoch_to_dt(end_s)}},
-                {"ts": 1, "payload": 1},
-            ).sort("ts", 1)
-
-            wall_start = time.monotonic()
-            for doc in future_docs:
-                if not self.stream_token_active(session_id, component_id, token):
-                    return
-                frame_ts = _dt_to_epoch(doc.get("ts"))
-                packet = _payload_json(doc)
-                if frame_ts is None or not isinstance(packet, dict):
-                    continue
-                decoded = self._decode_replay_packet(packet, last_frame)
-                if decoded is None:
-                    continue
-                jpeg_bytes, last_frame, _metadata = decoded
-                target_offset = max(0.0, frame_ts - start_s)
-                elapsed = time.monotonic() - wall_start
-                delay = target_offset - elapsed
-                if delay > 0:
-                    time.sleep(min(delay, 0.1))
-                    if not self.stream_token_active(session_id, component_id, token):
-                        return
-                yield (
-                    boundary
-                    + b"Content-Type: image/jpeg\r\n"
-                    + f"Content-Length: {len(jpeg_bytes)}\r\n\r\n".encode("ascii")
-                    + jpeg_bytes
-                    + b"\r\n"
-                )
-        finally:
-            self.clear_stream_token(session_id, component_id, token)
-
-    def _stream_key(self, session_id: str, component_id: str) -> str:
-        return f"{session_id}:{component_id}"
-
-    def register_stream_token(self, session_id: str, component_id: str, token: str) -> None:
-        with self._stream_lock:
-            self._active_stream_tokens[self._stream_key(session_id, component_id)] = token
-
-    def stream_token_active(self, session_id: str, component_id: str, token: str) -> bool:
-        with self._stream_lock:
-            return self._active_stream_tokens.get(self._stream_key(session_id, component_id)) == token
-
-    def clear_stream_token(self, session_id: str, component_id: str, token: str) -> None:
-        with self._stream_lock:
-            key = self._stream_key(session_id, component_id)
-            if self._active_stream_tokens.get(key) == token:
-                self._active_stream_tokens.pop(key, None)
-
-    def audio_chunks(self, component_id: str, start_s: float, end_s: float, limit: int = 150) -> List[Dict[str, Any]]:
-        topic_pattern = re.compile(rf"^pebble/[^/]+/{re.escape(component_id)}/outgoing/audio$")
+        topics = []
+        for component_id, component_type in component_map.items():
+            prefix = rf"^[^/]+/{re.escape(str(component_type))}/{re.escape(str(component_id))}"
+            topics.extend(
+                [
+                    {"topic": {"$regex": f"{prefix}/incoming/flags/mqtt-video$"}},
+                    {"topic": {"$regex": f"{prefix}/incoming/flags/mqtt-audio$"}},
+                    {"topic": {"$regex": f"{prefix}/incoming/front-camera$"}},
+                    {"topic": {"$regex": f"{prefix}/incoming/audio$"}},
+                    {"topic": {"$regex": f"{prefix}/incoming/soundboard-command$"}},
+                    {"topic": {"$regex": f"{prefix}/outgoing/soundboard-status$"}},
+                    {"topic": {"$regex": f"{prefix}/incoming/autonomy-command$"}},
+                    {"topic": {"$regex": f"{prefix}/outgoing/autonomy-status$"}},
+                    {"topic": {"$regex": f"{prefix}/incoming/flags/reboot$"}},
+                    {"topic": {"$regex": f"{prefix}/incoming/flags/service-restart$"}},
+                    {"topic": {"$regex": f"{prefix}/incoming/flags/git-pull$"}},
+                    {"topic": {"$regex": f"{prefix}/incoming/lights-solid$"}},
+                    {"topic": {"$regex": f"{prefix}/incoming/lights-flash$"}},
+                ]
+            )
+        if not topics:
+            return []
         cursor = (
             self._history()
-            .find({"topic": {"$regex": topic_pattern.pattern}, "ts": {"$gte": _epoch_to_dt(start_s), "$lte": _epoch_to_dt(end_s)}})
-            .sort("ts", 1)
-            .limit(max(1, min(limit, 500)))
-        )
-        chunks: List[Dict[str, Any]] = []
-        for doc in cursor:
-            payload = doc.get("payload")
-            if not isinstance(payload, bytes) or len(payload) < AUDIO_PACKET_HEADER_SIZE:
-                continue
-            header = payload[:AUDIO_PACKET_HEADER_SIZE]
-            body = payload[AUDIO_PACKET_HEADER_SIZE:]
-            try:
-                magic = header[:4]
-                version = header[4]
-                codec = header[5]
-                channels = header[6]
-                rate = int.from_bytes(header[8:10], "big")
-                frame_samples = int.from_bytes(header[10:12], "big")
-                seq = int.from_bytes(header[12:16], "big")
-                timestamp_ms = int.from_bytes(header[16:24], "big")
-            except Exception:
-                continue
-            if magic != AUDIO_MAGIC or version != 1 or codec != 1:
-                continue
-            chunks.append(
+            .find(
                 {
-                    "ts": _isoformat(doc.get("ts")),
-                    "timestampMs": timestamp_ms,
-                    "seq": seq,
-                    "rate": rate,
-                    "channels": channels,
-                    "frameSamples": frame_samples,
-                    "data": base64.b64encode(body).decode("ascii"),
-                }
+                    "$or": topics,
+                    "ts": {"$gte": _epoch_to_dt(start_s), "$lte": _epoch_to_dt(end_s)},
+                },
+                {"ts": 1, "topic": 1, "payload": 1},
             )
-        return chunks
+            .sort("ts", 1)
+            .limit(max(1, min(limit, 2000)))
+        )
+        events = self._synthetic_session_events(session)
+        for doc in cursor:
+            event = _public_event_from_doc(doc)
+            if event is not None:
+                events.append(event)
+        return sorted(events, key=lambda event: str(event.get("ts") or ""))[: max(1, min(limit, 2000))]
+
+    def republish_status(self) -> Dict[str, Any]:
+        with self._republish_lock:
+            job = self._republish_job
+            if not job:
+                return {"running": False}
+            thread = job.get("thread")
+            running = bool(thread and thread.is_alive() and not job["stop"].is_set())
+            return {
+                "running": running,
+                "sessionId": job.get("session_id"),
+                "startedAt": job.get("started_at"),
+                "sourceAt": _isoformat(job.get("source_at")),
+                "sourceSystem": job.get("source_system"),
+                "published": int(job.get("published") or 0),
+                "lastTopic": job.get("last_topic"),
+                "error": job.get("error"),
+            }
+
+    def stop_republish(self) -> Dict[str, Any]:
+        with self._republish_lock:
+            job = self._republish_job
+            if not job:
+                return {"running": False}
+            job["stop"].set()
+        return self.republish_status()
+
+    def start_republish(
+        self,
+        session_id: str,
+        start_s: float,
+        publish: Callable[[str, bytes, int, bool], bool],
+        component_ids: Optional[List[str]] = None,
+        source_system: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        session = self.get_session(session_id)
+        if not session:
+            raise KeyError("Unknown session")
+        selected_system = str(source_system or self._default_system_for_session(session)).strip()
+        if selected_system not in set(session.get("sourceSystems") or [selected_system]):
+            raise ValueError("Selected system is not present in this session")
+        self.stop_republish()
+        stop_event = threading.Event()
+        job: Dict[str, Any] = {
+            "session_id": session_id,
+            "session": session,
+            "source_at": _epoch_to_dt(start_s),
+            "started_at": _isoformat(_utc_now()),
+            "published": 0,
+            "last_topic": None,
+            "error": None,
+            "stop": stop_event,
+            "components": list(component_ids or []),
+            "source_system": selected_system,
+        }
+        thread = threading.Thread(
+            target=self._run_republish,
+            args=(job, publish),
+            name=f"replay-republish-{session_id}",
+            daemon=True,
+        )
+        job["thread"] = thread
+        with self._republish_lock:
+            self._republish_job = job
+        thread.start()
+        return self.republish_status()
+
+    def _run_republish(self, job: Dict[str, Any], publish: Callable[[str, bytes, int, bool], bool]) -> None:
+        session = job["session"]
+        try:
+            start_s = _dt_to_epoch(job.get("source_at")) or 0.0
+            session_end_s = _dt_to_epoch(datetime.datetime.fromisoformat(str(session["endTs"]))) or start_s
+            component_map = {item.get("id"): item.get("type") or "robots" for item in session.get("components") or []}
+            selected = list(job.get("components") or []) or list(component_map.keys())
+            source_system = str(job.get("source_system") or self._default_system_for_session(session)).strip()
+            topics = []
+            for component_id in selected:
+                component_type = component_map.get(component_id, "robots")
+                topics.append(
+                    {
+                        "topic": {
+                            "$regex": rf"^{re.escape(source_system)}/{re.escape(component_type)}/{re.escape(component_id)}/"
+                        }
+                    }
+                )
+            if not topics:
+                return
+            query = {
+                "$or": topics,
+                "ts": {"$gte": _epoch_to_dt(start_s), "$lte": _epoch_to_dt(session_end_s)},
+            }
+            cursor = self._history().find(query, {"ts": 1, "topic": 1, "payload": 1, "qos": 1}).sort("ts", 1)
+            wall_start = time.monotonic()
+            for doc in cursor:
+                if job["stop"].is_set():
+                    break
+                source_ts = _dt_to_epoch(doc.get("ts"))
+                if source_ts is None:
+                    continue
+                delay = (source_ts - start_s) - (time.monotonic() - wall_start)
+                if delay > 0 and job["stop"].wait(delay):
+                    break
+                rewritten = _rewrite_system_id(str(doc.get("topic") or ""))
+                payload = doc.get("payload")
+                if rewritten is None or payload is None:
+                    continue
+                if not isinstance(payload, bytes):
+                    payload = bytes(payload)
+                ok = publish(rewritten, payload, int(doc.get("qos") or 0), False)
+                if not ok:
+                    job["error"] = f"publish failed for {rewritten}"
+                    break
+                job["published"] = int(job.get("published") or 0) + 1
+                job["last_topic"] = rewritten
+        except Exception as exc:  # pragma: no cover - runtime integration
+            self.logger.exception("Replay republish failed")
+            job["error"] = str(exc)
+        finally:
+            job["stop"].set()

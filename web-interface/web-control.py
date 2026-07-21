@@ -668,6 +668,9 @@ def _log_mqtt_history(msg: mqtt.MQTTMessage) -> None:
     global mqtt_history_next_retry_at
     if not mqtt_history_enabled:
         return
+    parsed = _parse_component_topic(str(msg.topic or ""))
+    if parsed and parsed[0] == "replay":
+        return
     collection = mqtt_history_collection
     if collection is None:
         should_retry = False
@@ -1534,6 +1537,99 @@ def _handle_charge_level_payload(
         explicit=False,
         system=system,
     )
+
+
+def _command_payload_values(payload: Dict[str, Any]) -> Dict[str, Any]:
+    values = payload.get("value") if isinstance(payload.get("value"), dict) else payload
+    return values if isinstance(values, dict) else {}
+
+
+def _handle_drive_command_payload(
+    robot_id: str,
+    payload: Dict[str, Any],
+    component_type: Optional[str] = None,
+    system: Optional[str] = None,
+    component_id: Optional[str] = None,
+) -> None:
+    robot_key = _robot_key(robot_id)
+    values = _command_payload_values(payload)
+    try:
+        x = clamp(float(values.get("x", 0.0)), -1.0, 1.0)
+        z = clamp(float(values.get("z", 0.0)), -1.0, 1.0)
+        y = clamp(float(values.get("y", 0.0)), -1.0, 1.0)
+    except (TypeError, ValueError):
+        logging.debug("Invalid drive command payload for %s: %s", robot_id, payload)
+        return
+    now = time.time()
+    with telemetry_lock:
+        entry = telemetry_cache.setdefault(robot_key, {})
+        entry["drive_command"] = {"x": x, "z": z, "y": y}
+        entry["drive_command_received_at"] = now
+    _ensure_robot_placeholder(robot_key, component_type, system=system, component_id=component_id)
+    with robots_lock:
+        current = discovered_robots.get(robot_key)
+        if current is not None:
+            current["hasDrive"] = True
+
+
+def _handle_light_command_payload(
+    robot_id: str,
+    payload: Dict[str, Any],
+    mode: str,
+    component_type: Optional[str] = None,
+    system: Optional[str] = None,
+    component_id: Optional[str] = None,
+) -> None:
+    robot_key = _robot_key(robot_id)
+    values = _command_payload_values(payload)
+    try:
+        b = clamp(float(values.get("b", 0.0)), 0.0, 1.0)
+        g = clamp(float(values.get("g", 0.0)), 0.0, 1.0)
+        r = clamp(float(values.get("r", 0.0)), 0.0, 1.0)
+        period = clamp(float(values.get("period", 2.0)), 0.05, 30.0)
+    except (TypeError, ValueError):
+        logging.debug("Invalid light command payload for %s: %s", robot_id, payload)
+        return
+    command = {"mode": mode, "b": b, "g": g, "r": r}
+    if mode == "flash":
+        command["period"] = period
+    now = time.time()
+    with telemetry_lock:
+        entry = telemetry_cache.setdefault(robot_key, {})
+        entry["light_command"] = command
+        entry["light_command_received_at"] = now
+    _ensure_robot_placeholder(robot_key, component_type, system=system, component_id=component_id)
+    with robots_lock:
+        current = discovered_robots.get(robot_key)
+        if current is not None:
+            current["hasLights"] = True
+
+
+def _handle_boolean_command_payload(
+    robot_id: str,
+    payload: Dict[str, Any],
+    field: str,
+    component_type: Optional[str] = None,
+    system: Optional[str] = None,
+    component_id: Optional[str] = None,
+) -> None:
+    value = None
+    if isinstance(payload, dict):
+        for key in ("value", "enabled", "playing", "running"):
+            if key in payload:
+                value = _coerce_bool(payload.get(key))
+                break
+    else:
+        value = _coerce_bool(payload)
+    if value is None:
+        return
+    robot_key = _robot_key(robot_id)
+    now = time.time()
+    with telemetry_lock:
+        entry = telemetry_cache.setdefault(robot_key, {})
+        entry[field] = bool(value)
+        entry[f"{field}_received_at"] = now
+    _ensure_robot_placeholder(robot_key, component_type, system=system, component_id=component_id)
 
 
 def _handle_wheel_odometry_payload(
@@ -3080,6 +3176,15 @@ def _on_mqtt_connect(client: mqtt.Client, _userdata: Any, _flags: Dict[str, Any]
         client.subscribe("+/+/+/outgoing/status", qos=1)
         client.subscribe("+/+/+/outgoing/logs", qos=1)
         client.subscribe("+/+/+/outgoing/audio", qos=0)
+        client.subscribe("+/+/+/incoming/drive-values", qos=0)
+        client.subscribe("+/+/+/incoming/lights-solid", qos=1)
+        client.subscribe("+/+/+/incoming/lights-flash", qos=1)
+        client.subscribe("+/+/+/incoming/flags/mqtt-audio", qos=1)
+        client.subscribe("+/+/+/incoming/flags/mqtt-video", qos=1)
+        client.subscribe("+/+/+/incoming/audio", qos=1)
+        client.subscribe("+/+/+/incoming/front-camera", qos=1)
+        client.subscribe("+/+/+/incoming/soundboard-command", qos=1)
+        client.subscribe("+/+/+/incoming/autonomy-command", qos=1)
         client.subscribe("+/+/+/outgoing/outlets/#", qos=1)
         client.subscribe("+/+/+/outgoing/soundboard-files", qos=1)
         client.subscribe("+/+/+/outgoing/soundboard-status", qos=1)
@@ -3185,12 +3290,7 @@ def _on_mqtt_message(_client: mqtt.Client, _userdata: Any, msg: mqtt.MQTTMessage
         return
     system, component_type, component_id, direction, metric = parsed
     robot_key = _component_key(system, component_type, component_id)
-    if direction != "outgoing":
-        return
-    if not _get_robot(robot_key):
-        _ensure_robot_placeholder(robot_key, component_type, system=system, component_id=component_id)
-
-    if metric == "logs":
+    if direction == "outgoing" and metric == "logs":
         payload: Any
         try:
             decoded = msg.payload.decode("utf-8")
@@ -3205,6 +3305,26 @@ def _on_mqtt_message(_client: mqtt.Client, _userdata: Any, msg: mqtt.MQTTMessage
     except json.JSONDecodeError:
         logging.debug("Non-JSON MQTT payload on %s", msg.topic)
         return
+    if direction == "incoming":
+        if metric == "drive-values":
+            _handle_drive_command_payload(robot_key, payload, component_type, system, component_id)
+        elif metric == "lights-solid":
+            _handle_light_command_payload(robot_key, payload, "solid", component_type, system, component_id)
+        elif metric == "lights-flash":
+            _handle_light_command_payload(robot_key, payload, "flash", component_type, system, component_id)
+        elif metric in ("flags/mqtt-audio", "audio"):
+            _handle_boolean_command_payload(robot_key, payload, "audio_requested", component_type, system, component_id)
+        elif metric in ("flags/mqtt-video", "front-camera"):
+            _handle_boolean_command_payload(robot_key, payload, "video_requested", component_type, system, component_id)
+        elif metric == "soundboard-command":
+            _handle_boolean_command_payload(robot_key, payload, "soundboard_requested", component_type, system, component_id)
+        elif metric == "autonomy-command":
+            _handle_boolean_command_payload(robot_key, payload, "autonomy_requested", component_type, system, component_id)
+        return
+    if direction != "outgoing":
+        return
+    if not _get_robot(robot_key):
+        _ensure_robot_placeholder(robot_key, component_type, system=system, component_id=component_id)
     if metric == "touch-sensors":
         _handle_touch_payload(robot_key, payload, component_type, system)
     elif metric == "charging-status":
@@ -4825,8 +4945,10 @@ async function fetchVideoStatus() {
     const stale = hasFrame && ageValue !== null && ageValue > VIDEO_STALE_SECONDS;
     const running = hasFrame && !stale;
     const age = ageValue !== null ? `${ageValue.toFixed(1)}s ago` : "no frame";
+    const requested = typeof data.requested === "boolean" ? (data.requested ? "requested on" : "requested off") : "";
     const prefix = running ? "Streaming" : (hasFrame ? "Stopped" : "Idle");
     videoStatusEl.textContent = `${prefix} • ${data.hasFrame ? age : "no frame yet"}`;
+    if (requested) videoStatusEl.textContent += ` • ${requested}`;
     const hasControls = Boolean(data.controls);
     videoStartBtn.disabled = !hasControls;
     videoStopBtn.disabled = !hasControls;
@@ -6194,6 +6316,7 @@ const serviceRestartBtn = document.getElementById('serviceRestartBtn');
 const serviceRestartStatusEl = document.getElementById('serviceRestartStatus');
 const gitPullBtn = document.getElementById('gitPullBtn');
 const gitPullStatusEl = document.getElementById('gitPullStatus');
+const driveDisplayPressed = new Set();
 let joystickActive = false;
 let joystickPointerId = null;
 let joystickCenter = { x: 0, y: 0 };
@@ -6258,7 +6381,28 @@ function applyDriveBalance(l, r) {
 }
 
 function updateIndicators(){
-  ["W","A","S","D","Q","E"].forEach(c => k[c]?.classList.toggle('on', pressed.has(c)));
+  ["W","A","S","D","Q","E"].forEach(c => k[c]?.classList.toggle('on', driveDisplayPressed.has(c)));
+}
+
+function setDriveDisplayFromCommand(command, ageSeconds = null) {
+  driveDisplayPressed.clear();
+  if (command && typeof command === "object" && (ageSeconds === null || ageSeconds <= 1.0)) {
+    const x = Number(command.x || 0);
+    const z = Number(command.z || 0);
+    const y = Number(command.y || 0);
+    if (z > 0.15) driveDisplayPressed.add("W");
+    if (z < -0.15) driveDisplayPressed.add("S");
+    if (x < -0.15) driveDisplayPressed.add("A");
+    if (x > 0.15) driveDisplayPressed.add("D");
+    if (y < -0.15) driveDisplayPressed.add("Q");
+    if (y > 0.15) driveDisplayPressed.add("E");
+    const left = clampValue(z + x, -1, 1);
+    const right = clampValue(z - x, -1, 1);
+    statusEl.textContent = `${robotName(currentRobot)} <- M ${left.toFixed(3)} ${right.toFixed(3)} ${y.toFixed(3)}`;
+  } else if (currentRobot) {
+    statusEl.textContent = "Awaiting drive command...";
+  }
+  updateIndicators();
 }
 
 function mix() {
@@ -6290,14 +6434,18 @@ async function publishDriveCommand(cmd) {
   const robotId = currentRobot;
   const msg = `M ${l.toFixed(3)} ${r.toFixed(3)} ${y.toFixed(3)}`;
   lastSent = msg;
-  statusEl.textContent = `${robotName(robotId)} → ${msg}`;
+  statusEl.textContent = `Sending ${msg}...`;
   try {
-    await fetch(`/robots/${robotId}/m`, {
+    const res = await fetch(`/robots/${robotId}/m`, {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({ l, r, y })
     });
-  } catch(e) { console.error(e); }
+    if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+  } catch(e) {
+    console.error(e);
+    statusEl.textContent = `Drive publish failed: ${e.message || e}`;
+  }
   finally {
     driveLastSentMs = Date.now();
     driveLastSentState = state;
@@ -6617,13 +6765,43 @@ function hexToRgb01(hex) {
   return {r,g,b};
 }
 
+function rgb01ToHex(r, g, b) {
+  const toHex = (value) => {
+    const n = Math.max(0, Math.min(255, Math.round((Number(value) || 0) * 255)));
+    return n.toString(16).padStart(2, "0");
+  };
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function applyLightCommand(command) {
+  if (!command || typeof command !== "object") {
+    lightStatusEl.textContent = "Awaiting command...";
+    lightsShortcutEnabled = false;
+    return;
+  }
+  const r = Number(command.r || 0);
+  const g = Number(command.g || 0);
+  const b = Number(command.b || 0);
+  colorEl.value = rgb01ToHex(r, g, b);
+  const off = Math.abs(r) < 0.001 && Math.abs(g) < 0.001 && Math.abs(b) < 0.001;
+  lightsShortcutEnabled = !off;
+  if (command.mode === "flash") {
+    const period = Number(command.period || 2.0);
+    if (Number.isFinite(period)) flashTEl.value = period.toFixed(2);
+    lightStatusEl.textContent = `${robotName(currentRobot)} <- F ${b.toFixed(3)} ${g.toFixed(3)} ${r.toFixed(3)} ${Number(flashTEl.value).toFixed(2)}`;
+  } else {
+    lightStatusEl.textContent = `${robotName(currentRobot)} <- L ${b.toFixed(3)} ${g.toFixed(3)} ${r.toFixed(3)}`;
+  }
+}
+
 async function commandRobot(path, payload) {
   if (!currentRobot) return;
-  await fetch(`/robots/${currentRobot}/${path}`, {
+  const res = await fetch(`/robots/${currentRobot}/${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
+  if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
 }
 
 function syncRebootControls() {
@@ -6756,29 +6934,41 @@ async function sendGitPullCommand() {
 
 async function sendL_fromColor() {
   const {r,g,b} = hexToRgb01(colorEl.value);
+  lightStatusEl.textContent = "Sending solid light command...";
   await commandRobot("l", { b, g, r });
-  lightsShortcutEnabled = true;
-  lightStatusEl.textContent = `${robotName(currentRobot)} → L ${b.toFixed(3)} ${g.toFixed(3)} ${r.toFixed(3)}`;
 }
 
 async function sendF_fromColor() {
   const {r,g,b} = hexToRgb01(colorEl.value);
   let period = Number(flashTEl.value);
   if (!isFinite(period) || period <= 0) period = 2.0;
+  lightStatusEl.textContent = "Sending flash light command...";
   await commandRobot("f", { b, g, r, period });
-  lightsShortcutEnabled = true;
-  lightStatusEl.textContent = `${robotName(currentRobot)} → F ${b.toFixed(3)} ${g.toFixed(3)} ${r.toFixed(3)} ${period.toFixed(2)}`;
 }
 
 async function sendLightsOff() {
+  lightStatusEl.textContent = "Sending lights off command...";
   await commandRobot("l", { b:0, g:0, r:0 });
-  lightsShortcutEnabled = false;
-  lightStatusEl.textContent = `${robotName(currentRobot)} → L 0.000 0.000 0.000`;
 }
 
-document.getElementById('btnSolid').addEventListener("click", () => { sendL_fromColor().catch(console.error); });
-document.getElementById('btnFlash').addEventListener("click", () => { sendF_fromColor().catch(console.error); });
-document.getElementById('btnOff').addEventListener("click", () => { sendLightsOff().catch(console.error); });
+document.getElementById('btnSolid').addEventListener("click", () => {
+  sendL_fromColor().catch((err) => {
+    console.error(err);
+    lightStatusEl.textContent = `Light publish failed: ${err.message || err}`;
+  });
+});
+document.getElementById('btnFlash').addEventListener("click", () => {
+  sendF_fromColor().catch((err) => {
+    console.error(err);
+    lightStatusEl.textContent = `Light publish failed: ${err.message || err}`;
+  });
+});
+document.getElementById('btnOff').addEventListener("click", () => {
+  sendLightsOff().catch((err) => {
+    console.error(err);
+    lightStatusEl.textContent = `Light publish failed: ${err.message || err}`;
+  });
+});
 
 // Telemetry
 const chg = document.getElementById('chg');
@@ -7180,7 +7370,8 @@ function clearTelemetryUI(){
   latAvg.textContent = "–";
   offlineFor.textContent = "–";
   statusEl.textContent = "Select a component to begin.";
-  lightStatusEl.textContent = "Awaiting command...";
+  setDriveDisplayFromCommand(null);
+  applyLightCommand(null);
   if (rebootStatusEl) rebootStatusEl.textContent = "";
   if (serviceRestartStatusEl) serviceRestartStatusEl.textContent = "";
   if (gitPullStatusEl) gitPullStatusEl.textContent = "";
@@ -7246,6 +7437,9 @@ async function pollTelemetry(){
 
     updateOdometryFromTelemetry(t.odometry);
     updateImuFromTelemetry(t.imu);
+    const driveAge = typeof t.drive_command_received_at === "number" ? Math.max(0, Date.now() / 1000 - t.drive_command_received_at) : null;
+    setDriveDisplayFromCommand(t.drive_command, driveAge);
+    applyLightCommand(t.light_command);
   } catch(e) { console.error(e); }
 }
 setInterval(pollTelemetry, 200);
@@ -7298,107 +7492,58 @@ def replay_sessions() -> Response:
     return jsonify({"sessions": REPLAY_ARCHIVE.list_sessions(limit=limit, before=before_value)})
 
 
-@app.route("/replay/api/session/<session_id>/snapshot")
-def replay_session_snapshot(session_id: str) -> Response:
+@app.route("/replay/api/session/<session_id>/events")
+def replay_session_events(session_id: str) -> Response:
     if REPLAY_ARCHIVE is None or not REPLAY_ARCHIVE.is_available():
         return jsonify({"error": "Replay archive unavailable"}), 503
-    at_raw = request.args.get("at", "").strip()
+    try:
+        events = REPLAY_ARCHIVE.session_events(session_id)
+    except KeyError:
+        abort(404, description="Unknown session.")
+    return jsonify({"events": events})
+
+
+@app.route("/replay/api/republish/status")
+def replay_republish_status() -> Response:
+    if REPLAY_ARCHIVE is None or not REPLAY_ARCHIVE.is_available():
+        return jsonify({"error": "Replay archive unavailable"}), 503
+    return jsonify(REPLAY_ARCHIVE.republish_status())
+
+
+@app.route("/replay/api/session/<session_id>/republish", methods=["POST"])
+def replay_republish_control(session_id: str) -> Response:
+    if REPLAY_ARCHIVE is None or not REPLAY_ARCHIVE.is_available():
+        return jsonify({"error": "Replay archive unavailable"}), 503
+    payload = request.get_json(force=True, silent=True) or {}
+    action = str(payload.get("action") or "start").strip().lower()
+    if action == "stop":
+        return jsonify(REPLAY_ARCHIVE.stop_republish())
+    if action != "start":
+        abort(400, description="Invalid republish action.")
+    if mqtt_client is None or not mqtt_connected.is_set():
+        return jsonify({"error": "MQTT broker is not connected."}), 503
+    at_raw = str(payload.get("at") or "").strip()
     if not at_raw:
         abort(400, description="Missing 'at' timestamp.")
     try:
         at_value = datetime.datetime.fromisoformat(at_raw.replace("Z", "+00:00"))
     except ValueError:
         abort(400, description="Invalid 'at' timestamp.")
-    components = [value.strip() for value in request.args.getlist("component") if value.strip()]
+    components = [str(value).strip() for value in payload.get("components") or [] if str(value).strip()]
+    source_system = str(payload.get("system") or "").strip() or None
     try:
-        payload = REPLAY_ARCHIVE.snapshot(session_id, at_value.timestamp(), components or None)
+        status = REPLAY_ARCHIVE.start_republish(
+            session_id,
+            at_value.timestamp(),
+            _publish_command,
+            components or None,
+            source_system,
+        )
     except KeyError:
         abort(404, description="Unknown session.")
-    return jsonify(payload)
-
-
-@app.route("/replay/api/session/<session_id>/frame-step")
-def replay_frame_step(session_id: str) -> Response:
-    if REPLAY_ARCHIVE is None or not REPLAY_ARCHIVE.is_available():
-        return jsonify({"error": "Replay archive unavailable"}), 503
-    at_raw = request.args.get("at", "").strip()
-    direction = request.args.get("direction", "next").strip().lower()
-    if direction not in {"next", "prev"}:
-        abort(400, description="Invalid direction.")
-    try:
-        at_value = datetime.datetime.fromisoformat(at_raw.replace("Z", "+00:00"))
-    except ValueError:
-        abort(400, description="Invalid 'at' timestamp.")
-    components = [value.strip() for value in request.args.getlist("component") if value.strip()]
-    result = REPLAY_ARCHIVE.frame_step_time(session_id, at_value.timestamp(), direction, components)
-    return jsonify({"at": result and datetime.datetime.fromtimestamp(result, tz=datetime.timezone.utc).isoformat()})
-
-
-@app.route("/replay/api/session/<session_id>/video/preload", methods=["POST"])
-def replay_video_preload_start(session_id: str) -> Response:
-    if REPLAY_ARCHIVE is None or not REPLAY_ARCHIVE.is_available():
-        return jsonify({"error": "Replay archive unavailable"}), 503
-    components = [value.strip() for value in request.args.getlist("component") if value.strip()]
-    started = REPLAY_ARCHIVE.start_video_preload(session_id, components or None)
-    return jsonify({"started": started, "status": REPLAY_ARCHIVE.video_preload_status(session_id)})
-
-
-@app.route("/replay/api/session/<session_id>/video/preload")
-def replay_video_preload_status(session_id: str) -> Response:
-    if REPLAY_ARCHIVE is None or not REPLAY_ARCHIVE.is_available():
-        return jsonify({"error": "Replay archive unavailable"}), 503
-    return jsonify(REPLAY_ARCHIVE.video_preload_status(session_id))
-
-
-@app.route("/replay/api/video/frame/<component_id>")
-def replay_video_frame(component_id: str) -> Response:
-    if REPLAY_ARCHIVE is None or not REPLAY_ARCHIVE.is_available():
-        return jsonify({"error": "Replay archive unavailable"}), 503
-    at_raw = request.args.get("at", "").strip()
-    session_id = request.args.get("session", "").strip() or None
-    try:
-        at_value = datetime.datetime.fromisoformat(at_raw.replace("Z", "+00:00"))
-    except ValueError:
-        abort(400, description="Invalid 'at' timestamp.")
-    result = REPLAY_ARCHIVE.reconstruct_video_frame(component_id, at_value.timestamp(), session_id=session_id)
-    if result is None:
-        abort(404, description="No replay frame available.")
-    resp = Response(result["jpeg"], mimetype="image/jpeg")
-    metadata = result.get("metadata") or {}
-    if metadata.get("sourceTs"):
-        resp.headers["X-Replay-Source-Timestamp"] = str(metadata["sourceTs"])
-    return resp
-
-
-@app.route("/replay/api/video/stream/<component_id>")
-def replay_video_stream(component_id: str) -> Response:
-    if REPLAY_ARCHIVE is None or not REPLAY_ARCHIVE.is_available():
-        return jsonify({"error": "Replay archive unavailable"}), 503
-    session_id = request.args.get("session", "").strip()
-    start_raw = request.args.get("start", "").strip()
-    token = request.args.get("token", "").strip()
-    if not session_id or not start_raw or not token:
-        abort(400, description="Missing session, start timestamp, or stream token.")
-    try:
-        start_value = datetime.datetime.fromisoformat(start_raw.replace("Z", "+00:00"))
-    except ValueError:
-        abort(400, description="Invalid start timestamp.")
-    generator = stream_with_context(REPLAY_ARCHIVE.replay_video_stream(session_id, component_id, start_value.timestamp(), token))
-    return Response(generator, mimetype="multipart/x-mixed-replace; boundary=frame")
-
-
-@app.route("/replay/api/audio/chunks/<component_id>")
-def replay_audio_chunks(component_id: str) -> Response:
-    if REPLAY_ARCHIVE is None or not REPLAY_ARCHIVE.is_available():
-        return jsonify({"error": "Replay archive unavailable"}), 503
-    start_raw = request.args.get("start", "").strip()
-    end_raw = request.args.get("end", "").strip()
-    try:
-        start_value = datetime.datetime.fromisoformat(start_raw.replace("Z", "+00:00"))
-        end_value = datetime.datetime.fromisoformat(end_raw.replace("Z", "+00:00"))
-    except ValueError:
-        abort(400, description="Invalid start or end timestamp.")
-    return jsonify({"chunks": REPLAY_ARCHIVE.audio_chunks(component_id, start_value.timestamp(), end_value.timestamp())})
+    except ValueError as exc:
+        abort(400, description=str(exc))
+    return jsonify(status)
 
 
 @app.route("/mqtt/status")
@@ -7637,6 +7782,8 @@ def get_audio_status(robot_id: str):
         entry = audio_cache.get(robot_key) or {}
     with audio_uplink_lock:
         uplink = audio_uplink_state.get(robot_key) or {}
+    with telemetry_lock:
+        telemetry = telemetry_cache.get(robot_key, {}).copy()
     timestamp = entry.get("timestamp")
     age = time.time() - timestamp if timestamp else None
     uplink_age = None
@@ -7656,6 +7803,12 @@ def get_audio_status(robot_id: str):
         "uplinkTopic": _audio_uplink_topic_for_robot(robot_id),
         "uplinkSeq": uplink.get("seq"),
         "uplinkLastAge": uplink_age,
+        "requested": telemetry.get("audio_requested"),
+        "requestedAge": (
+            time.time() - float(telemetry.get("audio_requested_received_at"))
+            if telemetry.get("audio_requested_received_at") is not None
+            else None
+        ),
     }
     return jsonify(status)
 
@@ -7771,6 +7924,8 @@ def get_video_status(robot_id: str):
         entry = video_cache.get(robot_key) or {}
         timestamp = entry.get("timestamp")
         has_frame = bool(entry.get("jpeg"))
+    with telemetry_lock:
+        telemetry = telemetry_cache.get(robot_key, {}).copy()
 
     age = time.time() - timestamp if timestamp else None
     status = {
@@ -7779,6 +7934,12 @@ def get_video_status(robot_id: str):
         "hasFrame": has_frame,
         "lastFrameAge": age,
         "controls": _robot_has_video_controls(robot_id),
+        "requested": telemetry.get("video_requested"),
+        "requestedAge": (
+            time.time() - float(telemetry.get("video_requested_received_at"))
+            if telemetry.get("video_requested_received_at") is not None
+            else None
+        ),
     }
     return jsonify(status)
 

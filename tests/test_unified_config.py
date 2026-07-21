@@ -475,6 +475,34 @@ class UnifiedConfigTests(unittest.TestCase):
         self.assertFalse(mip["online"])
         self.assertEqual("offline", mip["connectionStatus"])
 
+    def test_web_incoming_drive_and_light_commands_update_telemetry_cache(self):
+        cfg = self._runtime_cfg()
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            module = self._load_web_module(cfg_path)
+
+            drive_msg = types.SimpleNamespace(
+                topic="replay/robots/mip/incoming/drive-values",
+                payload=json.dumps({"x": 0.25, "z": 0.5, "y": -0.1}).encode("utf-8"),
+                qos=0,
+                retain=False,
+            )
+            light_msg = types.SimpleNamespace(
+                topic="replay/robots/mip/incoming/lights-solid",
+                payload=json.dumps({"b": 0.1, "g": 0.2, "r": 0.3}).encode("utf-8"),
+                qos=1,
+                retain=False,
+            )
+
+            module._on_mqtt_message(None, None, drive_msg)
+            module._on_mqtt_message(None, None, light_msg)
+            data = module.telemetry_cache["replay:robots:mip"]
+
+        self.assertEqual(data["drive_command"], {"x": 0.25, "z": 0.5, "y": -0.1})
+        self.assertEqual(data["light_command"], {"mode": "solid", "b": 0.1, "g": 0.2, "r": 0.3})
+
     def test_web_mqtt_connect_subscribes_all_systems(self):
         cfg = self._runtime_cfg()
 
