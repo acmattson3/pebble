@@ -86,13 +86,16 @@ Example `control/configs/config.json` block:
     "uri": "mongodb://127.0.0.1:27017",
     "database": "pebble",
     "collection": "mqtt_history",
-    "max_bytes": 536870912000
+    "max_bytes": 53687091200
   }
 }
 ```
 
-If the target collection already exists and is not capped, the web interface falls
-back to periodic chunked pruning of oldest documents to keep usage under `max_bytes`.
+If the target capped collection already exists with a different cap, startup
+resizes it to `max_bytes`; if the new cap is smaller than current usage, MongoDB
+removes the oldest excess documents on the next insert. If the target collection
+already exists and is not capped, the web interface falls back to periodic
+chunked pruning of oldest documents to keep usage under `max_bytes`.
 `max_bytes` applies to the configured MongoDB history collection, not total database size.
 
 Payload notes:

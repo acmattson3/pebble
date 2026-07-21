@@ -87,7 +87,7 @@ def _coerce_bool(value: Any) -> Optional[bool]:
 
 def _normalize_mqtt_history_config(value: Any) -> Dict[str, Any]:
     cfg = value if isinstance(value, dict) else {}
-    max_bytes_default = 500 * 1024 * 1024 * 1024
+    max_bytes_default = 50 * 1024 * 1024 * 1024
     return {
         "enabled": bool(cfg.get("enabled", False)),
         "uri": str(cfg.get("uri") or "mongodb://127.0.0.1:27017"),
@@ -565,7 +565,7 @@ def _init_mqtt_history_logger() -> None:
     uri = str(MQTT_HISTORY_CFG.get("uri") or "mongodb://127.0.0.1:27017").strip()
     database_name = str(MQTT_HISTORY_CFG.get("database") or "pebble").strip() or "pebble"
     collection_name = str(MQTT_HISTORY_CFG.get("collection") or "mqtt_history").strip() or "mqtt_history"
-    max_bytes = max(1_000_000, _coerce_int(MQTT_HISTORY_CFG.get("max_bytes"), 500 * 1024 * 1024 * 1024))
+    max_bytes = max(1_000_000, _coerce_int(MQTT_HISTORY_CFG.get("max_bytes"), 50 * 1024 * 1024 * 1024))
 
     try:
         client = MongoClient(uri, serverSelectionTimeoutMS=5000)
@@ -584,12 +584,21 @@ def _init_mqtt_history_logger() -> None:
         current_size = _coerce_int(options.get("size"), configured_size)
         if is_capped:
             if current_size != configured_size:
-                logging.info(
-                    "MQTT history collection '%s' is capped at %s bytes (config requests %s bytes).",
-                    collection_name,
-                    current_size,
-                    configured_size,
-                )
+                try:
+                    db.command({"collMod": collection_name, "cappedSize": configured_size})
+                    current_size = configured_size
+                    logging.info(
+                        "Resized MQTT history capped collection '%s' to %s bytes.",
+                        collection_name,
+                        configured_size,
+                    )
+                except Exception:
+                    logging.exception(
+                        "Failed to resize MQTT history capped collection '%s' from %s to %s bytes.",
+                        collection_name,
+                        current_size,
+                        configured_size,
+                    )
             logging.info(
                 "MQTT history logging enabled: %s/%s (capped collection).",
                 database_name,
@@ -629,7 +638,7 @@ def _prune_mqtt_history_if_needed(force: bool = False) -> None:
             return
         mqtt_history_prune_counter = 0
 
-    max_bytes = max(1_000_000, _coerce_int(MQTT_HISTORY_CFG.get("max_bytes"), 500 * 1024 * 1024 * 1024))
+    max_bytes = max(1_000_000, _coerce_int(MQTT_HISTORY_CFG.get("max_bytes"), 50 * 1024 * 1024 * 1024))
     target_ratio = min(0.99, max(0.5, float(_coerce_float(MQTT_HISTORY_CFG.get("prune_target_ratio")) or 0.9)))
     target_bytes = int(max_bytes * target_ratio)
     chunk_docs = max(1000, _coerce_int(MQTT_HISTORY_CFG.get("prune_chunk_documents"), 50000))
