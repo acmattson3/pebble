@@ -3538,6 +3538,8 @@ def _robot_options_html() -> str:
   .audio-indicator .dot { width:10px; height:10px; border-radius:50%; background:#bbb; display:inline-block; }
   .audio-indicator.active { border-color:#0a6; background:#e8ffef; color:#064; }
   .audio-indicator.active .dot { background:#0a6; }
+  .light-current { display:inline-flex; align-items:center; gap:8px; }
+  .light-swatch { width:1.6rem; height:1.6rem; border-radius:50%; border:1px solid #999; background:transparent; box-shadow:inset 0 0 0 1px rgba(255,255,255,.65); }
   .outlets-card { grid-column: span 1; }
   .outlet-list { display:grid; gap:10px; }
   .outlet-item { border:1px solid #d6d6d6; border-radius:12px; padding:10px 12px; background:#fafafa; }
@@ -3730,6 +3732,7 @@ def _robot_options_html() -> str:
     <div class="row">
       <label>Color <input id="color" type="color" value="#ff0000"></label>
       <label>Flash period (s) <input id="flashT" type="number" min="0.05" step="0.05" value="2.00" style="width:6rem"></label>
+      <span class="light-current mono">Current <span id="currentLightColor" class="light-swatch" aria-label="Current light color"></span></span>
     </div>
     <div class="row">
       <button id="btnSolid">Set Solid (L)</button>
@@ -6751,6 +6754,7 @@ setInterval(() => { if (pressed.size) { const [L,R,Y] = mix(); sendM(L,R,Y); } }
 // Lights
 const colorEl = document.getElementById('color');
 const flashTEl = document.getElementById('flashT');
+const currentLightColorEl = document.getElementById('currentLightColor');
 const lightStatusEl = document.getElementById('lightStatus');
 let lightsShortcutEnabled = false;
 
@@ -6776,13 +6780,21 @@ function rgb01ToHex(r, g, b) {
 function applyLightCommand(command) {
   if (!command || typeof command !== "object") {
     lightStatusEl.textContent = "Awaiting command...";
+    if (currentLightColorEl) {
+      currentLightColorEl.style.backgroundColor = "transparent";
+      currentLightColorEl.title = "No current light color";
+    }
     lightsShortcutEnabled = false;
     return;
   }
   const r = Number(command.r || 0);
   const g = Number(command.g || 0);
   const b = Number(command.b || 0);
-  colorEl.value = rgb01ToHex(r, g, b);
+  const currentHex = rgb01ToHex(r, g, b);
+  if (currentLightColorEl) {
+    currentLightColorEl.style.backgroundColor = currentHex;
+    currentLightColorEl.title = `Current ${currentHex}`;
+  }
   const off = Math.abs(r) < 0.001 && Math.abs(g) < 0.001 && Math.abs(b) < 0.001;
   lightsShortcutEnabled = !off;
   if (command.mode === "flash") {
