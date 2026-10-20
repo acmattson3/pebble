@@ -51,8 +51,9 @@ outcomes rather than duplicating implementation details from the READMEs.
   containing `chg=-1` no longer lose their `v=` voltage field.
 - Goob's soundboard module is defined and exposes the robot's `/opt/sounds`
   WAV library and playback status through the generic module interface.
-- Shared telemetry and log-viewer modules are enabled for Goob. The log module
-  uses a non-retained event endpoint and bounded gateway history.
+- Shared telemetry is enabled for Goob; its example module configuration now
+  includes the log viewer. The log module uses non-retained events and bounded
+  gateway history.
 - The module UI remains at `/modules`; the existing compatibility interface
   remains at `/` until the replacement passes the migration criteria.
 
