@@ -38,10 +38,14 @@ outcomes rather than duplicating implementation details from the READMEs.
   Sparkplug payload and topic model.
 - Full-duplex acoustic echo cancellation, native browser media transport, and
   Jev integration are not implemented.
+- Robot-local MQTT topic settings now use identity-relative `subtopic` and
+  `subtopics` in the example configs. One shared resolver handles defaults,
+  preserves legacy full `topic`/`topics` values, and rejects unsafe local
+  subtopics.
 
 ## Roadmap
 
-### 1. Simplify and separate configuration — next milestone
+### 1. Simplify and separate configuration — underway
 
 Reduce repeated identity, topic, broker, and media settings while making the
 robot runtime and web deployment independently understandable.
@@ -69,6 +73,11 @@ robot runtime and web deployment independently understandable.
 - Migrate example configs first; preserve existing deployments through a
   compatibility loader or clear migration tool. Add schema validation and
   tests for resolved topics, cross-robot references, and precedence.
+
+**Completed slice:** centralized robot-local topic resolution and migrated
+robot, module-adapter, and web-target examples to `subtopic` fields while
+keeping legacy full topics supported. Focused tests verify namespace safety
+and unchanged effective media/capability topics.
 
 **Acceptance:** Goob and the primary Pebble/web deployment resolve to the same
 effective topics and service behavior as before; a multi-robot web config can
@@ -159,12 +168,11 @@ controls, and has a clear timeout/failure behavior.
 
 ## Immediate proposed next step
 
-Before changing runtime behavior, define the target config boundaries and
-resolution rules from representative Goob and web-host configs. The first
-implementation slice should add a central identity-aware topic resolver,
-convert robot-local topic settings to `subtopic`, and validate that the
-resolved topics remain unchanged. Then split robot and web configuration in a
-separate, reviewable slice with compatibility for the existing unified config.
+Split robot runtime settings from web deployment settings in a reviewable
+slice. Keep the existing unified config working through a compatibility
+adapter, and verify that Goob's runtime and the multi-robot web interface still
+resolve the same effective settings. Extract audio/video profiles only after
+that boundary is clear.
 
-This sequence keeps the topic cleanup independently testable and avoids
-combining topic migration with a broad deployment change.
+The identity-aware resolver and example migration are in place to make that
+split safer and independently testable.
