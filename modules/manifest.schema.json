@@ -299,7 +299,8 @@
                         "autonomy",
                         "lights",
                         "telemetry",
-                        "logs"
+                        "logs",
+                        "admin"
                       ]
                     },
                     "label": {
@@ -383,6 +384,21 @@
                     "flash_endpoint": {
                       "type": "string",
                       "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                    },
+                    "actions": {
+                      "type": "array",
+                      "maxItems": 8,
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}$"},
+                          "label": {"type": "string", "maxLength": 80},
+                          "endpoint": {"type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"},
+                          "confirmation": {"type": "string", "maxLength": 240}
+                        },
+                        "required": ["id", "label", "endpoint", "confirmation"],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [

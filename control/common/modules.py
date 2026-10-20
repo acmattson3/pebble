@@ -198,6 +198,17 @@ def validate_manifest(manifest: dict) -> dict:
                 endpoint = endpoints.get(widget.get("endpoint"))
                 if not endpoint or endpoint["kind"] != "event":
                     raise ValueError("Logs widget needs an event endpoint")
+            if kind == "admin":
+                seen_admin = set()
+                if not widget.get("actions"):
+                    raise ValueError("Admin widget must advertise at least one configured action")
+                for action in widget["actions"]:
+                    endpoint = endpoints.get(action["endpoint"])
+                    if action["id"] in seen_admin or not endpoint or endpoint["kind"] != "command":
+                        raise ValueError("Admin actions need unique IDs and declared command endpoints")
+                    seen_admin.add(action["id"])
+                    if endpoint["schema"].get("type") != "object" or endpoint["schema"].get("properties", {}).get("enabled", {}).get("const") is not True:
+                        raise ValueError("Admin endpoints must require a fixed enabled=true payload")
             if kind == "button" and "value" not in widget:
                 raise ValueError("Button needs a value")
             if kind == "state" and (widget.get("endpoint") not in endpoints or endpoints[widget["endpoint"]]["kind"] != "state"):
@@ -218,6 +229,12 @@ def build_manifest(config: dict, config_path: Path) -> tuple[dict, dict]:
         for key in ("title", "description", "bindings", "ui"):
             if key in instance:
                 module[key] = deepcopy(instance[key])
+        if "endpoints" in instance:
+            selected = instance["endpoints"]
+            if not isinstance(selected, list) or len(set(selected)) != len(selected) or set(selected) - set(module["endpoints"]):
+                raise ValueError("Module endpoint selection must name unique declared endpoints")
+            module["endpoints"] = {key: value for key, value in module["endpoints"].items() if key in selected}
+            module["commands"] = [command for command in module["commands"] if command["endpoint"] in module["endpoints"]]
         for eid, attributes in instance.get("formats", {}).items():
             if eid not in module["endpoints"] or not isinstance(attributes, dict) or set(attributes)-{"codec","rate","channels"}:
                 raise ValueError("Invalid module media format override")

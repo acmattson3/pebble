@@ -38,10 +38,18 @@ class ModuleTests(unittest.TestCase):
     def test_shared_and_robot_local_modules_are_data_only(self):
         built = make_built()
         manifest, adapters = built
-        assert [m['type'] for m in manifest['modules']] == ['pebble.drive', 'pebble.soundboard', 'pebble.lights', 'pebble.telemetry', 'pebble.logs', 'pebble.autonomy', 'goob.gripper-demo']
+        assert [m['type'] for m in manifest['modules']] == ['pebble.drive', 'pebble.soundboard', 'pebble.lights', 'pebble.telemetry', 'pebble.logs', 'pebble.autonomy', 'pebble.admin', 'goob.gripper-demo']
         assert 'adapters' not in json.dumps(manifest)
         assert adapters[manifest['base'] + '/i/drive']['topic'].endswith('/incoming/drive-values')
         assert adapters[manifest['base'] + '/i/soundboard/command']['topic'].endswith('/incoming/soundboard-command')
+        admin = manifest['modules'][6]
+        assert set(admin['endpoints']) == {'reboot', 'git_pull', 'service_restart'}
+        assert [item['id'] for item in admin['ui']['controls'][0]['actions']] == ['reboot', 'git_pull', 'service_restart']
+        assert adapters[manifest['base'] + '/i/admin/reboot']['topic'].endswith('/incoming/flags/reboot')
+        validate_payload(admin['endpoints']['reboot'], {'enabled': True})
+        for payload in ({'enabled': False}, {'enabled': True, 'command': 'arbitrary'}):
+            with self.assertRaises(ValidationError):
+                validate_payload(admin['endpoints']['reboot'], payload)
         drive = manifest['modules'][0]
         validate_payload(drive['endpoints']['command'], {'x': 0.5, 'z': -0.2})
         for payload in ({'x': 2, 'z': 0}, {'x': 0}, {'x': 0, 'z': 0, 'extra': 1}, {'x': float('nan'), 'z': 0}):

@@ -1,0 +1,33 @@
+{
+  "type": "pebble.admin",
+  "version": 1,
+  "title": "Administration",
+  "description": "Robot maintenance actions explicitly enabled by the robot configuration.",
+  "endpoints": {
+    "reboot": {
+      "topic": "i/admin/reboot",
+      "kind": "command",
+      "schema": {"type": "object", "properties": {"enabled": {"const": true}}, "required": ["enabled"], "additionalProperties": false},
+      "qos": 0,
+      "retain": false
+    },
+    "git_pull": {
+      "topic": "i/admin/git-pull",
+      "kind": "command",
+      "schema": {"type": "object", "properties": {"enabled": {"const": true}}, "required": ["enabled"], "additionalProperties": false},
+      "qos": 0,
+      "retain": false
+    },
+    "service_restart": {
+      "topic": "i/admin/service-restart",
+      "kind": "command",
+      "schema": {"type": "object", "properties": {"enabled": {"const": true}}, "required": ["enabled"], "additionalProperties": false},
+      "qos": 0,
+      "retain": false
+    }
+  },
+  "actions": {},
+  "commands": [],
+  "bindings": [],
+  "ui": {"columns": 1, "controls": []}
+}

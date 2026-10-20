@@ -404,6 +404,21 @@ function render(manifest) {
         const list=element('div',undefined,'logs-list');list.setAttribute('role','log');list.setAttribute('aria-live','off');
         toolbar.append(element('strong',widget.label),labeled('Level',level));node.append(toolbar,list);controls.append(node);
         const item={widget,level,list};ctx.logsWidgets.push(item);
+      } else if(widget.kind==='admin') {
+        const node=element('div',undefined,'admin-widget');
+        node.append(element('strong',widget.label,'admin-title'));
+        for(const action of widget.actions) {
+          const button=element('button',action.label);
+          button.addEventListener('click',()=>{
+            if(!window.confirm(action.confirmation) || !beginInteraction())return;
+            try {
+              queueCommand(robot,module,{endpoint:action.endpoint},{enabled:true},manifest.revision);
+              say(`${action.label} request queued. The robot's configured handler will decide whether it can run.`,false);
+            } catch(error) { say(error.message,true); }
+          });
+          ctx.controlNodes.push(button);node.append(button);
+        }
+        controls.append(node);
       }
     }
     card.append(controls);

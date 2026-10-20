@@ -55,6 +55,28 @@
           "use": "modules/autonomy/module.json"
         },
         {
+          "id": "admin",
+          "use": "modules/admin/module.json",
+          "endpoints": ["reboot", "git_pull", "service_restart"],
+          "ui": {
+            "columns": 1,
+            "controls": [{
+              "kind": "admin",
+              "label": "Robot administration",
+              "actions": [
+                {"id": "reboot", "label": "Reboot robot", "endpoint": "reboot", "confirmation": "Reboot Goob now? The robot will disconnect until it starts again."},
+                {"id": "git_pull", "label": "Update from Git", "endpoint": "git_pull", "confirmation": "Run Goob's configured Git update command now?"},
+                {"id": "service_restart", "label": "Restart services", "endpoint": "service_restart", "confirmation": "Restart Goob's configured services now?"}
+              ]
+            }]
+          },
+          "adapters": {
+            "reboot": {"kind": "forward", "subtopic": "incoming/flags/reboot"},
+            "git_pull": {"kind": "forward", "subtopic": "incoming/flags/git-pull"},
+            "service_restart": {"kind": "forward", "subtopic": "incoming/flags/service-restart"}
+          }
+        },
+        {
           "id": "gripper-demo",
           "use": "robots/goob/modules/gripper-demo/module.json",
           "adapters": {

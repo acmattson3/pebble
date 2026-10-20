@@ -66,10 +66,21 @@ non-retained and are not a durable archive. The shared `modules/logs/module.json
 declares the record fields and level filter. The launcher publishes records to
 compact `o/logs` and also mirrors them to its configured compatibility topic.
 
+The administration widget is a shared, data-only set of fixed actions. A robot
+instance selects only supported endpoints and defines its confirmation text;
+the browser renders those actions and requires confirmation before publishing.
+Each action has a separate command endpoint with a fixed `enabled: true`
+payload, and the robot maps that endpoint to its existing local handler. The
+browser cannot supply commands, service names, or arbitrary topics. Goob maps
+reboot, Git update, and service restart to its configured flag handlers. The
+web page reports that the request was queued; the existing handlers do not yet
+publish execution results.
+
 Each configured instance supplies an `id` and `use` (a module JSON path relative
 to the repo, or an absolute path for a local/private module). Optional
-`subtopics`, `bindings`, `ui`, `title`, and `description` override that
-instance's defaults. Module endpoint subtopics must remain within the robot's
+`subtopics`, `endpoints`, `bindings`, `ui`, `title`, and `description` override
+that instance's defaults. `endpoints` can restrict an instance to a subset of
+the shared module's declared endpoints. Module endpoint subtopics must remain within the robot's
 identity prefix. A forward adapter's `subtopic` names its local compatibility
 destination. Legacy `topics`/`topic` adapter fields remain accepted during
 migration. Adapters remain private robot configuration and are not sent to the

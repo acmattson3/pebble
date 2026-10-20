@@ -201,16 +201,17 @@ one-way listening or speech intelligibility.
 **Acceptance:** a Jev prototype is removable, cannot bypass local safety
 controls, and has a clear timeout/failure behavior.
 
-### Next implementation slice: administrative module
+### Administrative module implementation
 
-- Define a shared administrative module for the configured reboot, Git pull,
-  and service-restart actions. Robots advertise only the actions they support.
-- Keep execution behind existing robot-local handlers and an explicit allowlist;
-  the browser must not supply arbitrary commands or service names.
-- Require a deliberate confirmation step for disruptive actions and show
-  bounded result/status feedback in the generic module UI.
-- Verify Goob's advertised actions and handler mapping without issuing reboot,
-  Git pull, or restart commands during validation.
+- The shared `modules/admin/module.json` defines separate fixed command endpoints
+  for reboot, Git pull, and service restart. Robot configuration selects the
+  endpoints it supports, so unsupported actions are absent from discovery.
+- Goob's actions forward only to its existing local flag handlers. The browser
+  cannot provide commands, service names, or topics, and each action requires
+  confirmation. The UI reports when a request is queued; execution results are
+  not available from the existing handlers yet.
+- Validate discovery and adapter destinations without issuing any admin
+  command. Add robot-published execution status if a later use case needs it.
 
 ## Deferred by choice
 
