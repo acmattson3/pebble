@@ -13,6 +13,7 @@ import subprocess
 import sys
 import threading
 import time
+import uuid
 from pathlib import Path
 from typing import Any, Optional
 
@@ -54,6 +55,10 @@ class MqttBridge:
         self.same_broker_mode = self._brokers_match()
 
         self.base = self.identity.base
+        self.presence_topic = f"{self.base}/o/online"
+        self.boot_id = uuid.uuid4().hex
+        self.presence_interval = 30.0
+        self.next_presence_at = 0.0
         self.incoming_prefix = f"{self.base}/incoming/"
         self.outgoing_prefix = f"{self.base}/outgoing/"
         self.module_incoming_prefix = f"{self.base}/i/"
@@ -169,6 +174,7 @@ class MqttBridge:
         if self.same_broker_mode:
             logging.info("mqtt_bridge same-broker mode enabled; mirroring disabled, heartbeat/media controls remain active.")
         while not self.stop_event.is_set():
+            self._publish_presence_if_due()
             self._publish_heartbeat_if_due()
             self.stop_event.wait(0.05)
 
@@ -177,6 +183,13 @@ class MqttBridge:
         self._stop_video_process()
         self._stop_audio_stack()
         self._disconnect_client(self.local_client)
+        if self.remote_client and self.remote_client.is_connected():
+            try:
+                info = self._publish_presence(False)
+                if info:
+                    info.wait_for_publish(timeout=2)
+            except Exception:
+                logging.debug("Could not publish offline presence during shutdown", exc_info=True)
         self._disconnect_client(self.remote_client)
         self.local_client = None
         self.remote_client = None
@@ -217,6 +230,7 @@ class MqttBridge:
             websocket_path=self.remote_websocket_path,
         )
         mqtt_auth_and_tls(client, self.remote_mqtt_cfg, self.config_path.parent)
+        client.will_set(self.presence_topic, self._presence_payload(False, include_timestamp=False), qos=1, retain=True)
         client.on_connect = self._on_remote_connect
         client.on_disconnect = self._on_remote_disconnect
         client.on_message = self._on_remote_message
@@ -260,6 +274,8 @@ class MqttBridge:
             client.subscribe(f"{self.incoming_prefix}#", qos=1)
             client.subscribe(f"{self.module_incoming_prefix}#", qos=1)
         self.next_heartbeat_at = 0.0
+        self._publish_presence(True)
+        self.next_presence_at = time.monotonic() + self.presence_interval
         self._publish_heartbeat()
         if not self.same_broker_mode:
             self._replay_retained_outgoing_to_remote()
@@ -847,6 +863,25 @@ class MqttBridge:
     @staticmethod
     def _heartbeat_payload() -> bytes:
         return json.dumps({"t": int(time.time() * 1000)}).encode("utf-8")
+
+    def _presence_payload(self, online: bool, include_timestamp: bool = True) -> bytes:
+        body = {"online": online, "boot_id": self.boot_id}
+        if include_timestamp:
+            body["t"] = int(time.time() * 1000)
+        return json.dumps(body, separators=(",", ":")).encode("utf-8")
+
+    def _publish_presence(self, online: bool):
+        client = self.remote_client
+        if not client or not client.is_connected():
+            return None
+        return client.publish(self.presence_topic, self._presence_payload(online), qos=1, retain=True)
+
+    def _publish_presence_if_due(self) -> None:
+        now = time.monotonic()
+        if now < self.next_presence_at:
+            return
+        self.next_presence_at = now + self.presence_interval
+        self._publish_presence(True)
 
     def _publish_heartbeat(self) -> None:
         if not self.heartbeat_enabled:

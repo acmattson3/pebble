@@ -42,6 +42,9 @@ The robot identity remains unchanged. This is a gradual migration: module
 endpoints use `i/` and `o/`, while established services and compatibility
 adapters still use `incoming/` and `outgoing/`. Both conventions currently
 coexist; see [module controls](modules/README.md) and [the topic standard](mqtt_standard.md).
+The minimal robot lifecycle signal is retained `o/online` with an MQTT Last
+Will; publishing a module manifest is optional for robots that only need basic
+MQTT control and telemetry.
 
 Infrastructure discovery remains reserved at:
 

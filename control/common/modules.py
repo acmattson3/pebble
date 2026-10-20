@@ -76,7 +76,7 @@ def validate_manifest(manifest: dict) -> dict:
             relative = topic.removeprefix(identity.base + "/")
             if topic != endpoint_topic(identity, relative) or topic in topics:
                 raise ValueError("Endpoint escapes its robot or duplicates another endpoint")
-            if relative in {"o/manifest", "o/modules/status"}:
+            if relative in {"o/manifest", "o/online", "o/modules/status"}:
                 raise ValueError("Reserved module topic")
             topics.add(topic)
             if (endpoint["kind"] in {"command", "uplink"}) != relative.startswith("i/"):

@@ -118,6 +118,37 @@ Examples:
 Legacy deployments may use equivalent `incoming/...` and `outgoing/...`
 filters.
 
+### 3.5 Robot availability
+
+An MQTT client that represents a complete robot SHOULD publish robot-wide
+availability at `{base}/o/online`. The minimal payload is:
+
+```json
+{"online":true}
+```
+
+The retained online message SHOULD use QoS 1. Before connecting, the client
+SHOULD configure an MQTT Last Will on the same topic with a retained QoS 1
+payload that sets `online` to `false`. After a successful connection it
+publishes `online: true`; before a clean disconnect it SHOULD publish
+`online: false`. The Will covers ungraceful loss of the MQTT session.
+
+An online publisher SHOULD refresh its retained `online: true` periodically,
+no slower than every 60 seconds. Pebble's Linux bridge currently refreshes it
+every 30 seconds, independently of the compatibility heartbeat. Consumers can
+use this refresh as a freshness signal; MQTT clients that only publish on
+connect SHOULD still use a local timeout and rely on broker connection state
+and LWT for prompt disconnect detection.
+
+Publishers MAY add `boot_id` (unique for each process/device boot) and `t`
+(UNIX epoch milliseconds) to help consumers recognize restarts and order live
+updates. A Will's publish time is not the time the connection failed, so
+consumers SHOULD use their local receive time to track offline events and
+freshness. If a publisher cannot send periodic updates, a consumer SHOULD treat
+an old `online: true` as stale after a locally chosen timeout. Availability
+means the MQTT client is connected; it does not guarantee that every motor,
+sensor, or optional Pebble service is healthy.
+
 ## 4. Message Conventions
 
 ### 4.1 JSON And Binary Payloads
@@ -288,6 +319,16 @@ older capabilities format remains for compatibility with the classic interface.
 If a system publishes a current-state discovery or capability topic intended for
 late subscribers, that topic MUST be retained.
 
+Pebble's minimal robot contract does not require a Linux module host or a rich
+capability document. `{base}/o/online` is the small lifecycle signal. The
+optional robot-owned module system uses retained `{base}/o/manifest` to
+describe controls, endpoint schemas, and media formats for generic interfaces.
+The module host's `{base}/o/modules/status` is service-level availability; it
+does not replace robot-wide online status. Consumers SHOULD treat a retained
+manifest as the latest discovery snapshot and replace their cached snapshot
+when a newer manifest arrives. Publishing an empty retained manifest payload
+removes that snapshot under MQTT retained-message semantics.
+
 ## 8. Example Implementation In This Repository
 
 Pebble is migrating its runtime services toward compact `i/` and `o/` topics.
@@ -337,7 +378,7 @@ compact paths; legacy service examples are explicitly labeled.
 
 | Example topic | Current producer(s) | Current consumer(s) | Notes |
 | --- | --- | --- | --- |
-| `{base}/outgoing/online` | MQTT bridge, ROS 1 bridge; some firmware components may publish directly | web UI, replay, analysis | Current heartbeat topic in this repository. |
+| `{base}/outgoing/online` | MQTT bridge, ROS 1 bridge; some firmware components may publish directly | classic web UI, replay, analysis | Legacy timestamp heartbeat, kept for compatibility; robot-wide lifecycle topic is `{base}/o/online`. |
 | `{base}/outgoing/capabilities` | launcher | web UI, replay, tooling | Retained capability advertisement. |
 | `{base}/outgoing/logs` | launcher | web UI, replay, analysis | Structured runtime diagnostics. |
 | `{base}/outgoing/touch-sensors` | serial MCU bridge when enabled | web UI, analysis | Optional ADC touch telemetry. |
@@ -448,8 +489,9 @@ Current heartbeat payload:
 { "t": 1710969600123 }
 ```
 
-In the current repository this is published on `outgoing/online`, typically
-retained with QoS 1.
+The compact lifecycle signal is published on `o/online` as described in
+[Robot availability](#35-robot-availability). The classic heartbeat remains on
+`outgoing/online`, typically retained with QoS 1.
 
 ### 8.6 Legacy Capabilities Payload
 

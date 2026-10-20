@@ -3,6 +3,7 @@ from copy import deepcopy
 import importlib.util
 import json
 from pathlib import Path
+import sys
 from flask import Flask
 from jsonschema import ValidationError
 from control.common.modules import build_manifest, validate_manifest, validate_payload
@@ -11,6 +12,7 @@ from control.services.module_host import ModuleHost
 from control.services.mqtt_bridge import MqttBridge
 from tests.helpers import FakeMqttClient, FakeMqttMessage, make_base_config
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'web-interface'))
 spec = importlib.util.spec_from_file_location('module_ui', ROOT / 'web-interface/module_ui.py')
 web = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(web)
@@ -103,6 +105,8 @@ class ModuleTests(unittest.TestCase):
         ui = web.ModuleUI(app, lambda *a, **k: calls.append((a, k)) or True, lambda: connected[0])
         topics, _ = ui.consume(manifest['base'] + '/o/manifest', json.dumps(manifest).encode())
         assert manifest['availability_topic'] in topics
+        presence_topic = manifest['base'] + '/o/online'
+        assert presence_topic in topics
         ui.consume(manifest['availability_topic'], b'{"online":true}')
         ui.consume(manifest['base'] + '/o/gripper-demo/state', b'{"position":0.7}')
         client = app.test_client()
@@ -116,10 +120,15 @@ class ModuleTests(unittest.TestCase):
         body = {'robot': manifest['base'], 'revision': manifest['revision'], 'module': 'drive', 'endpoint': 'command', 'payload': {'x': 0, 'z': 0}}
         assert client.post('/modules/api/command', json=body).status_code == 200
         assert len(calls) == 1
+        ui.consume(presence_topic, b'{"online":false}')
+        assert client.post('/modules/api/command', json=body).status_code == 503
+        ui.consume(presence_topic, b'{"online":true}')
+        assert client.post('/modules/api/command', json=body).status_code == 200
+        assert len(calls) == 2
         for invalid in ({**body, 'payload': {'x': 0, 'z': 2}}, {**body, 'topic': 'unrelated'}, {**body, 'endpoint': 'state'}):
             assert client.post('/modules/api/command', json=invalid).status_code in (400, 404)
         assert client.post('/modules/api/command', json={**body, 'revision': 'stale'}).status_code == 409
-        assert len(calls) == 1
+        assert len(calls) == 2
         connected[0] = False
         assert client.post('/modules/api/command', json=body).status_code == 503
         connected[0] = True
@@ -127,6 +136,7 @@ class ModuleTests(unittest.TestCase):
         assert client.post('/modules/api/command', json=body).status_code == 503
         _, removed = ui.consume(manifest['base'] + '/o/manifest', b'')
         assert manifest['availability_topic'] in removed
+        assert presence_topic in removed
         assert client.get('/modules/api/robots').json['robots'] == []
 if __name__ == '__main__':
     unittest.main()

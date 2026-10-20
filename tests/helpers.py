@@ -13,6 +13,8 @@ class FakeMqttClient:
         self.unsubscribe_calls: list[str] = []
         self.loop_started = False
         self.disconnected = False
+        self.will = None
+        self.connection = None
 
     def is_connected(self) -> bool:
         return self.connected
@@ -20,6 +22,12 @@ class FakeMqttClient:
     def publish(self, topic: str, payload: Any, qos: int = 0, retain: bool = False):
         self.publish_calls.append((topic, payload, qos, retain))
         return (0, 1)
+
+    def will_set(self, topic: str, payload: Any, qos: int = 0, retain: bool = False):
+        self.will = (topic, payload, qos, retain)
+
+    def connect(self, host: str, port: int, keepalive: int):
+        self.connection = (host, port, keepalive)
 
     def subscribe(self, topic: str, qos: int = 0):
         self.subscribe_calls.append((topic, qos))

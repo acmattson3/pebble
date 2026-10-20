@@ -85,6 +85,11 @@ control ownership is outside this milestone.
 
 ## Runtime and gateway behavior
 
+The bridge also publishes robot-wide retained connection presence at
+`o/online`, with a Last Will for unexpected MQTT disconnects. The older
+`outgoing/online` heartbeat remains for existing consumers. This core presence
+contract does not depend on the module host or this module manifest.
+
 The module host publishes retained availability every five seconds at
 `o/modules/status`, with a boot ID and MQTT last will. The web page treats a
 module host as offline after 20 seconds without availability or when its broker

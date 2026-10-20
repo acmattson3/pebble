@@ -97,7 +97,16 @@ class ModuleUI:
         app.register_blueprint(bp)
 
     def online(self, robot):
-        return bool(self.connected() and robot["online"] and time.monotonic()-robot["status_seen"] < 20)
+        now = time.monotonic()
+        module_host_online = robot["online"] and now - robot["status_seen"] < 20
+        # Older robots may only advertise module-host availability. When the
+        # robot-wide lifecycle topic is present, honor its LWT immediately.
+        presence_seen = robot.get("presence_seen", 0.)
+        presence_online = (
+            not presence_seen
+            or (robot.get("presence_online", False) and now - presence_seen < 120)
+        )
+        return bool(self.connected() and module_host_online and presence_online)
 
     def state_topics(self):
         with self.lock:
@@ -131,7 +140,7 @@ class ModuleUI:
         """Return added/removed subscriptions. All parsing is isolated from legacy UI."""
         with self.lock:
             route = self.routes.get(topic)
-            if route and route[1] is not None:
+            if route and route[1] not in (None, "__presence__"):
                 base, mid, eid = route
                 module = next(m for m in self.robots[base]["manifest"]["modules"] if m["id"] == mid)
                 endpoint = module["endpoints"][eid]
@@ -165,6 +174,7 @@ class ModuleUI:
                         del self.routes[t]
                     self.robots[base] = {"manifest": manifest, "states": {}, "online": False, "status_seen": 0.}
                     self.routes[manifest["availability_topic"]] = (base, None, None)
+                    self.routes[f"{base}/o/online"] = (base, "__presence__", None)
                     for module in manifest["modules"]:
                         for eid, endpoint in module["endpoints"].items():
                             if endpoint["kind"] in {"state", "video", "audio"}:
@@ -181,6 +191,12 @@ class ModuleUI:
             robot = self.robots[base]
             try:
                 body = json.loads(payload)
+                if mid == "__presence__":
+                    if not isinstance(body, dict) or not isinstance(body.get("online"), bool):
+                        return [], []
+                    robot["presence_online"] = body["online"]
+                    robot["presence_seen"] = time.monotonic()
+                    return [], []
                 if mid is None:
                     if not isinstance(body, dict) or not isinstance(body.get("online"), bool):
                         return [], []

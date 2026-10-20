@@ -223,6 +223,52 @@ class MqttBridgeTests(unittest.TestCase):
         self.assertEqual(bridge.remote_client.publish_calls[0][0], bridge.heartbeat_topic)
         self.assertEqual(len(bridge.local_client.publish_calls), 0)
 
+    def test_presence_is_compact_retained_and_carries_process_id(self):
+        bridge = self._bridge()
+        bridge.remote_client = FakeMqttClient()
+
+        bridge._publish_presence(True)
+
+        topic, payload, qos, retain = bridge.remote_client.publish_calls[0]
+        body = json.loads(payload)
+        self.assertEqual(topic, f"{bridge.base}/o/online")
+        self.assertEqual(body["online"], True)
+        self.assertEqual(body["boot_id"], bridge.boot_id)
+        self.assertIn("t", body)
+        self.assertEqual(qos, 1)
+        self.assertTrue(retain)
+
+    def test_presence_last_will_omits_publish_timestamp(self):
+        bridge = self._bridge()
+        payload = json.loads(bridge._presence_payload(False, include_timestamp=False))
+        self.assertEqual(payload, {"online": False, "boot_id": bridge.boot_id})
+
+    def test_presence_refresh_uses_its_own_slow_interval(self):
+        bridge = self._bridge()
+        bridge.remote_client = FakeMqttClient()
+        bridge.next_presence_at = float("inf")
+
+        bridge._publish_presence_if_due()
+        self.assertEqual([], bridge.remote_client.publish_calls)
+
+        bridge.next_presence_at = 0.0
+        bridge._publish_presence_if_due()
+        self.assertEqual(1, len(bridge.remote_client.publish_calls))
+        self.assertEqual(bridge.presence_topic, bridge.remote_client.publish_calls[0][0])
+
+    def test_remote_client_registers_retained_offline_will_before_connect(self):
+        bridge = self._bridge()
+        client = FakeMqttClient()
+        with mock.patch("control.services.mqtt_bridge.create_client", return_value=client), mock.patch(
+            "control.services.mqtt_bridge.mqtt_auth_and_tls"
+        ):
+            bridge._connect_remote()
+
+        self.assertEqual(client.will[0], f"{bridge.base}/o/online")
+        self.assertEqual(json.loads(client.will[1]), {"online": False, "boot_id": bridge.boot_id})
+        self.assertEqual(client.will[2:], (1, True))
+        self.assertEqual(client.connection, (bridge.remote_host, bridge.remote_port, bridge.remote_keepalive))
+
     def test_same_broker_mode_detected_from_matching_config(self):
         config = make_base_config("mqbot")
         config["local_mqtt"]["host"] = "mosquitto_broker"
@@ -257,6 +303,7 @@ class MqttBridgeTests(unittest.TestCase):
         self.assertNotIn(f"{bridge.outgoing_prefix}#", subscribed_topics)
         self.assertEqual([], bridge.remote_client.subscribe_calls)
 
+        publish_count = len(bridge.remote_client.publish_calls)
         bridge._on_local_message(
             None,
             None,
@@ -268,7 +315,7 @@ class MqttBridgeTests(unittest.TestCase):
             FakeMqttMessage(topic=f"{bridge.incoming_prefix}drive-values", payload=b'{"value":{"x":0.1}}'),
         )  # type: ignore[arg-type]
 
-        self.assertEqual([], bridge.remote_client.publish_calls[1:])
+        self.assertEqual(publish_count, len(bridge.remote_client.publish_calls))
         self.assertEqual([], bridge.local_client.publish_calls)
 
     def test_unknown_high_rate_topic_is_forwarded_by_default(self):

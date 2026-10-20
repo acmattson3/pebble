@@ -19,7 +19,8 @@
   - Exposes shared local streams over `shmsink` for other local processes.
 - `services/mqtt_bridge.py`
   - Bridges local MQTT and remote MQTT.
-  - Publishes remote `online` heartbeat.
+  - Publishes compact retained robot presence at `o/online` with an MQTT Last
+    Will, plus the legacy `outgoing/online` heartbeat for compatibility.
   - Handles MQTT media subprocess controls (audio/video) behind flags.
   - MQTT media scripts consume AV-daemon shared streams and do not access hardware directly.
 - `services/ros1_bridge.py`
@@ -98,6 +99,10 @@ in that manifest. Many established control services still use
 the new contracts to those service topics during migration. Both conventions
 coexist today. See [the MQTT topic standard](../mqtt_standard.md) and
 [module contracts](../modules/README.md).
+
+`o/online` is robot-wide MQTT connection presence. Module discovery is optional;
+when enabled, `o/modules/status` separately reports whether the module host is
+available. Neither topic guarantees that every actuator or sensor is healthy.
 
 ## Mirror + Media Flags
 
