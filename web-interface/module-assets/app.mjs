@@ -179,13 +179,25 @@ function syncSoundboardWidget(ctx, item) {
   else if(filesState) item.status.textContent=`Ready · ${files.length} sound${files.length===1?'':'s'}`;
   else item.status.textContent='Waiting for sound list…';
 }
+function syncTelemetryWidget(ctx, item) {
+  const states=ctx.latestState?.states?.[ctx.module.id]??{};
+  for(const metric of item.metrics) {
+    const body=states[metric.spec.endpoint]?.value;
+    const datum=body?.[metric.spec.field];
+    if(datum===undefined||datum===null) {metric.value.textContent='—';continue;}
+    if(typeof datum==='number'&&Number.isFinite(datum)) metric.value.textContent=`${datum.toFixed(metric.spec.precision??1)}${metric.spec.unit?` ${metric.spec.unit}`:''}`;
+    else if(typeof datum==='boolean') metric.value.textContent=datum?'Yes':'No';
+    else if(typeof datum==='object') metric.value.textContent=Object.entries(datum).map(([key,value])=>`${key}: ${value}`).join(' · ');
+    else metric.value.textContent=String(datum);
+  }
+}
 function render(manifest) {
   for(const ctx of contexts)for(const media of ctx.mediaWidgets??[])media.destroy();
   container.replaceChildren(); contexts=[];
   const robot=base;
   for(const module of manifest.modules) {
     const card=element('section',undefined,'module');card.dataset.module=module.id;
-    const ctx={module,card,bindings:loadBindings(module),valueNodes:new Map(),stateNodes:[],controlNodes:[],mediaWidgets:[],soundboardWidgets:[],lightsWidgets:[],latestState:null};
+    const ctx={module,card,bindings:loadBindings(module),valueNodes:new Map(),stateNodes:[],controlNodes:[],mediaWidgets:[],soundboardWidgets:[],lightsWidgets:[],telemetryWidgets:[],latestState:null};
     ctx.engine=new InputEngine(module,(command,payload)=>{
       const endpoint=module.endpoints?.[command.endpoint];
       if(['audio-stream','video-stream'].includes(endpoint?.resource)) {
@@ -269,6 +281,16 @@ function render(manifest) {
       } else if(widget.kind==='lights') {
         const lights=new LightsWidget({widget,send:(endpoint,payload)=>api('/modules/api/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({robot,module:module.id,endpoint,payload,revision:manifest.revision})})});
         ctx.lightsWidgets.push(lights);controls.append(lights.node);
+      } else if(widget.kind==='telemetry') {
+        const node=element('div',undefined,'telemetry-widget');
+        const title=element('strong',widget.label,'telemetry-title');node.append(title);
+        const metrics=[];
+        for(const spec of widget.metrics) {
+          const row=element('div',undefined,'telemetry-metric');
+          const label=element('span',spec.label),value=element('strong','—');
+          row.append(label,value);node.append(row);metrics.push({spec,value});
+        }
+        controls.append(node);ctx.telemetryWidgets.push({metrics});
       }
     }
     card.append(controls);
@@ -298,6 +320,7 @@ function applyState(state) {
       const datum=widget.field?body?.[widget.field]:body;
       value.textContent=datum===undefined?'—':(typeof datum==='object'?JSON.stringify(datum):String(datum));
     }
+    for(const item of ctx.telemetryWidgets)syncTelemetryWidget(ctx,item);
     syncValues(ctx);
   }
 }

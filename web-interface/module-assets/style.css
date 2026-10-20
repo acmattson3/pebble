@@ -10,3 +10,4 @@
 .soundboard-widget select { width:100%; max-width:none; min-width:0; }
 .soundboard-actions { display:flex; gap:8px; }
 .soundboard-status { grid-column:1/-1; min-height:1em; margin:0; font-size:13px; }
+.telemetry-widget{grid-column:1/-1;padding:14px;border:1px solid var(--line);border-radius:8px;background:#111e27}.telemetry-title{display:block;margin-bottom:8px}.telemetry-metric{display:flex;justify-content:space-between;gap:1rem;padding:8px 0;border-top:1px solid #2d3d48;font-size:13px}.telemetry-metric strong{color:var(--accent);text-align:right;font-variant-numeric:tabular-nums}

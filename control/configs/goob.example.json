@@ -62,6 +62,10 @@
           }
         },
         {
+          "id": "telemetry",
+          "use": "modules/telemetry/module.json"
+        },
+        {
           "id": "gripper-demo",
           "use": "robots/goob/modules/gripper-demo/module.json",
           "adapters": {
@@ -297,7 +301,8 @@
         "timeout_seconds": 0.1
       },
       "telemetry": {
-        "publish_touch_sensors": false
+        "publish_touch_sensors": false,
+        "publish_module_telemetry": true
       },
       "odometry_shm": {
         "enabled": true,

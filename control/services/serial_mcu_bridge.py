@@ -208,6 +208,10 @@ class SerialMcuBridge:
         self.retained_publish_interval_seconds = interval_value if interval_value > 0 else 3600.0
 
         if self.protocol_name == PROTOCOL_GOOB_BASE_V1:
+            self.publish_module_telemetry = bool(telemetry_cfg.get("publish_module_telemetry", False))
+            self.module_touch_topic = self.identity.topic("o", "telemetry/touch")
+            self.module_charge_topic = self.identity.topic("o", "telemetry/charging")
+            self.module_charge_level_topic = self.identity.topic("o", "telemetry/battery")
             self.drive_topic = resolve_mapped_topic(self.identity, self.service_cfg, "drive_values", "incoming/drive-values")
             self.lights_solid_topic = resolve_mapped_topic(self.identity, self.service_cfg, "lights_solid", "incoming/lights-solid")
             self.lights_flash_topic = resolve_mapped_topic(self.identity, self.service_cfg, "lights_flash", "incoming/lights-flash")
@@ -943,6 +947,7 @@ class SerialMcuBridge:
                 self.odometry_writer = None
         if self.publish_touch_sensors:
             self._publish_json(self.touch_topic, touch)
+            self._publish_module_telemetry(self.module_touch_topic, touch, qos=0, retain=False)
 
     def _handle_charge_telemetry(self, charge: int) -> None:
         charge_value = None if int(charge) < 0 else bool(charge)
@@ -958,6 +963,7 @@ class SerialMcuBridge:
         if not should_publish:
             return
         self._publish_json(self.charge_topic, payload, qos=1, retain=True)
+        self._publish_module_telemetry(self.module_charge_topic, payload, qos=1, retain=True)
         self.next_charge_republish_at = now + self.retained_publish_interval_seconds
 
     def _handle_charge_level_telemetry(self, charge_level: float) -> None:
@@ -968,6 +974,7 @@ class SerialMcuBridge:
         with self.telemetry_lock:
             self.last_charge_level = payload
         self._publish_json(self.charge_level_topic, payload, qos=1, retain=True)
+        self._publish_module_telemetry(self.module_charge_level_topic, payload, qos=1, retain=True)
         self.next_charge_level_republish_at = time.time() + self.retained_publish_interval_seconds
 
     def _handle_imu_high_rate_telemetry(self, data: dict[str, Any]) -> None:
@@ -1130,9 +1137,11 @@ class SerialMcuBridge:
                 charge_level = self.last_charge_level
             if charge is not None:
                 self._publish_json(self.charge_topic, charge, qos=1, retain=True)
+                self._publish_module_telemetry(self.module_charge_topic, charge, qos=1, retain=True)
                 self.next_charge_republish_at = time.time() + self.retained_publish_interval_seconds
             if charge_level is not None:
                 self._publish_json(self.charge_level_topic, charge_level, qos=1, retain=True)
+                self._publish_module_telemetry(self.module_charge_level_topic, charge_level, qos=1, retain=True)
                 self.next_charge_level_republish_at = time.time() + self.retained_publish_interval_seconds
             return
 
@@ -1159,6 +1168,7 @@ class SerialMcuBridge:
         if not charge:
             return
         self._publish_json(self.charge_topic, charge, qos=1, retain=True)
+        self._publish_module_telemetry(self.module_charge_topic, charge, qos=1, retain=True)
 
     def _republish_charge_level_if_due(self) -> None:
         if self.next_charge_level_republish_at <= 0:
@@ -1172,6 +1182,11 @@ class SerialMcuBridge:
         if charge_level is None:
             return
         self._publish_json(self.charge_level_topic, charge_level, qos=1, retain=True)
+        self._publish_module_telemetry(self.module_charge_level_topic, charge_level, qos=1, retain=True)
+
+    def _publish_module_telemetry(self, topic: str, payload: dict[str, Any], qos: int, retain: bool) -> None:
+        if getattr(self, "publish_module_telemetry", False):
+            self._publish_json(topic, payload, qos=qos, retain=retain)
 
     def _publish_json(self, topic: str, payload: dict[str, Any], qos: int = 1, retain: bool = False) -> None:
         client = self.client

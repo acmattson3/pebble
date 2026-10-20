@@ -154,6 +154,17 @@ def validate_manifest(manifest: dict) -> dict:
                     raise ValueError("Lights widget requires solid and flash command endpoints")
                 validate_payload(solid, {"b": 0, "g": 0, "r": 0})
                 validate_payload(flash, {"b": 0, "g": 0, "r": 0, "period": 1})
+            if kind == "telemetry":
+                metrics = widget.get("metrics", [])
+                if not metrics:
+                    raise ValueError("Telemetry widget needs at least one metric")
+                for metric in metrics:
+                    endpoint = endpoints.get(metric["endpoint"])
+                    if not endpoint or endpoint["kind"] != "state":
+                        raise ValueError("Telemetry metrics must reference state endpoints")
+                    properties = endpoint["schema"].get("properties", {})
+                    if metric["field"] not in properties:
+                        raise ValueError("Telemetry metric field is not declared by its endpoint schema")
             if kind == "button" and "value" not in widget:
                 raise ValueError("Button needs a value")
             if kind == "state" and (widget.get("endpoint") not in endpoints or endpoints[widget["endpoint"]]["kind"] != "state"):

@@ -1,0 +1,78 @@
+{
+  "type": "pebble.telemetry",
+  "version": 1,
+  "title": "Telemetry",
+  "description": "A reusable dashboard for robot state and sensor readings.",
+  "endpoints": {
+    "charging": {
+      "topic": "o/telemetry/charging",
+      "kind": "state",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "value": {"type": ["boolean", "null"]}
+        },
+        "required": ["value"],
+        "additionalProperties": false
+      },
+      "qos": 1,
+      "retain": true
+    },
+    "battery": {
+      "topic": "o/telemetry/battery",
+      "kind": "state",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "value": {"type": "number", "minimum": 0, "maximum": 100},
+          "unit": {"const": "v"}
+        },
+        "required": ["value", "unit"],
+        "additionalProperties": false
+      },
+      "qos": 1,
+      "retain": true
+    },
+    "touch": {
+      "topic": "o/telemetry/touch",
+      "kind": "state",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "object",
+            "properties": {
+              "a0": {"type": "integer", "minimum": 0, "maximum": 65535},
+              "a1": {"type": "integer", "minimum": 0, "maximum": 65535},
+              "a2": {"type": "integer", "minimum": 0, "maximum": 65535}
+            },
+            "required": ["a0", "a1", "a2"],
+            "additionalProperties": false
+          },
+          "unit": {"const": "adc"}
+        },
+        "required": ["value", "unit"],
+        "additionalProperties": false
+      },
+      "qos": 0,
+      "retain": false
+    }
+  },
+  "actions": {},
+  "commands": [],
+  "bindings": [],
+  "ui": {
+    "columns": 1,
+    "controls": [
+      {
+        "kind": "telemetry",
+        "label": "Robot telemetry",
+        "metrics": [
+          {"label": "Charging", "endpoint": "charging", "field": "value"},
+          {"label": "Battery", "endpoint": "battery", "field": "value", "unit": "V", "precision": 2},
+          {"label": "Touch sensors", "endpoint": "touch", "field": "value", "unit": "ADC"}
+        ]
+      }
+    ]
+  }
+}

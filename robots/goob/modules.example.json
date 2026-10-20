@@ -43,6 +43,10 @@
           }
         },
         {
+          "id": "telemetry",
+          "use": "modules/telemetry/module.json"
+        },
+        {
           "id": "gripper-demo",
           "use": "robots/goob/modules/gripper-demo/module.json",
           "adapters": {

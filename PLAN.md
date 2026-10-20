@@ -122,6 +122,9 @@ running Pebble's Linux services, module host, or web interface.
   contract; each robot opts in and adapts it to its playback service and sound
   collection. The generic renderer handles the control without Goob-specific
   web code.
+- The shared lights and telemetry modules are implemented and enabled for Goob.
+  Telemetry displays battery voltage, charging state, and optional touch sensor
+  readings through validated state endpoints.
 - Keep input-to-action mapping in the module contract so keyboard, gamepad, and
   future inputs use the same command path.
 - Add module examples for common drive variants and one or more robot-specific
@@ -159,9 +162,9 @@ one-way listening or speech intelligibility.
 - Expose autonomy scripts through a robot-defined module so robots can publish
   their available scripts and the interface can start/stop them without a
   Pebble-wide hard-coded autonomy panel.
-- The shared lights module is implemented and enabled for Goob. Add robot-defined
-  log-viewer and telemetry modules, using the existing interface behavior as a
-  reference while keeping each module optional and robot-owned.
+- Add robot-defined log-viewer and autonomy modules, using the existing
+  interface behavior as a reference while keeping each module optional and
+  robot-owned.
 - Add safe, bounded audio volume controls for supported ALSA devices.
 - Add soundboard repeat and timed-repeat modes with a clear stop command.
 - Goob's serial bridge preserves the MCU's flashing startup pattern, then sends
