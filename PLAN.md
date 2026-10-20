@@ -114,6 +114,9 @@ running Pebble's Linux services, module host, or web interface.
 
 - Continue promoting proven robot-local modules into `modules/` with stable
   type/version contracts and examples.
+- Commit and push each reusable module with its schema, generic interface
+  support, and at least one robot configuration/example as part of that feature
+  slice; do not leave shared modules only in a robot's private configuration.
 - Keep promoting robot-owned capabilities into reusable shared modules. The
   soundboard module now defines its command, file-list, status, and layout
   contract; each robot opts in and adapts it to its playback service and sound
