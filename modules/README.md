@@ -29,7 +29,7 @@ A module definition contains:
   actions. Axes support dead zones, scale/inversion and offsets. Reset bindings
   release held actions. Keyboard auto-repeat is ignored.
 - `ui`: a grid of generic joystick, range, button, reset and state widgets,
-  plus reusable media and soundboard widgets.
+  plus reusable media, soundboard, and lights widgets.
 
 Module format version 1 supports numeric action bindings and object commands.
 The soundboard widget is a reusable typed control that reads the robot's WAV
@@ -38,6 +38,11 @@ play/stop commands to a declared command endpoint. Definitions contain no
 arbitrary JavaScript, HTML, expressions, remote schema references, or
 robot-specific web routes. Schemas support the bounded local JSON Schema subset
 enforced by `control/common/modules.py`.
+
+The lights widget uses declared solid and flash command endpoints. The shared
+`modules/lights/module.json` defines color and flash-period payloads; robots
+adapt those endpoints to their own actuators. Goob forwards them to its existing
+serial bridge topics.
 
 Each configured instance supplies an `id` and `use` (a module JSON path relative
 to the repo, or an absolute path for a local/private module). Optional
@@ -63,6 +68,9 @@ The launcher starts `control.services.module_host` automatically when enabled.
   playback state, and play/stop buttons. Goob's module instance forwards the
   compact command to its existing soundboard handler; the handler keeps the
   legacy topics available and publishes the declared module state endpoints.
+- Shared `modules/lights/module.json`: color picker, solid/flash/off controls,
+  and bounded flash period. Goob forwards its compact command endpoints to the
+  serial bridge's existing light topics.
 - Robot-local `robots/goob/modules/gripper-demo/module.json`: a virtual position
   slider, open/close buttons, G/H keys and controller buttons 0/1. Its echo
   adapter updates retained `o/gripper-demo/state` and never touches hardware.

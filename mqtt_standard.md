@@ -350,6 +350,7 @@ compact paths; legacy service examples are explicitly labeled.
 | `{base}/o/manifest` | Retained robot-advertised module definitions |
 | `{base}/o/modules/status` | Module host availability |
 | `{base}/i/drive` | Drive command, adapted locally to the existing drive bridge |
+| `{base}/i/lights/solid`, `{base}/i/lights/flash` | Solid/flash RGB commands from the shared lights module |
 | `{base}/i/camera`, `{base}/i/audio`, `{base}/i/speaker` | Media requests |
 | `{base}/o/video`, `{base}/o/audio` | H.264/PBVD video and Opus audio |
 | `{base}/i/audio-stream` | Opus audio sent to robot speaker |

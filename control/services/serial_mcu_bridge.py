@@ -333,6 +333,11 @@ class SerialMcuBridge:
         with self.telemetry_lock:
             self.last_imu_sample_at = time.monotonic()
         logging.info("Serial connected on %s @ %d for %s", self.serial_port, self.baud, self.service_name)
+        if self.protocol_name == PROTOCOL_GOOB_BASE_V1:
+            # This legacy MCU owns the startup flash. Clear it only once the
+            # bridge can write over the serial link, as a visible link check.
+            self._send_serial_line("L", "0.000", "0.000", "0.000")
+            logging.info("Sent startup lights-off command to MCU over serial")
 
     def _start_serial_reader(self) -> None:
         thread = threading.Thread(target=self._serial_reader, name=f"{self.service_name}-reader", daemon=True)

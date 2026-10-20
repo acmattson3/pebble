@@ -1,4 +1,5 @@
 import { MediaWidget } from './media-widget.mjs';
+import { LightsWidget } from './lights-widget.mjs';
 import { InputEngine, mappedValue } from './input-engine.mjs';
 
 const $ = id => document.getElementById(id);
@@ -156,6 +157,7 @@ function syncValues(ctx, syncMedia=true) {
   for(const input of ctx.controlNodes)input.disabled=!online;
   ctx.card.classList.toggle('offline',!online);
   if(syncMedia)for(const media of ctx.mediaWidgets??[])media.sync(ctx.engine.values, online && !suspended && document.visibilityState!=='hidden');
+  for(const widget of ctx.lightsWidgets??[])widget.setOnline(online && !suspended);
   for(const widget of ctx.soundboardWidgets??[])syncSoundboardWidget(ctx,widget);
 }
 function syncSoundboardWidget(ctx, item) {
@@ -183,7 +185,7 @@ function render(manifest) {
   const robot=base;
   for(const module of manifest.modules) {
     const card=element('section',undefined,'module');card.dataset.module=module.id;
-    const ctx={module,card,bindings:loadBindings(module),valueNodes:new Map(),stateNodes:[],controlNodes:[],mediaWidgets:[],soundboardWidgets:[],latestState:null};
+    const ctx={module,card,bindings:loadBindings(module),valueNodes:new Map(),stateNodes:[],controlNodes:[],mediaWidgets:[],soundboardWidgets:[],lightsWidgets:[],latestState:null};
     ctx.engine=new InputEngine(module,(command,payload)=>{
       const endpoint=module.endpoints?.[command.endpoint];
       if(['audio-stream','video-stream'].includes(endpoint?.resource)) {
@@ -264,6 +266,9 @@ function render(manifest) {
           if(!beginInteraction())return;
           queueCommand(robot,module,{endpoint:widget.command_endpoint},{action:'stop',file:''},manifest.revision);
         });
+      } else if(widget.kind==='lights') {
+        const lights=new LightsWidget({widget,send:(endpoint,payload)=>api('/modules/api/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({robot,module:module.id,endpoint,payload,revision:manifest.revision})})});
+        ctx.lightsWidgets.push(lights);controls.append(lights.node);
       }
     }
     card.append(controls);

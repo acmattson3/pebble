@@ -1,0 +1,55 @@
+{
+  "type": "pebble.lights",
+  "version": 1,
+  "title": "Lights",
+  "description": "Set the robot lights to a solid or flashing color, or turn them off.",
+  "endpoints": {
+    "solid": {
+      "topic": "i/lights/solid",
+      "kind": "command",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "b": {"type": "number", "minimum": 0, "maximum": 1},
+          "g": {"type": "number", "minimum": 0, "maximum": 1},
+          "r": {"type": "number", "minimum": 0, "maximum": 1}
+        },
+        "required": ["b", "g", "r"],
+        "additionalProperties": false
+      },
+      "qos": 0,
+      "retain": false
+    },
+    "flash": {
+      "topic": "i/lights/flash",
+      "kind": "command",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "b": {"type": "number", "minimum": 0, "maximum": 1},
+          "g": {"type": "number", "minimum": 0, "maximum": 1},
+          "r": {"type": "number", "minimum": 0, "maximum": 1},
+          "period": {"type": "number", "minimum": 0.05, "maximum": 30}
+        },
+        "required": ["b", "g", "r", "period"],
+        "additionalProperties": false
+      },
+      "qos": 0,
+      "retain": false
+    }
+  },
+  "actions": {},
+  "commands": [],
+  "bindings": [],
+  "ui": {
+    "columns": 1,
+    "controls": [
+      {
+        "kind": "lights",
+        "label": "Light color",
+        "solid_endpoint": "solid",
+        "flash_endpoint": "flash"
+      }
+    ]
+  }
+}

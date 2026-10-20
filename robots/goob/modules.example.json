@@ -29,6 +29,20 @@
           }
         },
         {
+          "id": "lights",
+          "use": "modules/lights/module.json",
+          "adapters": {
+            "solid": {
+              "kind": "forward",
+              "subtopic": "incoming/lights-solid"
+            },
+            "flash": {
+              "kind": "forward",
+              "subtopic": "incoming/lights-flash"
+            }
+          }
+        },
+        {
           "id": "gripper-demo",
           "use": "robots/goob/modules/gripper-demo/module.json",
           "adapters": {

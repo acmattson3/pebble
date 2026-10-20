@@ -147,6 +147,13 @@ def validate_manifest(manifest: dict) -> dict:
                 status_schema = status["schema"].get("properties", {})
                 if status["schema"].get("type") != "object" or status_schema.get("playing", {}).get("type") != "boolean":
                     raise ValueError("Soundboard status endpoint must provide a playing flag")
+            if kind == "lights":
+                solid = endpoints.get(widget.get("solid_endpoint"))
+                flash = endpoints.get(widget.get("flash_endpoint"))
+                if not solid or solid["kind"] != "command" or not flash or flash["kind"] != "command":
+                    raise ValueError("Lights widget requires solid and flash command endpoints")
+                validate_payload(solid, {"b": 0, "g": 0, "r": 0})
+                validate_payload(flash, {"b": 0, "g": 0, "r": 0, "period": 1})
             if kind == "button" and "value" not in widget:
                 raise ValueError("Button needs a value")
             if kind == "state" and (widget.get("endpoint") not in endpoints or endpoints[widget["endpoint"]]["kind"] != "state"):

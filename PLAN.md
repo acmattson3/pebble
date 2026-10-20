@@ -159,15 +159,14 @@ one-way listening or speech intelligibility.
 - Expose autonomy scripts through a robot-defined module so robots can publish
   their available scripts and the interface can start/stop them without a
   Pebble-wide hard-coded autonomy panel.
-- Add robot-defined light-control, log-viewer, and telemetry modules, using the
-  existing interface behavior as a reference while keeping each module
-  optional and robot-owned.
+- The shared lights module is implemented and enabled for Goob. Add robot-defined
+  log-viewer and telemetry modules, using the existing interface behavior as a
+  reference while keeping each module optional and robot-owned.
 - Add safe, bounded audio volume controls for supported ALSA devices.
 - Add soundboard repeat and timed-repeat modes with a clear stop command.
-- Preserve the MCU's flashing startup pattern, then have `serial_mcu_bridge`
-  send a lights-off command immediately after establishing serial
-  communication. This gives a visible startup check for MCU power, bridge
-  connectivity, and successful command delivery.
+- Goob's serial bridge preserves the MCU's flashing startup pattern, then sends
+  lights-off after opening the serial link. This gives a visible startup check
+  for MCU power, bridge connectivity, and successful command delivery.
 - Improve structured runtime diagnostics with service metadata and optional
   health states while keeping robot-wide availability separate from individual
   service health.

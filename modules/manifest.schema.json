@@ -294,7 +294,8 @@
                         "state",
                         "video",
                         "audio",
-                        "soundboard"
+                        "soundboard",
+                        "lights"
                       ]
                     },
                     "label": {
@@ -342,6 +343,14 @@
                       "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
                     },
                     "status_endpoint": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                    },
+                    "solid_endpoint": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                    },
+                    "flash_endpoint": {
                       "type": "string",
                       "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
                     }
