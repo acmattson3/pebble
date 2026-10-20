@@ -23,7 +23,7 @@ if __package__ is None or __package__ == "":
 
 from control.common.config import default_retained_publish_interval_seconds, load_config, log_level, service_cfg
 from control.common.mqtt import create_client, mqtt_auth_and_tls
-from control.common.topics import identity_from_config
+from control.common.topics import identity_from_config, resolve_mapped_topic
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -58,10 +58,9 @@ class AutonomyManager:
         if not self.service_cfg.get("enabled", True):
             raise SystemExit("autonomy_manager is disabled in config.")
 
-        topics = self.service_cfg.get("topics") if isinstance(self.service_cfg.get("topics"), dict) else {}
-        self.command_topic = str(topics.get("command") or self.identity.topic("incoming", "autonomy-command"))
-        self.files_topic = str(topics.get("files") or self.identity.topic("outgoing", "autonomy-files"))
-        self.status_topic = str(topics.get("status") or self.identity.topic("outgoing", "autonomy-status"))
+        self.command_topic = resolve_mapped_topic(self.identity, self.service_cfg, "command", "incoming/autonomy-command")
+        self.files_topic = resolve_mapped_topic(self.identity, self.service_cfg, "files", "outgoing/autonomy-files")
+        self.status_topic = resolve_mapped_topic(self.identity, self.service_cfg, "status", "outgoing/autonomy-status")
 
         autonomy_root_raw = str(self.service_cfg.get("autonomy_root") or "autonomy")
         autonomy_root = Path(autonomy_root_raw).expanduser()

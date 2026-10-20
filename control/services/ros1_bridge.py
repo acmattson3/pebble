@@ -21,7 +21,7 @@ if __package__ is None or __package__ == "":
 
 from control.common.config import load_config, log_level, service_cfg
 from control.common.mqtt import create_client, mqtt_auth_and_tls
-from control.common.topics import identity_from_config
+from control.common.topics import identity_from_config, resolve_mapped_topic, resolve_topic
 
 
 def clamp(value: float, lo: float, hi: float) -> float:
@@ -167,37 +167,20 @@ class Ros1Bridge:
         self.local_port = int(self.local_mqtt_cfg.get("port") or 1883)
         self.local_keepalive = int(self.local_mqtt_cfg.get("keepalive") or 60)
 
-        topics_cfg = _as_dict(self.service_cfg.get("topics"))
-        self.drive_topic = str(topics_cfg.get("drive_values") or self.identity.topic("incoming", "drive-values"))
-        self.wheel_odometry_topic = str(
-            topics_cfg.get("wheel_odometry") or self.identity.topic("outgoing", "wheel-odometry")
-        )
-        self.charging_status_topic = str(
-            topics_cfg.get("charging_status") or self.identity.topic("outgoing", "charging-status")
-        )
-        self.charging_level_topic = str(
-            topics_cfg.get("charging_level") or self.identity.topic("outgoing", "charging-level")
-        )
-        self.localization_pose_topic = str(
-            topics_cfg.get("localization_pose") or self.identity.topic("outgoing", "localization-pose")
-        )
-        self.navigation_status_topic = str(
-            topics_cfg.get("navigation_status") or self.identity.topic("outgoing", "navigation-status")
-        )
-        self.navigation_goal_topic = str(
-            topics_cfg.get("navigation_goal") or self.identity.topic("outgoing", "navigation-goal")
-        )
-        self.navigation_local_plan_topic = str(
-            topics_cfg.get("navigation_local_plan") or self.identity.topic("outgoing", "navigation/local-plan")
-        )
-        self.navigation_global_plan_topic = str(
-            topics_cfg.get("navigation_global_plan") or self.identity.topic("outgoing", "navigation/global-plan")
-        )
-        self.diagnostics_topic_out = str(topics_cfg.get("diagnostics") or self.identity.topic("outgoing", "diagnostics"))
+        self.drive_topic = resolve_mapped_topic(self.identity, self.service_cfg, "drive_values", "incoming/drive-values")
+        self.wheel_odometry_topic = resolve_mapped_topic(self.identity, self.service_cfg, "wheel_odometry", "outgoing/wheel-odometry")
+        self.charging_status_topic = resolve_mapped_topic(self.identity, self.service_cfg, "charging_status", "outgoing/charging-status")
+        self.charging_level_topic = resolve_mapped_topic(self.identity, self.service_cfg, "charging_level", "outgoing/charging-level")
+        self.localization_pose_topic = resolve_mapped_topic(self.identity, self.service_cfg, "localization_pose", "outgoing/localization-pose")
+        self.navigation_status_topic = resolve_mapped_topic(self.identity, self.service_cfg, "navigation_status", "outgoing/navigation-status")
+        self.navigation_goal_topic = resolve_mapped_topic(self.identity, self.service_cfg, "navigation_goal", "outgoing/navigation-goal")
+        self.navigation_local_plan_topic = resolve_mapped_topic(self.identity, self.service_cfg, "navigation_local_plan", "outgoing/navigation/local-plan")
+        self.navigation_global_plan_topic = resolve_mapped_topic(self.identity, self.service_cfg, "navigation_global_plan", "outgoing/navigation/global-plan")
+        self.diagnostics_topic_out = resolve_mapped_topic(self.identity, self.service_cfg, "diagnostics", "outgoing/diagnostics")
 
         heartbeat_cfg = _as_dict(self.service_cfg.get("heartbeat"))
         self.heartbeat_enabled = bool(heartbeat_cfg.get("enabled", True))
-        self.heartbeat_topic = str(heartbeat_cfg.get("topic") or self.identity.topic("outgoing", "online"))
+        self.heartbeat_topic = resolve_topic(self.identity, heartbeat_cfg, "outgoing/online")
         self.heartbeat_interval = max(0.05, _parse_float(heartbeat_cfg.get("interval_seconds"), 60.0))
         self.heartbeat_qos = int(heartbeat_cfg.get("qos") or 1)
         self.heartbeat_retain = bool(heartbeat_cfg.get("retain", True))

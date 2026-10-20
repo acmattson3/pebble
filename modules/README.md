@@ -37,9 +37,13 @@ and future versions can be added as their use cases arise. Schemas support the
 bounded local JSON Schema subset enforced by `control/common/modules.py`.
 
 Each configured instance supplies an `id` and `use` (a module JSON path relative
-to the repo, or an absolute path for a local/private module). Optional `topics`,
-`bindings`, `ui`, `title`, and `description` override that instance's defaults.
-Adapters remain private robot configuration and are not sent to the browser.
+to the repo, or an absolute path for a local/private module). Optional
+`subtopics`, `bindings`, `ui`, `title`, and `description` override that
+instance's defaults. Module endpoint subtopics must remain within the robot's
+identity prefix. A forward adapter's `subtopic` names its local compatibility
+destination. Legacy `topics`/`topic` adapter fields remain accepted during
+migration. Adapters remain private robot configuration and are not sent to the
+browser.
 
 ## Goob's first modules
 

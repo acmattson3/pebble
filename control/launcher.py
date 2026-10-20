@@ -24,7 +24,7 @@ if __package__ is None or __package__ == "":
 from control.common.capabilities import CAPABILITIES_SCHEMA, build_capabilities_value, capabilities_topic
 from control.common.config import default_retained_publish_interval_seconds, enabled_service_instances, load_config, log_level, service_cfg
 from control.common.mqtt import create_client, mqtt_auth_and_tls
-from control.common.topics import identity_from_config
+from control.common.topics import identity_from_config, resolve_topic
 
 CHILD_LOG_PATTERN = re.compile(r"^\d{2}:\d{2}:\d{2}\s+\[(DEBUG|INFO|WARNING|ERROR|CRITICAL)\]\s*(.*)$")
 
@@ -38,7 +38,7 @@ class LauncherLogsPublisher:
 
         self.identity = identity_from_config(config)
         self.enabled = bool(logs_cfg.get("enabled", True))
-        self.topic = str(logs_cfg.get("topic") or self.identity.topic("outgoing", "logs"))
+        self.topic = resolve_topic(self.identity, logs_cfg, "outgoing/logs")
         self.qos = int(logs_cfg.get("qos") or 0)
         self.retain = bool(logs_cfg.get("retain", False))
         self.max_message_chars = max(64, int(logs_cfg.get("max_message_chars") or 2048))

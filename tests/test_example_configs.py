@@ -49,6 +49,14 @@ class ExampleConfigTests(unittest.TestCase):
                 self.assertTrue(caps["audio"]["topic"].startswith(identity.base))
                 self.assertTrue(caps["drive"]["topic"].startswith(identity.base))
 
+    def test_goob_example_subtopics_resolve_to_the_expected_robot_topics(self):
+        config = self._load_config(REPO_ROOT / "control" / "configs" / "goob.example.json")
+        caps = build_capabilities_value(config)
+        self.assertEqual(caps["video"]["topic"], "pebble/robots/goob/o/video")
+        self.assertEqual(caps["audio"]["topic"], "pebble/robots/goob/o/audio")
+        self.assertEqual(caps["audio"]["uplink_topic"], "pebble/robots/goob/i/audio-stream")
+        self.assertEqual(caps["drive"]["topic"], "pebble/robots/goob/incoming/drive-values")
+
     def test_example_configs_reference_existing_runtime_scripts(self):
         for path in EXAMPLE_CONFIGS:
             with self.subTest(config=path.name):

@@ -7,7 +7,13 @@ from pathlib import Path
 
 from control.common.config import load_config, log_level, service_cfg
 from control.common.mqtt import parse_bool_payload
-from control.common.topics import RobotIdentity, identity_from_config
+from control.common.topics import (
+    RobotIdentity,
+    identity_from_config,
+    resolve_mapped_topic,
+    resolve_topic,
+    robot_topic,
+)
 
 
 class CommonModuleTests(unittest.TestCase):
@@ -28,6 +34,39 @@ class CommonModuleTests(unittest.TestCase):
     def test_identity_requires_robot_id(self):
         with self.assertRaises(SystemExit):
             identity_from_config({"robot": {"system": "pebble", "type": "robots"}})
+
+    def test_robot_local_subtopics_resolve_from_identity(self):
+        identity = RobotIdentity(system="pebble", type="robots", robot_id="goob")
+        self.assertEqual(robot_topic(identity, "o/video"), "pebble/robots/goob/o/video")
+        self.assertEqual(
+            resolve_topic(identity, {"subtopic": "incoming/drive-values"}, "incoming/default"),
+            "pebble/robots/goob/incoming/drive-values",
+        )
+        self.assertEqual(
+            resolve_topic(identity, {}, "o/status"),
+            "pebble/robots/goob/o/status",
+        )
+
+    def test_legacy_full_topics_and_mapped_subtopics_resolve(self):
+        identity = RobotIdentity(system="pebble", type="robots", robot_id="goob")
+        external = "pebble/robots/other/o/status"
+        self.assertEqual(resolve_topic(identity, {"topic": external}, "o/status"), external)
+        self.assertEqual(
+            resolve_mapped_topic(identity, {"subtopics": {"drive": "i/drive"}}, "drive", "i/default"),
+            "pebble/robots/goob/i/drive",
+        )
+        self.assertEqual(
+            resolve_mapped_topic(identity, {"topics": {"drive": external}}, "drive", "i/default"),
+            external,
+        )
+
+    def test_robot_subtopics_reject_absolute_escape_and_wildcards(self):
+        identity = RobotIdentity(system="pebble", type="robots", robot_id="goob")
+        for value in ("/o/status", "o/../drive", "o/+/status", "o/#", "o//status"):
+            with self.subTest(subtopic=value), self.assertRaises(ValueError):
+                robot_topic(identity, value)
+        with self.assertRaises(ValueError):
+            resolve_topic(identity, {"topic": "external/topic", "subtopic": "o/status"}, "o/status")
 
     def test_load_config_and_service_cfg(self):
         with tempfile.TemporaryDirectory() as td:

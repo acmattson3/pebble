@@ -22,6 +22,11 @@ Override with:
 PEBBLE_CONFIG=/path/to/config.json python3 web-control.py
 ```
 
+MQTT topic overrides for a configured robot can use `video.subtopic`,
+`audio.subtopic`, and `audio.uplink_subtopic`; the web interface resolves each
+under that robot's configured identity. Full `topic` and `uplink_topic` values
+remain available for compatibility or deliberate external routes.
+
 For Docker usage, provide `/app/control/configs/config.json` and let the
 launcher start `web_handler`, which wraps `web-control.py`.
 

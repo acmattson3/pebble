@@ -26,6 +26,7 @@ if __package__ is None or __package__ == "":
 
 from control.common.opus import AudioDecoder
 from control.common.mqtt import create_client
+from control.common.topics import identity_from_config, resolve_topic
 
 MAGIC = b"PBAT"
 CODEC_PCM_S16LE = 1
@@ -136,7 +137,7 @@ def _runtime_audio_config(cfg: dict[str, Any]) -> Optional[dict[str, Any]]:
         "password": str(remote_cfg.get("password") or ""),
         "tls": remote_cfg.get("tls") if isinstance(remote_cfg.get("tls"), dict) else {"enabled": False},
         "receiver": {
-            "topic": str(audio_rx_cfg.get("topic") or _topic_from_robot(robot_cfg, "incoming", "audio-stream") or ""),
+            "topic": resolve_topic(identity_from_config(cfg), audio_rx_cfg, "incoming/audio-stream"),
             "device": str(audio_rx_cfg.get("device") or "default"),
             "rate": int(audio_rx_cfg.get("rate") or 16000),
             "channels": int(audio_rx_cfg.get("channels") or 1),

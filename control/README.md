@@ -73,9 +73,13 @@ Reference schema:
   endpoint.
 - Shared retained-topic default interval:
   - `services.defaults.retained_publish_interval_seconds` (default `3600`).
+- Robot-local MQTT topic overrides use `subtopic` or `subtopics`; Pebble prefixes
+  them with `robot.system/robot.type/robot.id`. Existing full `topic` and
+  `topics` values remain accepted for compatibility and deliberate
+  cross-component routes. Do not set both forms for the same topic.
 - ROS 1 drive bridge config:
-  - `services.ros1_bridge.topics.drive_values`
-  - `services.ros1_bridge.topics.wheel_odometry|charging_status|charging_level|localization_pose|navigation_status|navigation_goal|navigation_local_plan|navigation_global_plan|diagnostics`
+  - `services.ros1_bridge.subtopics.drive_values`
+  - `services.ros1_bridge.subtopics.wheel_odometry|charging_status|charging_level|localization_pose|navigation_status|navigation_goal|navigation_local_plan|navigation_global_plan|diagnostics`
   - `services.ros1_bridge.heartbeat.*`
   - `services.ros1_bridge.ros.cmd_vel_topic|cmd_vel_publish_interval_seconds|odometry_topic|navigation_*_topic|diagnostics_topic`
   - `services.ros1_bridge.telemetry.*`
@@ -84,7 +88,7 @@ Reference schema:
   - Local joystick and Arduino auger controls are part of the Husky ROS control workspace, outside Pebble. See `../../HuskyROS/README.md` in the deployment workspace.
 
 - Autonomy manager config:
-  - `services.autonomy_manager.topics.command|files|status`
+  - `services.autonomy_manager.subtopics.command|files|status`
   - `services.autonomy_manager.scripts.<name>.args[]` (web-editable runtime fields mapped to script CLI args)
 ## Topic Format
 
@@ -150,7 +154,7 @@ Flag semantics:
 
 Reboot control config (in `services.mqtt_bridge`):
 
-- `topics.reboot`
+- `subtopics.reboot`
   - Topic for reboot flag input (default `.../incoming/flags/reboot`).
 - `reboot_control.command`
   - Command list/string to execute when a reboot request is received.
@@ -158,7 +162,7 @@ Reboot control config (in `services.mqtt_bridge`):
   - Minimum seconds between accepted reboot requests (default `30`).
 - `reboot_control.ignore_retained`
   - Ignore retained reboot payloads (default `true`).
-- `topics.service_restart`
+- `subtopics.service_restart`
   - Topic for service-restart flag input (default `.../incoming/flags/service-restart`).
 - `service_restart_control.command`
   - Command list/string to execute when a service-restart request is received.
@@ -166,7 +170,7 @@ Reboot control config (in `services.mqtt_bridge`):
   - Minimum seconds between accepted service-restart requests (default `10`).
 - `service_restart_control.ignore_retained`
   - Ignore retained service-restart payloads (default `true`).
-- `topics.git_pull`
+- `subtopics.git_pull`
   - Topic for git-pull flag input (default `.../incoming/flags/git-pull`).
 - `git_pull_control.command`
   - Command list/string to execute when a git-pull request is received.
@@ -200,7 +204,7 @@ Reboot control config (in `services.mqtt_bridge`):
 - `services.serial_mcu_bridge.retained_publish_interval_seconds`
   - Interval used to re-publish retained charging status (default inherits `services.defaults.retained_publish_interval_seconds`, normally `3600`).
   - Charging status is always published immediately when it changes.
-- `services.serial_mcu_bridge.instances.<name>.topics.high_rate|low_rate`
+- `services.serial_mcu_bridge.instances.<name>.subtopics.high_rate|low_rate`
   - IMU protocol topics for `imu_mpu6050_v1` instances.
 - `services.serial_mcu_bridge.instances.<name>.publish.high_rate_qos|low_rate_qos|high_rate_retain|low_rate_retain`
   - IMU protocol publish controls for `imu_mpu6050_v1` instances.

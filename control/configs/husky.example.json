@@ -31,18 +31,18 @@
       "log_level": "INFO",
       "capabilities": {
         "enabled": true,
-        "topic": "pebble/robots/husky/outgoing/capabilities",
         "qos": 1,
         "retain": true,
-        "publish_interval_seconds": 3600
+        "publish_interval_seconds": 3600,
+        "subtopic": "outgoing/capabilities"
       },
       "logs": {
         "enabled": true,
-        "topic": "pebble/robots/husky/outgoing/logs",
         "qos": 0,
         "retain": false,
         "min_level": "INFO",
-        "max_message_chars": 2048
+        "max_message_chars": 2048,
+        "subtopic": "outgoing/logs"
       }
     },
     "av_daemon": {
@@ -68,22 +68,12 @@
           "ciphers": ""
         }
       },
-      "topics": {
-        "remote_mirror": "pebble/robots/husky/incoming/flags/remote-mirror",
-        "mqtt_audio": "pebble/robots/husky/incoming/flags/mqtt-audio",
-        "mqtt_video": "pebble/robots/husky/incoming/flags/mqtt-video",
-        "reboot": "pebble/robots/husky/incoming/flags/reboot",
-        "service_restart": "pebble/robots/husky/incoming/flags/service-restart",
-        "git_pull": "pebble/robots/husky/incoming/flags/git-pull",
-        "audio_control": "pebble/robots/husky/incoming/audio",
-        "video_control": "pebble/robots/husky/incoming/front-camera"
-      },
       "heartbeat": {
         "enabled": true,
-        "topic": "pebble/robots/husky/outgoing/online",
         "interval_seconds": 60.0,
         "qos": 1,
-        "retain": true
+        "retain": true,
+        "subtopic": "outgoing/online"
       },
       "reboot_control": {
         "command": [
@@ -108,6 +98,16 @@
         "cooldown_seconds": 10,
         "ignore_retained": true,
         "env": {}
+      },
+      "subtopics": {
+        "remote_mirror": "incoming/flags/remote-mirror",
+        "mqtt_audio": "incoming/flags/mqtt-audio",
+        "mqtt_video": "incoming/flags/mqtt-video",
+        "reboot": "incoming/flags/reboot",
+        "service_restart": "incoming/flags/service-restart",
+        "git_pull": "incoming/flags/git-pull",
+        "audio_control": "incoming/audio",
+        "video_control": "incoming/front-camera"
       }
     },
     "ros1_bridge": {
@@ -116,24 +116,12 @@
       "drive": {
         "enabled": true
       },
-      "topics": {
-        "drive_values": "pebble/robots/husky/incoming/drive-values",
-        "wheel_odometry": "pebble/robots/husky/outgoing/wheel-odometry",
-        "charging_status": "pebble/robots/husky/outgoing/charging-status",
-        "charging_level": "pebble/robots/husky/outgoing/charging-level",
-        "localization_pose": "pebble/robots/husky/outgoing/localization-pose",
-        "navigation_status": "pebble/robots/husky/outgoing/navigation-status",
-        "navigation_goal": "pebble/robots/husky/outgoing/navigation-goal",
-        "navigation_local_plan": "pebble/robots/husky/outgoing/navigation/local-plan",
-        "navigation_global_plan": "pebble/robots/husky/outgoing/navigation/global-plan",
-        "diagnostics": "pebble/robots/husky/outgoing/diagnostics"
-      },
       "heartbeat": {
         "enabled": false,
-        "topic": "pebble/robots/husky/outgoing/online",
         "interval_seconds": 60.0,
         "qos": 1,
-        "retain": true
+        "retain": true,
+        "subtopic": "outgoing/online"
       },
       "ros": {
         "node_name": "pebble_husky_ros1_bridge",
@@ -210,6 +198,18 @@
         "drive_timeout_seconds": 0.75,
         "ignore_retained_drive": true,
         "stop_on_shutdown": true
+      },
+      "subtopics": {
+        "drive_values": "incoming/drive-values",
+        "wheel_odometry": "outgoing/wheel-odometry",
+        "charging_status": "outgoing/charging-status",
+        "charging_level": "outgoing/charging-level",
+        "localization_pose": "outgoing/localization-pose",
+        "navigation_status": "outgoing/navigation-status",
+        "navigation_goal": "outgoing/navigation-goal",
+        "navigation_local_plan": "outgoing/navigation/local-plan",
+        "navigation_global_plan": "outgoing/navigation/global-plan",
+        "diagnostics": "outgoing/diagnostics"
       }
     },
     "serial_mcu_bridge": {

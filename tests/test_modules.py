@@ -76,6 +76,20 @@ class ModuleTests(unittest.TestCase):
         host.on_connect(client, None, None, 0)
         assert [c[0] for c in client.publish_calls[before:]] == [host.manifest_topic, host.status_topic, host.manifest['base'] + '/o/gripper-demo/state']
 
+    def test_module_adapter_subtopic_is_resolved_under_robot_identity(self):
+        configured = make_configured()
+        configured["services"]["module_host"]["modules"][0]["adapters"]["command"] = {
+            "kind": "forward",
+            "subtopic": "incoming/drive-values",
+        }
+        manifest, adapters = build_manifest(configured, ROOT / "control/configs/config.json")
+        endpoint = manifest["base"] + "/i/drive"
+        assert adapters[endpoint]["topic"] == manifest["base"] + "/incoming/drive-values"
+
+        configured["services"]["module_host"]["modules"][0]["adapters"]["command"]["topic"] = "other/topic"
+        with self.assertRaises(ValueError):
+            build_manifest(configured, ROOT / "control/configs/config.json")
+
     def test_bridge_preserves_live_retained_module_states(self):
         built = make_built()
         manifest, _ = built

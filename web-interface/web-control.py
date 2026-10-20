@@ -43,6 +43,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 from module_ui import ModuleUI
+from control.common.topics import RobotIdentity, resolve_topic
 REPLAY_DIR = Path(__file__).resolve().parent / "replay"
 if str(REPLAY_DIR) not in sys.path:
     sys.path.insert(0, str(REPLAY_DIR))
@@ -226,9 +227,14 @@ def _normalize_web_robot(
     robot_system = str(robot.get("system") or (identity_hint or {}).get("system") or system)
     robot_type = str(robot.get("type") or (identity_hint or {}).get("type") or component_type)
     robot_key = _component_key(robot_system, robot_type, robot_id)
-    base_video_topic = _topic_from_identity(robot_system, robot_type, robot_id, "outgoing", "front-camera")
-    base_audio_topic = _topic_from_identity(robot_system, robot_type, robot_id, "outgoing", "audio")
-    base_audio_uplink = _topic_from_identity(robot_system, robot_type, robot_id, "incoming", "audio-stream")
+    identity = RobotIdentity(robot_system, robot_type, robot_id)
+
+    def target_topic(topic_cfg: Dict[str, Any], default_topic: str, default_subtopic: str) -> str:
+        if not topic_cfg.get("subtopic") and not topic_cfg.get("topic") and default_topic:
+            hint = _identity_hint_from_topic(default_topic)
+            if hint == {"system": robot_system, "type": robot_type, "id": robot_id}:
+                return default_topic
+        return resolve_topic(identity, topic_cfg, default_subtopic)
 
     normalized = {
         "key": robot_key,
@@ -238,12 +244,16 @@ def _normalize_web_robot(
         "type": robot_type,
         "model": robot.get("model"),
         "video": {
-            "topic": str(video_cfg.get("topic") or default_video_topic or base_video_topic),
+            "topic": target_topic(video_cfg, default_video_topic, "outgoing/front-camera"),
             "controls": bool(video_cfg.get("controls", True)),
         },
         "audio": {
-            "topic": str(audio_cfg.get("topic") or default_audio_topic or base_audio_topic),
-            "uplink_topic": str(audio_cfg.get("uplink_topic") or default_audio_uplink_topic or base_audio_uplink),
+            "topic": target_topic(audio_cfg, default_audio_topic, "outgoing/audio"),
+            "uplink_topic": target_topic(
+                {"topic": audio_cfg.get("uplink_topic"), "subtopic": audio_cfg.get("uplink_subtopic")},
+                default_audio_uplink_topic,
+                "incoming/audio-stream",
+            ),
             "rate": _coerce_int(audio_cfg.get("rate"), 16000),
             "channels": _coerce_int(audio_cfg.get("channels"), 1),
             "chunk_ms": _coerce_int(audio_cfg.get("chunk_ms"), 20),
@@ -307,18 +317,12 @@ def _normalize_config(raw: Dict[str, Any]) -> Dict[str, Any]:
     audio_pub_cfg = media_cfg.get("audio_publisher") if isinstance(media_cfg.get("audio_publisher"), dict) else {}
     audio_rx_cfg = media_cfg.get("audio_receiver") if isinstance(media_cfg.get("audio_receiver"), dict) else {}
 
-    default_video_topic = str(
-        video_pub_cfg.get("topic")
-        or (_topic_from_identity(system, component_type, component_id, "outgoing", "front-camera") if component_id else "")
+    local_identity = RobotIdentity(system, component_type, component_id) if component_id else None
+    default_video_topic = (
+        resolve_topic(local_identity, video_pub_cfg, "outgoing/front-camera") if local_identity else ""
     )
-    default_audio_topic = str(
-        audio_pub_cfg.get("topic")
-        or (_topic_from_identity(system, component_type, component_id, "outgoing", "audio") if component_id else "")
-    )
-    default_audio_uplink_topic = str(
-        audio_rx_cfg.get("topic")
-        or (_topic_from_identity(system, component_type, component_id, "incoming", "audio-stream") if component_id else "")
-    )
+    default_audio_topic = resolve_topic(local_identity, audio_pub_cfg, "outgoing/audio") if local_identity else ""
+    default_audio_uplink_topic = resolve_topic(local_identity, audio_rx_cfg, "incoming/audio-stream") if local_identity else ""
 
     robots_cfg = web_cfg.get("robots") if isinstance(web_cfg.get("robots"), list) else []
     if not robots_cfg and component_id:

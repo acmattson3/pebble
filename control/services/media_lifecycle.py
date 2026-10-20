@@ -10,7 +10,7 @@ import time
 
 from control.common.modules import build_manifest
 from control.common.mqtt import create_client, mqtt_auth_and_tls
-from control.common.topics import identity_from_config
+from control.common.topics import identity_from_config, resolve_mapped_topic
 
 RESOURCES = {'video', 'microphone', 'video-stream', 'audio-stream', 'speaker'}
 
@@ -18,7 +18,8 @@ RESOURCES = {'video', 'microphone', 'video-stream', 'audio-stream', 'speaker'}
 class MediaLifecycle:
     def __init__(self, config, path, capture, pipeline_class):
         self.config, self.path, self.capture = config, path, capture
-        self.base = identity_from_config(config).base
+        identity = identity_from_config(config)
+        self.base = identity.base
         self.lock = threading.Lock()
         self.leases = {}
         self.routes = {}
@@ -60,9 +61,10 @@ class MediaLifecycle:
         self.last_state = 0
         self.last_body = None
         # Transitional classic controls remain usable, scoped to a separate consumer.
-        topics = bridge.get('topics', {})
-        self.legacy = {topics.get('video_control', self.base+'/incoming/front-camera'): {'video-stream'},
-                       topics.get('audio_control', self.base+'/incoming/audio'): {'audio-stream','speaker'}}
+        self.legacy = {
+            resolve_mapped_topic(identity, bridge, 'video_control', 'incoming/front-camera'): {'video-stream'},
+            resolve_mapped_topic(identity, bridge, 'audio_control', 'incoming/audio'): {'audio-stream','speaker'},
+        }
 
     def start(self):
         local = self.config.get('local_mqtt', {})

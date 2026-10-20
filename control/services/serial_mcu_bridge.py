@@ -28,7 +28,7 @@ from control.common.config import (
 )
 from control.common.mqtt import create_client, mqtt_auth_and_tls
 from control.common.odometry_shm import OdometryRawShmWriter
-from control.common.topics import identity_from_config
+from control.common.topics import identity_from_config, resolve_mapped_topic
 from control.services.serial_standard import (
     MSG_ACK,
     MSG_CMD,
@@ -160,7 +160,6 @@ class SerialMcuBridge:
         self._configure_protocol()
 
     def _configure_protocol(self) -> None:
-        topics_cfg = self.service_cfg.get("topics") if isinstance(self.service_cfg.get("topics"), dict) else {}
         telemetry_cfg = self.service_cfg.get("telemetry") if isinstance(self.service_cfg.get("telemetry"), dict) else {}
         safety_cfg = self.service_cfg.get("safety") if isinstance(self.service_cfg.get("safety"), dict) else {}
         publish_cfg = self.service_cfg.get("publish") if isinstance(self.service_cfg.get("publish"), dict) else {}
@@ -204,14 +203,12 @@ class SerialMcuBridge:
         self.retained_publish_interval_seconds = interval_value if interval_value > 0 else 3600.0
 
         if self.protocol_name == PROTOCOL_GOOB_BASE_V1:
-            self.drive_topic = str(topics_cfg.get("drive_values") or self.identity.topic("incoming", "drive-values"))
-            self.lights_solid_topic = str(topics_cfg.get("lights_solid") or self.identity.topic("incoming", "lights-solid"))
-            self.lights_flash_topic = str(topics_cfg.get("lights_flash") or self.identity.topic("incoming", "lights-flash"))
-            self.touch_topic = str(topics_cfg.get("touch_sensors") or self.identity.topic("outgoing", "touch-sensors"))
-            self.charge_topic = str(topics_cfg.get("charging_status") or self.identity.topic("outgoing", "charging-status"))
-            self.charge_level_topic = str(
-                topics_cfg.get("charging_level") or self.identity.topic("outgoing", "charging-level")
-            )
+            self.drive_topic = resolve_mapped_topic(self.identity, self.service_cfg, "drive_values", "incoming/drive-values")
+            self.lights_solid_topic = resolve_mapped_topic(self.identity, self.service_cfg, "lights_solid", "incoming/lights-solid")
+            self.lights_flash_topic = resolve_mapped_topic(self.identity, self.service_cfg, "lights_flash", "incoming/lights-flash")
+            self.touch_topic = resolve_mapped_topic(self.identity, self.service_cfg, "touch_sensors", "outgoing/touch-sensors")
+            self.charge_topic = resolve_mapped_topic(self.identity, self.service_cfg, "charging_status", "outgoing/charging-status")
+            self.charge_level_topic = resolve_mapped_topic(self.identity, self.service_cfg, "charging_level", "outgoing/charging-level")
             self.publish_touch_sensors = bool(telemetry_cfg.get("publish_touch_sensors", False))
 
             odometry_shm_cfg = (
@@ -240,8 +237,8 @@ class SerialMcuBridge:
             self.ignore_retained_drive = True
             self.stop_on_shutdown = False
 
-            self.imu_high_rate_topic = str(topics_cfg.get("high_rate") or self.identity.topic("outgoing", "sensors/imu-fast"))
-            self.imu_low_rate_topic = str(topics_cfg.get("low_rate") or self.identity.topic("outgoing", "sensors/imu"))
+            self.imu_high_rate_topic = resolve_mapped_topic(self.identity, self.service_cfg, "high_rate", "outgoing/sensors/imu-fast")
+            self.imu_low_rate_topic = resolve_mapped_topic(self.identity, self.service_cfg, "low_rate", "outgoing/sensors/imu")
             self.imu_high_rate_qos = max(0, min(2, _parse_int(publish_cfg.get("high_rate_qos"), 0)))
             self.imu_low_rate_qos = max(0, min(2, _parse_int(publish_cfg.get("low_rate_qos"), 1)))
             self.imu_high_rate_retain = bool(publish_cfg.get("high_rate_retain", False))

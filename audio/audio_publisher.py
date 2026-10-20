@@ -27,6 +27,7 @@ if __package__ is None or __package__ == "":
 
 from control.common.mqtt import create_client
 from control.common.opus import Opus, packet
+from control.common.topics import identity_from_config, resolve_topic
 
 MAGIC = b"PBAT"
 CODEC_PCM_S16LE = 1
@@ -140,7 +141,7 @@ def _runtime_audio_config(cfg: dict[str, Any]) -> Optional[dict[str, Any]]:
         "password": str(remote_cfg.get("password") or ""),
         "tls": remote_cfg.get("tls") if isinstance(remote_cfg.get("tls"), dict) else {"enabled": False},
         "publisher": {
-            "topic": str(audio_pub_cfg.get("topic") or _topic_from_robot(robot_cfg, "outgoing", "audio") or ""),
+            "topic": resolve_topic(identity_from_config(cfg), audio_pub_cfg, "outgoing/audio"),
             "input_shm": str(audio_pub_cfg.get("input_shm") or "/tmp/pebble-audio.sock"),
             "input_retry": float(audio_pub_cfg.get("input_retry_seconds") or 2.0),
             "rate": int(audio_pub_cfg.get("rate") or 16000),

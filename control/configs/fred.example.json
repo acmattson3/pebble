@@ -31,18 +31,18 @@
       "log_level": "INFO",
       "capabilities": {
         "enabled": true,
-        "topic": "pebble/robots/fred/outgoing/capabilities",
         "qos": 1,
         "retain": true,
-        "publish_interval_seconds": 3600
+        "publish_interval_seconds": 3600,
+        "subtopic": "outgoing/capabilities"
       },
       "logs": {
         "enabled": true,
-        "topic": "pebble/robots/fred/outgoing/logs",
         "qos": 0,
         "retain": false,
         "min_level": "INFO",
-        "max_message_chars": 2048
+        "max_message_chars": 2048,
+        "subtopic": "outgoing/logs"
       }
     },
     "av_daemon": {
@@ -101,27 +101,16 @@
           "ciphers": ""
         }
       },
-      "topics": {
-        "remote_mirror": "pebble/robots/fred/incoming/flags/remote-mirror",
-        "mqtt_audio": "pebble/robots/fred/incoming/flags/mqtt-audio",
-        "mqtt_video": "pebble/robots/fred/incoming/flags/mqtt-video",
-        "reboot": "pebble/robots/fred/incoming/flags/reboot",
-        "service_restart": "pebble/robots/fred/incoming/flags/service-restart",
-        "git_pull": "pebble/robots/fred/incoming/flags/git-pull",
-        "audio_control": "pebble/robots/fred/incoming/audio",
-        "video_control": "pebble/robots/fred/incoming/front-camera"
-      },
       "heartbeat": {
         "enabled": true,
-        "topic": "pebble/robots/fred/outgoing/online",
         "interval_seconds": 60.0,
         "qos": 1,
-        "retain": true
+        "retain": true,
+        "subtopic": "outgoing/online"
       },
       "media": {
         "video_publisher": {
           "profile": "default",
-          "topic": "pebble/robots/fred/outgoing/front-camera",
           "input_shm": "/tmp/pebble-video.sock",
           "input_retry_seconds": 2.0,
           "width": 640,
@@ -134,25 +123,26 @@
           "keyframe_interval": 5,
           "jpeg_quality": 10,
           "rotate_degrees": 0,
-          "reconnect_seconds": 10
+          "reconnect_seconds": 10,
+          "subtopic": "outgoing/front-camera"
         },
         "audio_publisher": {
-          "topic": "pebble/robots/fred/outgoing/audio",
           "input_shm": "/tmp/pebble-audio.sock",
           "input_retry_seconds": 2.0,
           "rate": 16000,
           "channels": 1,
           "chunk_ms": 20,
-          "qos": 0
+          "qos": 0,
+          "subtopic": "outgoing/audio"
         },
         "audio_receiver": {
-          "topic": "pebble/robots/fred/incoming/audio-stream",
           "device": "default",
           "rate": 16000,
           "channels": 1,
           "queue_limit": 48,
           "concealment_ms": 100,
-          "qos": 0
+          "qos": 0,
+          "subtopic": "incoming/audio-stream"
         }
       },
       "video_control": {
@@ -185,25 +175,51 @@
         "env": {}
       },
       "reboot_control": {
-        "command": ["sudo", "-n", "/sbin/reboot"],
+        "command": [
+          "sudo",
+          "-n",
+          "/sbin/reboot"
+        ],
         "cwd": "",
         "cooldown_seconds": 30,
         "ignore_retained": true,
         "env": {}
       },
       "service_restart_control": {
-        "command": ["sudo", "-n", "/usr/bin/systemctl", "restart", "pebble-control.service"],
+        "command": [
+          "sudo",
+          "-n",
+          "/usr/bin/systemctl",
+          "restart",
+          "pebble-control.service"
+        ],
         "cwd": "",
         "cooldown_seconds": 10,
         "ignore_retained": true,
         "env": {}
       },
       "git_pull_control": {
-        "command": ["git", "-C", "/opt/pebble", "pull", "--ff-only"],
+        "command": [
+          "git",
+          "-C",
+          "/opt/pebble",
+          "pull",
+          "--ff-only"
+        ],
         "cwd": "",
         "cooldown_seconds": 60,
         "ignore_retained": true,
         "env": {}
+      },
+      "subtopics": {
+        "remote_mirror": "incoming/flags/remote-mirror",
+        "mqtt_audio": "incoming/flags/mqtt-audio",
+        "mqtt_video": "incoming/flags/mqtt-video",
+        "reboot": "incoming/flags/reboot",
+        "service_restart": "incoming/flags/service-restart",
+        "git_pull": "incoming/flags/git-pull",
+        "audio_control": "incoming/audio",
+        "video_control": "incoming/front-camera"
       }
     },
     "serial_mcu_bridge": {
@@ -228,29 +244,31 @@
         "ignore_retained_drive": true,
         "stop_on_shutdown": true
       },
-      "topics": {
-        "drive_values": "pebble/robots/fred/incoming/drive-values",
-        "lights_solid": "pebble/robots/fred/incoming/lights-solid",
-        "lights_flash": "pebble/robots/fred/incoming/lights-flash",
-        "touch_sensors": "pebble/robots/fred/outgoing/touch-sensors",
-        "charging_status": "pebble/robots/fred/outgoing/charging-status"
+      "subtopics": {
+        "drive_values": "incoming/drive-values",
+        "lights_solid": "incoming/lights-solid",
+        "lights_flash": "incoming/lights-flash",
+        "touch_sensors": "outgoing/touch-sensors",
+        "charging_status": "outgoing/charging-status"
       }
     },
     "soundboard_handler": {
       "enabled": true,
       "log_level": "INFO",
-      "topics": {
-        "command": "pebble/robots/fred/incoming/soundboard-command",
-        "files": "pebble/robots/fred/outgoing/soundboard-files",
-        "status": "pebble/robots/fred/outgoing/soundboard-status"
-      },
       "playback": {
         "directory": "/var/lib/pebble/sounds",
-        "player_command": ["aplay"],
+        "player_command": [
+          "aplay"
+        ],
         "stop_timeout": 5,
         "scan_interval": 10,
         "cwd": "",
         "env": {}
+      },
+      "subtopics": {
+        "command": "incoming/soundboard-command",
+        "files": "outgoing/soundboard-files",
+        "status": "outgoing/soundboard-status"
       }
     },
     "autonomy_manager": {
@@ -259,11 +277,6 @@
       "autonomy_root": "autonomy",
       "scan_interval_seconds": 5,
       "stop_timeout_seconds": 8,
-      "topics": {
-        "command": "pebble/robots/fred/incoming/autonomy-command",
-        "files": "pebble/robots/fred/outgoing/autonomy-files",
-        "status": "pebble/robots/fred/outgoing/autonomy-status"
-      },
       "scripts": {
         "apriltag-follow": {
           "enabled": true,
@@ -340,6 +353,11 @@
             }
           ]
         }
+      },
+      "subtopics": {
+        "command": "incoming/autonomy-command",
+        "files": "outgoing/autonomy-files",
+        "status": "outgoing/autonomy-status"
       }
     }
   },
@@ -369,12 +387,12 @@
         "name": "Fred",
         "type": "robots",
         "video": {
-          "topic": "pebble/robots/fred/outgoing/front-camera",
+          "subtopic": "outgoing/front-camera",
           "controls": true
         },
         "audio": {
-          "topic": "pebble/robots/fred/outgoing/audio",
-          "uplink_topic": "pebble/robots/fred/incoming/audio-stream",
+          "subtopic": "outgoing/audio",
+          "uplink_subtopic": "incoming/audio-stream",
           "rate": 16000,
           "channels": 1,
           "chunk_ms": 20,

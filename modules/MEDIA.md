@@ -58,8 +58,9 @@ failures release the speaker request and show an error.
 | `i/media/lease` | Local capture resource requests |
 | `o/media/state` | Retained AV service activity |
 
-Topics are configurable through the module instance's `topics` overrides and
-matching publisher/receiver configuration. Binary streams use QoS 0, never
+Topics are configurable through the module instance's `subtopics` overrides and
+matching publisher/receiver configuration. Legacy `topics` overrides remain
+accepted during migration. Binary streams use QoS 0, never
 retain packets. State is retained; commands are not. The manifest advertises
 `video`, `audio`, and `uplink` endpoint kinds and the codec/sample format.
 

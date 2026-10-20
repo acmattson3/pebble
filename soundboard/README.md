@@ -23,7 +23,7 @@ Per component:
 
 Defaults are generated from robot identity unless overridden in:
 
-- `services.soundboard_handler.topics.*`
+- `services.soundboard_handler.subtopics.*`
 
 ## Command payloads
 

@@ -1,7 +1,14 @@
 import copy
 import json
 from pathlib import Path
+import sys
 from typing import Any, Optional
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from control.common.topics import identity_from_config, resolve_topic
 
 
 DEFAULT_RUNTIME_CONFIG_PATH = Path(__file__).resolve().parents[1] / "control" / "configs" / "config.json"
@@ -65,7 +72,7 @@ def _profiles_from_runtime_config(data: dict[str, Any]) -> dict[str, Any]:
         raise CameraProfileError("services.mqtt_bridge.remote_mqtt.host is required for video publisher")
 
     profile_name = str(video_pub_cfg.get("profile") or "default").strip() or "default"
-    topic = str(video_pub_cfg.get("topic") or _topic_from_identity(robot_cfg, "outgoing", "front-camera"))
+    topic = resolve_topic(identity_from_config(data), video_pub_cfg, "outgoing/front-camera")
 
     mqtt_cfg = {
         "broker": remote_host,

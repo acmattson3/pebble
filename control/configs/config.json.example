@@ -35,18 +35,18 @@
       "log_level": "INFO",
       "capabilities": {
         "enabled": true,
-        "topic": "pebble/robots/my-robot/outgoing/capabilities",
         "qos": 1,
         "retain": true,
-        "publish_interval_seconds": 3600
+        "publish_interval_seconds": 3600,
+        "subtopic": "outgoing/capabilities"
       },
       "logs": {
         "enabled": true,
-        "topic": "pebble/robots/my-robot/outgoing/logs",
         "qos": 0,
         "retain": false,
         "min_level": "INFO",
-        "max_message_chars": 2048
+        "max_message_chars": 2048,
+        "subtopic": "outgoing/logs"
       }
     },
     "av_daemon": {
@@ -103,27 +103,16 @@
           "ciphers": ""
         }
       },
-      "topics": {
-        "remote_mirror": "pebble/robots/my-robot/incoming/flags/remote-mirror",
-        "mqtt_audio": "pebble/robots/my-robot/incoming/flags/mqtt-audio",
-        "mqtt_video": "pebble/robots/my-robot/incoming/flags/mqtt-video",
-        "reboot": "pebble/robots/my-robot/incoming/flags/reboot",
-        "service_restart": "pebble/robots/my-robot/incoming/flags/service-restart",
-        "git_pull": "pebble/robots/my-robot/incoming/flags/git-pull",
-        "audio_control": "pebble/robots/my-robot/incoming/audio",
-        "video_control": "pebble/robots/my-robot/incoming/front-camera"
-      },
       "heartbeat": {
         "enabled": true,
-        "topic": "pebble/robots/my-robot/outgoing/online",
         "interval_seconds": 60.0,
         "qos": 1,
-        "retain": true
+        "retain": true,
+        "subtopic": "outgoing/online"
       },
       "media": {
         "video_publisher": {
           "profile": "default",
-          "topic": "pebble/robots/my-robot/outgoing/front-camera",
           "input_shm": "/tmp/pebble-video.sock",
           "input_retry_seconds": 2.0,
           "width": 640,
@@ -136,25 +125,26 @@
           "keyframe_interval": 5,
           "jpeg_quality": 10,
           "rotate_degrees": 0,
-          "reconnect_seconds": 10
+          "reconnect_seconds": 10,
+          "subtopic": "outgoing/front-camera"
         },
         "audio_publisher": {
-          "topic": "pebble/robots/my-robot/outgoing/audio",
           "input_shm": "/tmp/pebble-audio.sock",
           "input_retry_seconds": 2.0,
           "rate": 16000,
           "channels": 1,
           "chunk_ms": 20,
-          "qos": 0
+          "qos": 0,
+          "subtopic": "outgoing/audio"
         },
         "audio_receiver": {
-          "topic": "pebble/robots/my-robot/incoming/audio-stream",
           "device": "default",
           "rate": 16000,
           "channels": 1,
           "queue_limit": 48,
           "concealment_ms": 100,
-          "qos": 0
+          "qos": 0,
+          "subtopic": "incoming/audio-stream"
         }
       },
       "video_control": {
@@ -187,25 +177,51 @@
         "env": {}
       },
       "reboot_control": {
-        "command": ["sudo", "-n", "/sbin/reboot"],
+        "command": [
+          "sudo",
+          "-n",
+          "/sbin/reboot"
+        ],
         "cwd": "",
         "cooldown_seconds": 30,
         "ignore_retained": true,
         "env": {}
       },
       "service_restart_control": {
-        "command": ["sudo", "-n", "/usr/bin/systemctl", "restart", "pebble-control.service"],
+        "command": [
+          "sudo",
+          "-n",
+          "/usr/bin/systemctl",
+          "restart",
+          "pebble-control.service"
+        ],
         "cwd": "",
         "cooldown_seconds": 10,
         "ignore_retained": true,
         "env": {}
       },
       "git_pull_control": {
-        "command": ["git", "-C", "/opt/pebble", "pull", "--ff-only"],
+        "command": [
+          "git",
+          "-C",
+          "/opt/pebble",
+          "pull",
+          "--ff-only"
+        ],
         "cwd": "",
         "cooldown_seconds": 60,
         "ignore_retained": true,
         "env": {}
+      },
+      "subtopics": {
+        "remote_mirror": "incoming/flags/remote-mirror",
+        "mqtt_audio": "incoming/flags/mqtt-audio",
+        "mqtt_video": "incoming/flags/mqtt-video",
+        "reboot": "incoming/flags/reboot",
+        "service_restart": "incoming/flags/service-restart",
+        "git_pull": "incoming/flags/git-pull",
+        "audio_control": "incoming/audio",
+        "video_control": "incoming/front-camera"
       }
     },
     "ros1_bridge": {
@@ -214,24 +230,12 @@
       "drive": {
         "enabled": true
       },
-      "topics": {
-        "drive_values": "pebble/robots/my-robot/incoming/drive-values",
-        "wheel_odometry": "pebble/robots/my-robot/outgoing/wheel-odometry",
-        "charging_status": "pebble/robots/my-robot/outgoing/charging-status",
-        "charging_level": "pebble/robots/my-robot/outgoing/charging-level",
-        "localization_pose": "pebble/robots/my-robot/outgoing/localization-pose",
-        "navigation_status": "pebble/robots/my-robot/outgoing/navigation-status",
-        "navigation_goal": "pebble/robots/my-robot/outgoing/navigation-goal",
-        "navigation_local_plan": "pebble/robots/my-robot/outgoing/navigation/local-plan",
-        "navigation_global_plan": "pebble/robots/my-robot/outgoing/navigation/global-plan",
-        "diagnostics": "pebble/robots/my-robot/outgoing/diagnostics"
-      },
       "heartbeat": {
         "enabled": true,
-        "topic": "pebble/robots/my-robot/outgoing/online",
         "interval_seconds": 60.0,
         "qos": 1,
-        "retain": true
+        "retain": true,
+        "subtopic": "outgoing/online"
       },
       "ros": {
         "node_name": "pebble_ros1_bridge",
@@ -306,14 +310,36 @@
           "retain": true,
           "status_name": "",
           "key": "",
-          "truthy_values": ["true", "charging", "yes", "1"],
-          "falsey_values": ["false", "not charging", "no", "0"]
+          "truthy_values": [
+            "true",
+            "charging",
+            "yes",
+            "1"
+          ],
+          "falsey_values": [
+            "false",
+            "not charging",
+            "no",
+            "0"
+          ]
         }
       },
       "safety": {
         "drive_timeout_seconds": 0.75,
         "ignore_retained_drive": true,
         "stop_on_shutdown": true
+      },
+      "subtopics": {
+        "drive_values": "incoming/drive-values",
+        "wheel_odometry": "outgoing/wheel-odometry",
+        "charging_status": "outgoing/charging-status",
+        "charging_level": "outgoing/charging-level",
+        "localization_pose": "outgoing/localization-pose",
+        "navigation_status": "outgoing/navigation-status",
+        "navigation_goal": "outgoing/navigation-goal",
+        "navigation_local_plan": "outgoing/navigation/local-plan",
+        "navigation_global_plan": "outgoing/navigation/global-plan",
+        "diagnostics": "outgoing/diagnostics"
       }
     },
     "serial_mcu_bridge": {
@@ -339,14 +365,6 @@
         "ignore_retained_drive": true,
         "stop_on_shutdown": true
       },
-      "topics": {
-        "drive_values": "pebble/robots/my-robot/incoming/drive-values",
-        "lights_solid": "pebble/robots/my-robot/incoming/lights-solid",
-        "lights_flash": "pebble/robots/my-robot/incoming/lights-flash",
-        "touch_sensors": "pebble/robots/my-robot/outgoing/touch-sensors",
-        "charging_status": "pebble/robots/my-robot/outgoing/charging-status",
-        "charging_level": "pebble/robots/my-robot/outgoing/charging-level"
-      },
       "instances": {
         "imu": {
           "enabled": false,
@@ -355,10 +373,6 @@
             "port": "/dev/serial/by-id/usb-imu-adapter",
             "baud": 115200,
             "timeout_seconds": 0.1
-          },
-          "topics": {
-            "high_rate": "pebble/robots/my-robot/outgoing/sensors/imu-fast",
-            "low_rate": "pebble/robots/my-robot/outgoing/sensors/imu"
           },
           "publish": {
             "high_rate_qos": 0,
@@ -369,25 +383,39 @@
           "health": {
             "imu_sample_timeout_seconds": 5.0,
             "exit_on_serial_error": true
+          },
+          "subtopics": {
+            "high_rate": "outgoing/sensors/imu-fast",
+            "low_rate": "outgoing/sensors/imu"
           }
         }
+      },
+      "subtopics": {
+        "drive_values": "incoming/drive-values",
+        "lights_solid": "incoming/lights-solid",
+        "lights_flash": "incoming/lights-flash",
+        "touch_sensors": "outgoing/touch-sensors",
+        "charging_status": "outgoing/charging-status",
+        "charging_level": "outgoing/charging-level"
       }
     },
     "soundboard_handler": {
       "enabled": true,
       "log_level": "INFO",
-      "topics": {
-        "command": "pebble/robots/my-robot/incoming/soundboard-command",
-        "files": "pebble/robots/my-robot/outgoing/soundboard-files",
-        "status": "pebble/robots/my-robot/outgoing/soundboard-status"
-      },
       "playback": {
         "directory": "/var/lib/pebble/sounds",
-        "player_command": ["aplay"],
+        "player_command": [
+          "aplay"
+        ],
         "stop_timeout": 5,
         "scan_interval": 10,
         "cwd": "",
         "env": {}
+      },
+      "subtopics": {
+        "command": "incoming/soundboard-command",
+        "files": "outgoing/soundboard-files",
+        "status": "outgoing/soundboard-status"
       }
     },
     "autonomy_manager": {
@@ -396,11 +424,6 @@
       "autonomy_root": "autonomy",
       "scan_interval_seconds": 5,
       "stop_timeout_seconds": 8,
-      "topics": {
-        "command": "pebble/robots/my-robot/incoming/autonomy-command",
-        "files": "pebble/robots/my-robot/outgoing/autonomy-files",
-        "status": "pebble/robots/my-robot/outgoing/autonomy-status"
-      },
       "scripts": {
         "apriltag-follow": {
           "enabled": true,
@@ -607,6 +630,11 @@
             }
           ]
         }
+      },
+      "subtopics": {
+        "command": "incoming/autonomy-command",
+        "files": "outgoing/autonomy-files",
+        "status": "outgoing/autonomy-status"
       }
     },
     "web_handler": {
@@ -653,12 +681,12 @@
         "name": "My Robot",
         "type": "robots",
         "video": {
-          "topic": "pebble/robots/my-robot/outgoing/front-camera",
+          "subtopic": "outgoing/front-camera",
           "controls": true
         },
         "audio": {
-          "topic": "pebble/robots/my-robot/outgoing/audio",
-          "uplink_topic": "pebble/robots/my-robot/incoming/audio-stream",
+          "subtopic": "outgoing/audio",
+          "uplink_subtopic": "incoming/audio-stream",
           "rate": 16000,
           "channels": 1,
           "chunk_ms": 20,

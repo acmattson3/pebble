@@ -189,6 +189,28 @@ class UnifiedConfigTests(unittest.TestCase):
         self.assertEqual(rx["receiver"]["topic"], "pebble/robots/testbot/incoming/audio-stream")
         self.assertEqual(rx["receiver"]["device"], "default")
 
+    def test_media_profile_subtopics_resolve_under_robot_identity(self):
+        cfg = self._runtime_cfg()
+        media = cfg["services"]["mqtt_bridge"]["media"]
+        media["video_publisher"]["subtopic"] = "o/video"
+        media["video_publisher"].pop("topic")
+        media["audio_publisher"]["subtopic"] = "o/audio"
+        media["audio_publisher"].pop("topic")
+        media["audio_receiver"]["subtopic"] = "i/audio-stream"
+        media["audio_receiver"].pop("topic")
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            video = load_profile("robot-video", str(cfg_path))
+        pub = audio_pub._runtime_audio_config(cfg)
+        rx = audio_rx._runtime_audio_config(cfg)
+
+        assert pub is not None and rx is not None
+        self.assertEqual(video["mqtt"]["topic"], "pebble/robots/testbot/o/video")
+        self.assertEqual(pub["publisher"]["topic"], "pebble/robots/testbot/o/audio")
+        self.assertEqual(rx["receiver"]["topic"], "pebble/robots/testbot/i/audio-stream")
+
     def test_web_normalize_runtime_config(self):
         cfg = self._runtime_cfg()
 
@@ -211,6 +233,38 @@ class UnifiedConfigTests(unittest.TestCase):
             normalized["robots"][0]["video"]["topic"],
             "pebble/robots/testbot/outgoing/front-camera",
         )
+
+    def test_web_uses_robot_media_subtopics_as_local_defaults(self):
+        cfg = self._runtime_cfg()
+        media = cfg["services"]["mqtt_bridge"]["media"]
+        media["video_publisher"]["subtopic"] = "o/video"
+        media["video_publisher"].pop("topic")
+        media["audio_publisher"]["subtopic"] = "o/audio"
+        media["audio_publisher"].pop("topic")
+        media["audio_receiver"]["subtopic"] = "i/audio-stream"
+        media["audio_receiver"].pop("topic")
+        cfg["web_interface"]["robots"].append({
+            "id": "remote-bot",
+            "name": "Remote Bot",
+            "video": {"subtopic": "o/camera/main"},
+            "audio": {
+                "subtopic": "o/audio",
+                "uplink_subtopic": "i/audio-stream",
+            },
+        })
+
+        with tempfile.TemporaryDirectory() as td:
+            cfg_path = Path(td) / "config.json"
+            cfg_path.write_text(json.dumps(cfg))
+            module = self._load_web_module(cfg_path)
+            normalized = module._normalize_config(cfg)
+
+        self.assertEqual(normalized["robots"][0]["video"]["topic"], "pebble/robots/testbot/o/video")
+        self.assertEqual(normalized["robots"][0]["audio"]["topic"], "pebble/robots/testbot/o/audio")
+        self.assertEqual(normalized["robots"][0]["audio"]["uplink_topic"], "pebble/robots/testbot/i/audio-stream")
+        self.assertEqual(normalized["robots"][1]["video"]["topic"], "pebble/robots/remote-bot/o/camera/main")
+        self.assertEqual(normalized["robots"][1]["audio"]["topic"], "pebble/robots/remote-bot/o/audio")
+        self.assertEqual(normalized["robots"][1]["audio"]["uplink_topic"], "pebble/robots/remote-bot/i/audio-stream")
 
     def test_web_capabilities_payload_updates_robot_features(self):
         cfg = self._runtime_cfg()

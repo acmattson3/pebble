@@ -14,7 +14,7 @@
           "adapters": {
             "command": {
               "kind": "forward",
-              "topic": "incoming/drive-values"
+              "subtopic": "incoming/drive-values"
             }
           }
         },

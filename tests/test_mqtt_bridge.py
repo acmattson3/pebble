@@ -223,6 +223,23 @@ class MqttBridgeTests(unittest.TestCase):
         self.assertEqual(bridge.remote_client.publish_calls[0][0], bridge.heartbeat_topic)
         self.assertEqual(len(bridge.local_client.publish_calls), 0)
 
+    def test_robot_subtopic_overrides_resolve_to_configured_identity(self):
+        config = make_base_config("subtopic-bot")
+        bridge_cfg = config["services"]["mqtt_bridge"]
+        bridge_cfg.pop("topics", None)
+        bridge_cfg["subtopics"] = {
+            "mqtt_video": "incoming/flags/video-request",
+            "audio_control": "i/audio/control",
+        }
+        bridge_cfg["heartbeat"] = {"subtopic": "o/legacy-heartbeat"}
+        bridge_cfg["media"] = {"audio_receiver": {"subtopic": "i/audio-stream"}}
+        with tempfile.TemporaryDirectory() as td:
+            bridge = MqttBridge(config, Path(td) / "config.json")
+        self.assertEqual(bridge.mqtt_video_flag_topic, "pebble/robots/subtopic-bot/incoming/flags/video-request")
+        self.assertEqual(bridge.audio_control_topic, "pebble/robots/subtopic-bot/i/audio/control")
+        self.assertEqual(bridge.heartbeat_topic, "pebble/robots/subtopic-bot/o/legacy-heartbeat")
+        self.assertEqual(bridge.audio_stream_topic, "pebble/robots/subtopic-bot/i/audio-stream")
+
     def test_presence_is_compact_retained_and_carries_process_id(self):
         bridge = self._bridge()
         bridge.remote_client = FakeMqttClient()

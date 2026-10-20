@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from control.common.config import enabled_service_instances, service_cfg
-from control.common.topics import RobotIdentity, identity_from_config
+from control.common.topics import RobotIdentity, identity_from_config, resolve_mapped_topic, resolve_topic
 
 
 CAPABILITIES_SCHEMA = "pebble-capabilities/v1"
@@ -17,19 +17,13 @@ def _truthy(value: Any, default: bool = False) -> bool:
     return default
 
 
-def _topic(topics_cfg: dict[str, Any], key: str, default_value: str) -> str:
-    raw = topics_cfg.get(key)
-    if isinstance(raw, str) and raw.strip():
-        return raw.strip()
-    return default_value
+def _topic(identity: RobotIdentity, config: dict[str, Any], key: str, default_subtopic: str) -> str:
+    return resolve_mapped_topic(identity, config, key, default_subtopic)
 
 
 def capabilities_topic(identity: RobotIdentity, launcher_cfg: dict[str, Any]) -> str:
     cap_cfg = launcher_cfg.get("capabilities") if isinstance(launcher_cfg.get("capabilities"), dict) else {}
-    raw = cap_cfg.get("topic")
-    if isinstance(raw, str) and raw.strip():
-        return raw.strip()
-    return identity.topic("outgoing", "capabilities")
+    return resolve_topic(identity, cap_cfg, "outgoing/capabilities")
 
 
 def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
@@ -45,8 +39,6 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
     av_video_cfg = av_cfg.get("video") if isinstance(av_cfg.get("video"), dict) else {}
     av_audio_cfg = av_cfg.get("audio") if isinstance(av_cfg.get("audio"), dict) else {}
 
-    bridge_topics = mqtt_bridge_cfg.get("topics") if isinstance(mqtt_bridge_cfg.get("topics"), dict) else {}
-    ros1_topics = ros1_bridge_cfg.get("topics") if isinstance(ros1_bridge_cfg.get("topics"), dict) else {}
     ros1_drive_cfg = ros1_bridge_cfg.get("drive") if isinstance(ros1_bridge_cfg.get("drive"), dict) else {}
     ros1_telemetry_cfg = ros1_bridge_cfg.get("telemetry") if isinstance(ros1_bridge_cfg.get("telemetry"), dict) else {}
     ros1_charge_status_cfg = (
@@ -76,10 +68,7 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
             serial_base_cfg = instance_cfg
             break
 
-    serial_topics = serial_base_cfg.get("topics") if isinstance(serial_base_cfg.get("topics"), dict) else {}
     serial_telemetry_cfg = serial_base_cfg.get("telemetry") if isinstance(serial_base_cfg.get("telemetry"), dict) else {}
-    sound_topics = soundboard_cfg.get("topics") if isinstance(soundboard_cfg.get("topics"), dict) else {}
-    autonomy_topics = autonomy_cfg.get("topics") if isinstance(autonomy_cfg.get("topics"), dict) else {}
 
     mqtt_bridge_enabled = _truthy(mqtt_bridge_cfg.get("enabled"), False)
     ros1_bridge_enabled = _truthy(ros1_bridge_cfg.get("enabled"), False)
@@ -110,10 +99,13 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
         "video": {
             "available": video_enabled,
             "controls": bool(mqtt_bridge_enabled and video_control_configured),
-            "topic": str(video_pub_cfg.get("topic") or identity.topic("outgoing", "front-camera")),
-            "command_topic": _topic(bridge_topics, "video_control", identity.topic("incoming", "front-camera")),
-            "flag_topic": _topic(bridge_topics, "mqtt_video", identity.topic("incoming", "flags/mqtt-video")),
-            "overlays_topic": str(video_pub_cfg.get("overlays_topic") or identity.topic("outgoing", "video-overlays")),
+            "topic": resolve_topic(identity, video_pub_cfg, "outgoing/front-camera"),
+            "command_topic": _topic(identity, mqtt_bridge_cfg, "video_control", "incoming/front-camera"),
+            "flag_topic": _topic(identity, mqtt_bridge_cfg, "mqtt_video", "incoming/flags/mqtt-video"),
+            "overlays_topic": resolve_topic(identity, {
+                "subtopic": video_pub_cfg.get("overlays_subtopic"),
+                "topic": video_pub_cfg.get("overlays_topic"),
+            }, "outgoing/video-overlays"),
             "width": int(video_pub_cfg.get("publish_width") or video_pub_cfg.get("width") or av_video_cfg.get("width") or 640),
             "height": int(
                 video_pub_cfg.get("publish_height") or video_pub_cfg.get("height") or av_video_cfg.get("height") or 480
@@ -129,71 +121,71 @@ def build_capabilities_value(config: dict[str, Any]) -> dict[str, Any]:
         "audio": {
             "available": audio_enabled,
             "controls": bool(mqtt_bridge_enabled and audio_control_configured),
-            "topic": str(audio_pub_cfg.get("topic") or identity.topic("outgoing", "audio")),
-            "uplink_topic": str(audio_rx_cfg.get("topic") or identity.topic("incoming", "audio-stream")),
-            "command_topic": _topic(bridge_topics, "audio_control", identity.topic("incoming", "audio")),
-            "flag_topic": _topic(bridge_topics, "mqtt_audio", identity.topic("incoming", "flags/mqtt-audio")),
+            "topic": resolve_topic(identity, audio_pub_cfg, "outgoing/audio"),
+            "uplink_topic": resolve_topic(identity, audio_rx_cfg, "incoming/audio-stream"),
+            "command_topic": _topic(identity, mqtt_bridge_cfg, "audio_control", "incoming/audio"),
+            "flag_topic": _topic(identity, mqtt_bridge_cfg, "mqtt_audio", "incoming/flags/mqtt-audio"),
             "rate": int(audio_pub_cfg.get("rate") or av_audio_cfg.get("rate") or 16000),
             "channels": int(audio_pub_cfg.get("channels") or av_audio_cfg.get("channels") or 1),
         },
         "soundboard": {
             "available": soundboard_enabled,
             "controls": soundboard_enabled,
-            "command_topic": str(sound_topics.get("command") or identity.topic("incoming", "soundboard-command")),
-            "files_topic": str(sound_topics.get("files") or identity.topic("outgoing", "soundboard-files")),
-            "status_topic": str(sound_topics.get("status") or identity.topic("outgoing", "soundboard-status")),
+            "command_topic": _topic(identity, soundboard_cfg, "command", "incoming/soundboard-command"),
+            "files_topic": _topic(identity, soundboard_cfg, "files", "outgoing/soundboard-files"),
+            "status_topic": _topic(identity, soundboard_cfg, "status", "outgoing/soundboard-status"),
         },
         "autonomy": {
             "available": autonomy_enabled,
             "controls": autonomy_enabled,
-            "command_topic": str(autonomy_topics.get("command") or identity.topic("incoming", "autonomy-command")),
-            "files_topic": str(autonomy_topics.get("files") or identity.topic("outgoing", "autonomy-files")),
-            "status_topic": str(autonomy_topics.get("status") or identity.topic("outgoing", "autonomy-status")),
+            "command_topic": _topic(identity, autonomy_cfg, "command", "incoming/autonomy-command"),
+            "files_topic": _topic(identity, autonomy_cfg, "files", "outgoing/autonomy-files"),
+            "status_topic": _topic(identity, autonomy_cfg, "status", "outgoing/autonomy-status"),
         },
         "system": {
             "reboot": {
                 "available": True,
                 "controls": bool(mqtt_bridge_enabled and reboot_control_configured),
-                "flag_topic": _topic(bridge_topics, "reboot", identity.topic("incoming", "flags/reboot")),
+                "flag_topic": _topic(identity, mqtt_bridge_cfg, "reboot", "incoming/flags/reboot"),
             },
             "service_restart": {
                 "available": True,
                 "controls": bool(mqtt_bridge_enabled and service_restart_control_configured),
                 "flag_topic": _topic(
-                    bridge_topics,
+                    identity, mqtt_bridge_cfg,
                     "service_restart",
-                    identity.topic("incoming", "flags/service-restart"),
+                    "incoming/flags/service-restart",
                 ),
             },
             "git_pull": {
                 "available": True,
                 "controls": bool(mqtt_bridge_enabled and git_pull_control_configured),
-                "flag_topic": _topic(bridge_topics, "git_pull", identity.topic("incoming", "flags/git-pull")),
+                "flag_topic": _topic(identity, mqtt_bridge_cfg, "git_pull", "incoming/flags/git-pull"),
             },
         },
         "drive": {
             "available": bool(serial_enabled or ros1_drive_enabled),
             "controls": bool(serial_enabled or ros1_drive_enabled),
-            "topic": str(
-                serial_topics.get("drive_values")
-                or (ros1_topics.get("drive_values") if ros1_drive_enabled else "")
-                or identity.topic("incoming", "drive-values")
+            "topic": (
+                _topic(identity, serial_base_cfg, "drive_values", "incoming/drive-values") if serial_enabled else
+                _topic(identity, ros1_bridge_cfg, "drive_values", "incoming/drive-values") if ros1_drive_enabled else
+                identity.topic("incoming", "drive-values")
             ),
         },
         "lights": {
             "solid": serial_enabled,
             "flash": serial_enabled,
-            "solid_topic": str(serial_topics.get("lights_solid") or identity.topic("incoming", "lights-solid")),
-            "flash_topic": str(serial_topics.get("lights_flash") or identity.topic("incoming", "lights-flash")),
+            "solid_topic": _topic(identity, serial_base_cfg, "lights_solid", "incoming/lights-solid"),
+            "flash_topic": _topic(identity, serial_base_cfg, "lights_flash", "incoming/lights-flash"),
         },
         "telemetry": {
             "touch_sensors": bool(serial_enabled and touch_publish_enabled),
             "charging_status": bool(serial_enabled or ros1_charging_status_enabled),
-            "touch_topic": str(serial_topics.get("touch_sensors") or identity.topic("outgoing", "touch-sensors")),
+            "touch_topic": _topic(identity, serial_base_cfg, "touch_sensors", "outgoing/touch-sensors"),
             "charging_topic": str(
-                serial_topics.get("charging_status")
-                or (ros1_topics.get("charging_status") if ros1_charging_status_enabled else "")
-                or identity.topic("outgoing", "charging-status")
+                _topic(identity, serial_base_cfg, "charging_status", "outgoing/charging-status") if serial_enabled else
+                _topic(identity, ros1_bridge_cfg, "charging_status", "outgoing/charging-status") if ros1_charging_status_enabled else
+                identity.topic("outgoing", "charging-status")
             ),
         },
     }

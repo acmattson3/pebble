@@ -153,16 +153,22 @@ def build_manifest(config: dict, config_path: Path) -> tuple[dict, dict]:
             if module["endpoints"][eid]["kind"] not in {"video","audio","uplink"}:
                 raise ValueError("Format overrides require a media endpoint")
             module["endpoints"][eid].update(deepcopy(attributes))
-        overrides = instance.get("topics", {})
+        if "topics" in instance and "subtopics" in instance:
+            raise ValueError("Module instance accepts either subtopics or legacy topics")
+        overrides = instance.get("subtopics", instance.get("topics", {}))
         for key, endpoint in module["endpoints"].items():
             endpoint["topic"] = endpoint_topic(identity, overrides.get(key, endpoint["topic"]))
         for key, adapter in instance.get("adapters", {}).items():
             if key not in module["endpoints"] or module["endpoints"][key]["kind"] != "command":
                 raise ValueError("Adapter references an unknown command endpoint")
             if adapter["kind"] == "forward":
-                relative = adapter["topic"]
+                if "topic" in adapter and "subtopic" in adapter:
+                    raise ValueError("Compatibility adapter accepts either subtopic or legacy topic")
+                relative = adapter.get("subtopic", adapter.get("topic"))
                 # One explicitly declared, local compatibility destination.
-                if not relative.startswith("incoming/") or any(p in {"", ".", ".."} or any(c in p for c in "+#\x00") for p in relative.split("/")):
+                if not isinstance(relative, str) or not relative.startswith("incoming/") or any(
+                    p in {"", ".", ".."} or any(c in p for c in "+#\x00") for p in relative.split("/")
+                ):
                     raise ValueError("Compatibility adapter requires an incoming/... relative topic")
                 resolved = {"kind": "forward", "topic": identity.base + "/" + relative}
             elif adapter["kind"] == "echo":

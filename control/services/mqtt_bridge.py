@@ -24,7 +24,7 @@ if __package__ is None or __package__ == "":
 
 from control.common.config import enabled_service_instances, load_config, log_level, service_cfg
 from control.common.mqtt import create_client, mqtt_auth_and_tls, parse_bool_payload
-from control.common.topics import identity_from_config
+from control.common.topics import identity_from_config, resolve_mapped_topic, resolve_topic
 
 
 class MqttBridge:
@@ -70,27 +70,23 @@ class MqttBridge:
             protocol_name = str(instance_cfg.get("protocol") or "goob_base_v1").strip().lower()
             if protocol_name != "imu_mpu6050_v1":
                 continue
-            instance_topics_cfg = instance_cfg.get("topics") if isinstance(instance_cfg.get("topics"), dict) else {}
             ignored_outgoing_topics.add(
-                str(instance_topics_cfg.get("high_rate") or f"{self.base}/outgoing/sensors/imu-fast")
+                resolve_mapped_topic(self.identity, instance_cfg, "high_rate", "outgoing/sensors/imu-fast")
             )
         self.ignored_outgoing_topics = ignored_outgoing_topics
 
-        topics_cfg = self.service_cfg.get("topics") if isinstance(self.service_cfg.get("topics"), dict) else {}
-        self.remote_mirror_topic = str(topics_cfg.get("remote_mirror") or f"{self.flags_prefix}remote-mirror")
-        self.mqtt_audio_flag_topic = str(topics_cfg.get("mqtt_audio") or f"{self.flags_prefix}mqtt-audio")
-        self.mqtt_video_flag_topic = str(topics_cfg.get("mqtt_video") or f"{self.flags_prefix}mqtt-video")
-        self.reboot_flag_topic = str(topics_cfg.get("reboot") or f"{self.flags_prefix}reboot")
-        self.service_restart_flag_topic = str(
-            topics_cfg.get("service_restart") or f"{self.flags_prefix}service-restart"
-        )
-        self.git_pull_flag_topic = str(topics_cfg.get("git_pull") or f"{self.flags_prefix}git-pull")
-        self.audio_control_topic = str(topics_cfg.get("audio_control") or f"{self.base}/incoming/audio")
-        self.video_control_topic = str(topics_cfg.get("video_control") or f"{self.base}/incoming/front-camera")
+        self.remote_mirror_topic = resolve_mapped_topic(self.identity, self.service_cfg, "remote_mirror", "incoming/flags/remote-mirror")
+        self.mqtt_audio_flag_topic = resolve_mapped_topic(self.identity, self.service_cfg, "mqtt_audio", "incoming/flags/mqtt-audio")
+        self.mqtt_video_flag_topic = resolve_mapped_topic(self.identity, self.service_cfg, "mqtt_video", "incoming/flags/mqtt-video")
+        self.reboot_flag_topic = resolve_mapped_topic(self.identity, self.service_cfg, "reboot", "incoming/flags/reboot")
+        self.service_restart_flag_topic = resolve_mapped_topic(self.identity, self.service_cfg, "service_restart", "incoming/flags/service-restart")
+        self.git_pull_flag_topic = resolve_mapped_topic(self.identity, self.service_cfg, "git_pull", "incoming/flags/git-pull")
+        self.audio_control_topic = resolve_mapped_topic(self.identity, self.service_cfg, "audio_control", "incoming/audio")
+        self.video_control_topic = resolve_mapped_topic(self.identity, self.service_cfg, "video_control", "incoming/front-camera")
 
         heartbeat_cfg = self.service_cfg.get("heartbeat") if isinstance(self.service_cfg.get("heartbeat"), dict) else {}
         self.heartbeat_enabled = bool(heartbeat_cfg.get("enabled", True))
-        self.heartbeat_topic = str(heartbeat_cfg.get("topic") or f"{self.base}/outgoing/online")
+        self.heartbeat_topic = resolve_topic(self.identity, heartbeat_cfg, "outgoing/online")
         self.heartbeat_interval = max(0.05, float(heartbeat_cfg.get("interval_seconds") or 60.0))
         self.heartbeat_qos = int(heartbeat_cfg.get("qos") or 1)
         self.heartbeat_retain = bool(heartbeat_cfg.get("retain", True))
@@ -117,7 +113,7 @@ class MqttBridge:
         media_cfg = self.service_cfg.get("media") if isinstance(self.service_cfg.get("media"), dict) else {}
         audio_rx_cfg = media_cfg.get("audio_receiver") if isinstance(media_cfg.get("audio_receiver"), dict) else {}
         self.media_managed_by_av = bool(config.get("services", {}).get("av_daemon", {}).get("demand_enabled", False))
-        self.audio_stream_topic = str(audio_rx_cfg.get("topic") or f"{self.base}/incoming/audio-stream")
+        self.audio_stream_topic = resolve_topic(self.identity, audio_rx_cfg, "incoming/audio-stream")
 
         self.stop_event = threading.Event()
         self.state_lock = threading.Lock()

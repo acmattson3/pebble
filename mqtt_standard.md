@@ -833,24 +833,24 @@ are implementation details, not part of the general standard itself.
 
 | Config location | Affects |
 | --- | --- |
-| `services.launcher.capabilities.topic` | `outgoing/capabilities` |
-| `services.launcher.logs.topic` | `outgoing/logs` |
-| `services.mqtt_bridge.topics.remote_mirror` | `incoming/flags/remote-mirror` |
-| `services.mqtt_bridge.topics.mqtt_audio` | `incoming/flags/mqtt-audio` |
-| `services.mqtt_bridge.topics.mqtt_video` | `incoming/flags/mqtt-video` |
-| `services.mqtt_bridge.topics.reboot` | `incoming/flags/reboot` |
-| `services.mqtt_bridge.topics.service_restart` | `incoming/flags/service-restart` |
-| `services.mqtt_bridge.topics.git_pull` | `incoming/flags/git-pull` |
-| `services.mqtt_bridge.topics.audio_control` | `incoming/audio` |
-| `services.mqtt_bridge.topics.video_control` | `incoming/front-camera` |
-| `services.mqtt_bridge.heartbeat.topic` | `outgoing/online` |
-| `services.mqtt_bridge.media.video_publisher.topic` | `outgoing/front-camera` |
-| `services.mqtt_bridge.media.video_publisher.overlays_topic` | example overlay topic field in capabilities |
-| `services.mqtt_bridge.media.audio_publisher.topic` | `outgoing/audio` |
-| `services.mqtt_bridge.media.audio_receiver.topic` | `incoming/audio-stream` |
-| `services.serial_mcu_bridge.topics.*` | drive, lights, touch, charging topics |
-| `services.soundboard_handler.topics.*` | soundboard command/files/status topics |
-| `services.autonomy_manager.topics.*` | autonomy command/files/status topics |
+| `services.launcher.capabilities.subtopic` | `outgoing/capabilities` |
+| `services.launcher.logs.subtopic` | `outgoing/logs` |
+| `services.mqtt_bridge.subtopics.remote_mirror` | `incoming/flags/remote-mirror` |
+| `services.mqtt_bridge.subtopics.mqtt_audio` | `incoming/flags/mqtt-audio` |
+| `services.mqtt_bridge.subtopics.mqtt_video` | `incoming/flags/mqtt-video` |
+| `services.mqtt_bridge.subtopics.reboot` | `incoming/flags/reboot` |
+| `services.mqtt_bridge.subtopics.service_restart` | `incoming/flags/service-restart` |
+| `services.mqtt_bridge.subtopics.git_pull` | `incoming/flags/git-pull` |
+| `services.mqtt_bridge.subtopics.audio_control` | `incoming/audio` |
+| `services.mqtt_bridge.subtopics.video_control` | `incoming/front-camera` |
+| `services.mqtt_bridge.heartbeat.subtopic` | `outgoing/online` |
+| `services.mqtt_bridge.media.video_publisher.subtopic` | `outgoing/front-camera` |
+| `services.mqtt_bridge.media.video_publisher.overlays_subtopic` | example overlay topic field in capabilities |
+| `services.mqtt_bridge.media.audio_publisher.subtopic` | `outgoing/audio` |
+| `services.mqtt_bridge.media.audio_receiver.subtopic` | `incoming/audio-stream` |
+| `services.serial_mcu_bridge.subtopics.*` | drive, lights, touch, charging topics |
+| `services.soundboard_handler.subtopics.*` | soundboard command/files/status topics |
+| `services.autonomy_manager.subtopics.*` | autonomy command/files/status topics |
 | autonomy CLI args such as `--topic`, `--locations-topic`, `--overlays-topic`, `--odom-topic`, `--tags-topic` | script-specific published / subscribed topics |
 
 ## 11. Implementation Notes
