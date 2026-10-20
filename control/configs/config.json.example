@@ -346,6 +346,9 @@
       "enabled": true,
       "log_level": "INFO",
       "protocol": "goob_base_v1",
+      "drive": {
+        "swap_motor_outputs": false
+      },
       "retained_publish_interval_seconds": 3600,
       "serial": {
         "port": "/dev/ttyACM0",
@@ -397,6 +400,9 @@
         "touch_sensors": "outgoing/touch-sensors",
         "charging_status": "outgoing/charging-status",
         "charging_level": "outgoing/charging-level"
+      },
+      "drive": {
+        "swap_motor_outputs": false
       }
     },
     "soundboard_handler": {

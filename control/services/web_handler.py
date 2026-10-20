@@ -17,6 +17,14 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _web_config_path(service: dict, runtime_path: Path, repo_root: Path) -> Path:
+    configured = service.get("web_config")
+    if not isinstance(configured, str) or not configured.strip():
+        return runtime_path
+    path = Path(configured).expanduser()
+    return path.resolve() if path.is_absolute() else (repo_root / path).resolve()
+
+
 def main() -> None:
     args = _parse_args()
     _config, config_path = load_config(args.config)
@@ -28,7 +36,10 @@ def main() -> None:
 
     service = service_cfg(_config, "web_handler")
     env = os.environ.copy()
-    env["PEBBLE_CONFIG"] = str(config_path)
+    if service.get("web_config"):
+        env["PEBBLE_CONFIG"] = str(_web_config_path(service, config_path, repo_root))
+    else:
+        env.setdefault("PEBBLE_CONFIG", str(config_path))
     env.setdefault("PYTHONUNBUFFERED", "1")
 
     service_env = service.get("env")

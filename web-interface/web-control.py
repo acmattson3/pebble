@@ -57,7 +57,13 @@ if _CONFIG_OVERRIDE:
     if not CONFIG_PATH.is_absolute():
         CONFIG_PATH = (Path.cwd() / CONFIG_PATH).resolve()
 else:
-    CONFIG_PATH = REPO_ROOT / "control" / "configs" / "config.json"
+    WEB_CONFIG_PATH = Path(__file__).resolve().parent / "config.json"
+    ROBOT_CONFIG_PATH = REPO_ROOT / "control" / "configs" / "robot.json"
+    LEGACY_CONFIG_PATH = REPO_ROOT / "control" / "configs" / "config.json"
+    CONFIG_PATH = next(
+        (candidate for candidate in (WEB_CONFIG_PATH, ROBOT_CONFIG_PATH, LEGACY_CONFIG_PATH) if candidate.exists()),
+        WEB_CONFIG_PATH,
+    )
 AUDIO_MAGIC = b"PBAT"
 AUDIO_CODEC_PCM_S16LE = 1
 AUDIO_PACKET_HEADER = struct.Struct("!4sBBBBHHIQ")

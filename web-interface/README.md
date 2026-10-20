@@ -15,8 +15,13 @@ python3 -m pip install -r requirements.txt
 python3 web-control.py
 ```
 
-By default the UI reads `control/configs/config.json` from the repository root.
-Override with:
+By default the UI reads `web-interface/config.json`. Copy and edit the sample:
+
+```bash
+cp web-interface/config.json.example web-interface/config.json
+```
+
+Override the path with:
 
 ```bash
 PEBBLE_CONFIG=/path/to/config.json python3 web-control.py
@@ -27,15 +32,17 @@ MQTT topic overrides for a configured robot can use `video.subtopic`,
 under that robot's configured identity. Full `topic` and `uplink_topic` values
 remain available for compatibility or deliberate external routes.
 
-For Docker usage, provide `/app/control/configs/config.json` and let the
-launcher start `web_handler`, which wraps `web-control.py`.
+For Docker usage, provide the robot and web config files. The launcher wrapper
+uses `services.web_handler.web_config` to select the separate web file. Existing
+deployments can continue to use a unified config.
 
 Example:
 
 ```bash
 docker build -t pebble-web .
 docker run --rm -p 8080:8080 \
-  -v \"$PWD/control/configs/config.json:/app/control/configs/config.json:ro\" \
+  -v \"$PWD/control/configs/robot.json:/app/control/configs/robot.json:ro\" \
+  -v \"$PWD/web-interface/config.json:/app/web-interface/config.json:ro\" \
   pebble-web
 ```
 
@@ -48,7 +55,8 @@ services:
       context: .
     restart: unless-stopped
     volumes:
-      - ./control/configs/config.json:/app/control/configs/config.json:ro
+      - ./control/configs/robot.json:/app/control/configs/robot.json:ro
+      - ./web-interface/config.json:/app/web-interface/config.json:ro
     ports:
       - "8060:8080"
 ```
@@ -63,7 +71,7 @@ For long-running telemetry capture directly from the server broker, use:
 
 ```bash
 python3 web-interface/tools/mqtt-broker-logger.py \
-  --config control/configs/config.json \
+  --config web-interface/config.json \
   --topic 'pebble/#' \
   --decode-utf8 \
   --parse-json
@@ -79,20 +87,18 @@ See [FUTURE_GOALS.md](./FUTURE_GOALS.md) for planned expansion of this logger.
 `web-control.py` can persist MQTT history to MongoDB with a fixed storage cap.
 When enabled, it subscribes to `#` and records all broker traffic. The preferred
 storage mode is a MongoDB capped collection (oldest records overwritten automatically).
-Startup uses the configured `web_interface.mqtt` broker settings automatically when
+Startup uses the configured `mqtt` broker settings automatically when
 history logging is enabled.
 
-Example `control/configs/config.json` block:
+Example `web-interface/config.json` block:
 
 ```json
-"web_interface": {
-  "mqtt_history": {
+"mqtt_history": {
     "enabled": true,
     "uri": "mongodb://127.0.0.1:27017",
     "database": "pebble",
     "collection": "mqtt_history",
     "max_bytes": 53687091200
-  }
 }
 ```
 

@@ -20,7 +20,13 @@ from typing import Any, Optional
 import paho.mqtt.client as mqtt
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_CONFIG_PATH = REPO_ROOT / "control" / "configs" / "config.json"
+WEB_CONFIG_PATH = REPO_ROOT / "web-interface" / "config.json"
+ROBOT_CONFIG_PATH = REPO_ROOT / "control" / "configs" / "robot.json"
+LEGACY_CONFIG_PATH = REPO_ROOT / "control" / "configs" / "config.json"
+DEFAULT_CONFIG_PATH = next(
+    (path for path in (WEB_CONFIG_PATH, ROBOT_CONFIG_PATH, LEGACY_CONFIG_PATH) if path.exists()),
+    WEB_CONFIG_PATH,
+)
 
 
 def _normalize_tls_config(value: Any) -> dict[str, Any]:
@@ -93,6 +99,9 @@ def _load_config(path_value: str) -> tuple[dict[str, Any], Path]:
 
 
 def _broker_cfg(config: dict[str, Any]) -> dict[str, Any]:
+    standalone_mqtt = config.get("mqtt") if isinstance(config.get("mqtt"), dict) else {}
+    if standalone_mqtt:
+        return standalone_mqtt
     web_cfg = config.get("web_interface") if isinstance(config.get("web_interface"), dict) else {}
     web_mqtt = web_cfg.get("mqtt") if isinstance(web_cfg.get("mqtt"), dict) else {}
     if web_mqtt:

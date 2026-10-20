@@ -11,10 +11,11 @@ from control.common.topics import identity_from_config
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_CONFIGS = [
-    REPO_ROOT / "control" / "configs" / "config.json.example",
+    REPO_ROOT / "control" / "configs" / "robot.json.example",
     REPO_ROOT / "control" / "configs" / "fred.example.json",
     REPO_ROOT / "control" / "configs" / "goob.example.json",
     REPO_ROOT / "control" / "configs" / "husky.example.json",
+    REPO_ROOT / "control" / "configs" / "config.json.example",
 ]
 
 

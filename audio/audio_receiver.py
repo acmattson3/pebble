@@ -20,13 +20,15 @@ from typing import Any, Optional, Tuple
 import paho.mqtt.client as mqtt
 
 
-DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[1] / "control" / "configs" / "config.json"
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+from control.common.config import default_config_path
 from control.common.opus import AudioDecoder
 from control.common.mqtt import create_client
 from control.common.topics import identity_from_config, resolve_topic
+
+DEFAULT_CONFIG_PATH = default_config_path()
 
 MAGIC = b"PBAT"
 CODEC_PCM_S16LE = 1
@@ -35,7 +37,7 @@ HEADER_STRUCT = struct.Struct("!4sBBBBHHIQ")
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Play MQTT PCM audio to ALSA.")
-    parser.add_argument("--config", help=f"Path to unified runtime config JSON (default: {DEFAULT_CONFIG_PATH}).")
+    parser.add_argument("--config", help=f"Path to robot runtime config JSON (default: {DEFAULT_CONFIG_PATH}).")
     parser.add_argument("--robot-id", help="Robot ID used in the topic path.")
     parser.add_argument(
         "--topic",

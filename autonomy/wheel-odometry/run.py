@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.append(str(REPO_ROOT))
 
-from control.common.config import load_config, log_level, service_cfg
+from control.common.config import default_config_path, load_config, log_level, service_cfg
 from control.common.mqtt import mqtt_auth_and_tls
 from control.common.odometry_shm import OdometryRawShmReader
 from control.common.topics import identity_from_config
@@ -649,7 +649,7 @@ class WheelOdometryRuntime:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run shared-memory wheel odometry and publish pose to local MQTT.")
-    parser.add_argument("--config", default="control/configs/config.json", help="Path to unified runtime config JSON.")
+    parser.add_argument("--config", default=str(default_config_path()), help="Path to robot runtime config JSON.")
     parser.add_argument("--shm-name", default="", help="Shared-memory name (default from robot identity).")
     parser.add_argument("--topic", default="", help="MQTT topic for outgoing odometry payloads.")
     parser.add_argument("--qos", type=int, default=0, choices=[0, 1], help="MQTT QoS for odometry publishing.")

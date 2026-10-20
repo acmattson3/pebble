@@ -20,4 +20,4 @@ COPY . /app
 
 EXPOSE 8080
 
-CMD ["python3", "-u", "control/launcher.py", "--config", "control/configs/config.json"]
+CMD ["python3", "-u", "control/launcher.py", "--config", "control/configs/robot.json"]

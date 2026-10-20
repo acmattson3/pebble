@@ -31,7 +31,7 @@ except Exception:  # pragma: no cover - optional dependency may be partially bro
 
 
 _GPIO_INITIALIZED = False
-DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[1] / "control" / "configs" / "config.json"
+DEFAULT_CONFIG_PATH = camera_config.DEFAULT_RUNTIME_CONFIG_PATH
 VIDEO_MAGIC = b"PBVD"
 VIDEO_FRAME_JPEG = 1
 VIDEO_FRAME_DELTA_JPEG = 2
@@ -41,7 +41,7 @@ VIDEO_PACKET_HEADER = struct.Struct("!4sBBBIQ")
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Stream AV-daemon video to MQTT.")
     parser.add_argument("--profile", default="default", help="Profile name from config.services.mqtt_bridge.media.video_publisher.")
-    parser.add_argument("--config", default=str(DEFAULT_CONFIG_PATH), help="Path to unified runtime config JSON.")
+    parser.add_argument("--config", default=str(DEFAULT_CONFIG_PATH), help="Path to robot runtime config JSON.")
     parser.add_argument("--robot-id", help="Robot ID used for topic validation/defaulting.")
     parser.add_argument("--codec", choices=["pbvd", "h264"], help="Video encoding backend (default from config).")
     parser.add_argument("--topic", help="MQTT topic override.")

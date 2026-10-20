@@ -7,7 +7,7 @@ This directory contains AprilTag utilities that consume shared video from
 
 - `run.py`: autonomy-manager entrypoint that forwards to `april-follow-test.py`
   and applies default CLI values from `services.autonomy_manager.scripts.apriltag-follow.args`
-  in `control/configs/config.json`.
+  in `control/configs/robot.json`.
 - `april-follow-test.py`: tracks a marker and publishes drive commands.
 - `calibrate_camera_aruco.py`: camera calibration from live stream or image set.
 - `distance_test.py`: marker pose/distance reporting.
@@ -43,7 +43,7 @@ Use `--video-shm`, `--width`, `--height`, and `--fps` to override capture assump
 
 ```bash
 python3 autonomy/apriltag-follow/april-follow-test.py \
-  --config control/configs/config.json \
+  --config control/configs/robot.json \
   --marker-size 0.25 \
   --calibration autonomy/apriltag-follow/camera_calibration.yaml
 ```

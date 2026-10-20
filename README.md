@@ -72,7 +72,7 @@ sudo apt install -y \
   v4l-utils
 ```
 
-If `control/configs/config.json` sets `services.av_daemon.video.backend` to
+If `control/configs/robot.json` sets `services.av_daemon.video.backend` to
 `libcamera`, also install your distro's libcamera GStreamer plugin package
 (for example on Raspberry Pi OS/Debian variants):
 
@@ -95,15 +95,21 @@ Use any install path; `/opt/pebble` is only the systemd example default:
 ```bash
 git clone <your-repo-url> <repo-path>
 cd <repo-path>
-cp control/configs/config.json.example control/configs/config.json
+cp control/configs/robot.json.example control/configs/robot.json
+cp web-interface/config.json.example web-interface/config.json
 ```
 
-Edit `control/configs/config.json` for this robot:
+Edit `control/configs/robot.json` for robot identity and hardware:
 - robot identity (`robot.system`, `robot.type`, `robot.id`)
 - `services.mqtt_bridge.remote_mqtt.*`
 - serial port (`services.serial_mcu_bridge.serial.port`)
 - serial safety controls (`services.serial_mcu_bridge.safety.*`)
 - any camera/audio backend/device settings for `services.av_daemon`
+- motor channel ordering (`services.serial_mcu_bridge.drive.swap_motor_outputs`)
+
+Edit `web-interface/config.json` for the web server's broker connection,
+controlled robot list, bind address, and MQTT history. The old unified
+`control/configs/config.json` remains supported for existing installations.
 
 If you enable reboot control (`services.mqtt_bridge.reboot_control.command` uses `sudo`),
 add this in `sudo visudo` so reboot can run without a password prompt:
@@ -124,7 +130,7 @@ If you enable remote git-pull control (`services.mqtt_bridge.git_pull_control.co
 ensure the runtime service user can run `git pull` in `/opt/pebble` without prompts
 (repo ownership + non-interactive auth keys/tokens as needed).
 
-`control/configs/config.json` is gitignored and should stay local to the robot.
+Both local config files are gitignored and should stay on their deployment host.
 
 ### 4. Configure firmware private credentials (MiniLAMP only)
 
@@ -189,7 +195,7 @@ EOF
 
 ```bash
 cd <repo-path>
-python3 control/launcher.py --config control/configs/config.json
+python3 control/launcher.py --config control/configs/robot.json
 ```
 
 If this starts cleanly, stop it with `Ctrl+C` and continue with systemd.
@@ -245,19 +251,19 @@ mosquitto_sub -h 127.0.0.1 -t 'pebble/#' -v
 Then run the on-robot smoke test:
 
 ```bash
-python3 tests/on_robot_smoke.py --config control/configs/config.json
+python3 tests/on_robot_smoke.py --config control/configs/robot.json
 ```
 
 After reboot/systemd validation:
 
 ```bash
-python3 tests/on_robot_smoke.py --config control/configs/config.json --no-launch
+python3 tests/on_robot_smoke.py --config control/configs/robot.json --no-launch
 ```
 
 If remote broker access is intentionally unavailable, run local-only validation:
 
 ```bash
-python3 tests/on_robot_smoke.py --config control/configs/config.json --no-launch --skip-remote
+python3 tests/on_robot_smoke.py --config control/configs/robot.json --no-launch --skip-remote
 ```
 
 ## Web Interface
@@ -268,10 +274,9 @@ Run from repo root:
 python3 web-interface/web-control.py
 ```
 
-Web interface MQTT/robot defaults now come from `control/configs/config.json`
-under the `web_interface` section.
-For a dedicated web-only config file, set `PEBBLE_CONFIG` when starting
-`web-control.py`.
+The web interface reads `web-interface/config.json` by default. Set
+`PEBBLE_CONFIG` to use another web config path. A robot runtime config can
+still provide single-robot defaults when no web config exists.
 Robots can publish a retained module manifest at `.../o/manifest`. The web UI
 uses it to discover each robot's controls and available media modules. Shared
 modules live in `modules/`; robot-specific modules and compositions live in
@@ -279,7 +284,7 @@ modules live in `modules/`; robot-specific modules and compositions live in
 and migration compatibility. Autonomy start/stop publishes to
 `.../incoming/autonomy-command` using scripts/config fields reported on
 `.../outgoing/autonomy-files`.
-If `web_interface.mqtt_history.enabled=true`, the UI can also persist all MQTT
+If `mqtt_history.enabled=true`, the UI can also persist all MQTT
 message history to MongoDB (`pymongo` dependency).
 
 ## Docker Runtime
@@ -295,7 +300,8 @@ docker build -t pebble .
 docker run --rm \
   --name pebble \
   -p 8080:8080 \
-  -v "$PWD/control/configs/config.json:/app/control/configs/config.json:ro" \
+  -v "$PWD/control/configs/robot.json:/app/control/configs/robot.json:ro" \
+  -v "$PWD/web-interface/config.json:/app/web-interface/config.json:ro" \
   pebble
 ```
 

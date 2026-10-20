@@ -164,6 +164,11 @@ class SerialMcuBridge:
         safety_cfg = self.service_cfg.get("safety") if isinstance(self.service_cfg.get("safety"), dict) else {}
         publish_cfg = self.service_cfg.get("publish") if isinstance(self.service_cfg.get("publish"), dict) else {}
         health_cfg = self.service_cfg.get("health") if isinstance(self.service_cfg.get("health"), dict) else {}
+        drive_cfg = self.service_cfg.get("drive") if isinstance(self.service_cfg.get("drive"), dict) else {}
+        swap_motor_outputs = drive_cfg.get("swap_motor_outputs", False)
+        if not isinstance(swap_motor_outputs, bool):
+            raise SystemExit(f"{self.service_name}: drive.swap_motor_outputs must be a boolean")
+        self.swap_motor_outputs = swap_motor_outputs
 
         named_imu_instance = (self.instance_name or "").strip().lower() == "imu"
         default_imu_timeout = 0.0
@@ -1182,6 +1187,8 @@ class SerialMcuBridge:
         z = _parse_float(values.get("z"), 0.0)
         left = clamp(z + x, -1.0, 1.0)
         right = clamp(z - x, -1.0, 1.0)
+        if self.swap_motor_outputs:
+            left, right = right, left
         self._send_serial_line("M", f"{left:.3f}", f"{right:.3f}")
         self.last_drive_command_at = time.monotonic()
         self.drive_timed_out = False

@@ -87,6 +87,26 @@ class SerialMcuBridgeTests(unittest.TestCase):
         bridge._handle_drive_values({"value": {"x": 0.2, "z": 0.5}})
         self.assertEqual(bridge.ser.writes[-1].decode("utf-8"), "M 0.700 0.300\n")
 
+    def test_drive_values_can_swap_motor_outputs(self):
+        config = make_base_config("serialbot")
+        config["services"]["serial_mcu_bridge"]["drive"] = {"swap_motor_outputs": True}
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "config.json"
+            path.write_text(json.dumps(config))
+            bridge = SerialMcuBridge(config, path)
+        bridge.ser = FakeSerial()
+        bridge._handle_drive_values({"value": {"x": 0.2, "z": 0.5}})
+        self.assertEqual(bridge.ser.writes[-1].decode("utf-8"), "M 0.300 0.700\n")
+
+    def test_drive_swap_setting_must_be_boolean(self):
+        config = make_base_config("serialbot")
+        config["services"]["serial_mcu_bridge"]["drive"] = {"swap_motor_outputs": "true"}
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "config.json"
+            path.write_text(json.dumps(config))
+            with self.assertRaisesRegex(SystemExit, "must be a boolean"):
+                SerialMcuBridge(config, path)
+
     def test_lights_commands_send_serial(self):
         bridge = self._bridge()
         bridge.ser = FakeSerial()

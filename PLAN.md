@@ -166,7 +166,7 @@ controls, and has a clear timeout/failure behavior.
 - Requiring every robot to publish a rich module manifest.
 - Arbitrary robot-provided executable UI code in the web gateway.
 
-## Immediate proposed next step
+## Config boundary implementation
 
 Split robot runtime settings from web deployment settings in a reviewable
 slice. Keep the existing unified config working through a compatibility
@@ -174,5 +174,18 @@ adapter, and verify that Goob's runtime and the multi-robot web interface still
 resolve the same effective settings. Extract audio/video profiles only after
 that boundary is clear.
 
-The identity-aware resolver and example migration are in place to make that
-split safer and independently testable.
+The robot/web boundary is now represented by separate examples and local
+runtime paths. The loader prefers `robot.json`, the web UI prefers its own
+`web-interface/config.json`, and the old unified file remains a fallback.
+Audio/video profile extraction remains a later step after this boundary has
+been exercised on Goob and the web host.
+
+**Completed slice:** the serial MCU bridge accepts
+`services.serial_mcu_bridge.drive.swap_motor_outputs` as a boolean. The default
+preserves left/right order; Goob's example enables the swap for its current
+motor wiring.
+
+**Next verification:** exercise `robot.json` and `web-interface/config.json` on
+Goob and the web host, confirm they produce the same effective MQTT endpoints,
+then move Goob's motor swap from its local source edit into
+`drive.swap_motor_outputs: true`.

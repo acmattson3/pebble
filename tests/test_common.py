@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from control.common.config import load_config, log_level, service_cfg
+from control.common.config import default_config_path, load_config, log_level, service_cfg
 from control.common.mqtt import parse_bool_payload
 from control.common.topics import (
     RobotIdentity,
@@ -78,6 +78,17 @@ class CommonModuleTests(unittest.TestCase):
             self.assertEqual(service_cfg(cfg, "missing"), {})
             self.assertEqual(log_level(cfg, {}), "DEBUG")
             self.assertEqual(log_level(cfg, {"log_level": "warning"}), "WARNING")
+
+    def test_default_config_prefers_split_robot_config_and_falls_back(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            robot = root / "control/configs/robot.json"
+            legacy = root / "control/configs/config.json"
+            robot.parent.mkdir(parents=True)
+            legacy.write_text("{}")
+            self.assertEqual(default_config_path(root), legacy)
+            robot.write_text("{}")
+            self.assertEqual(default_config_path(root), robot)
 
     def test_load_config_rejects_missing_and_invalid(self):
         with self.assertRaises(SystemExit):

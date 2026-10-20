@@ -23,7 +23,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.append(str(REPO_ROOT))
 
-from control.common.config import load_config, log_level, service_cfg
+from control.common.config import default_config_path, load_config, log_level, service_cfg
 from control.common.mqtt import mqtt_auth_and_tls
 from control.common.odometry_shm import OdometryRawShmReader
 from control.common.topics import identity_from_config
@@ -1675,7 +1675,7 @@ class AutoTuner:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Auto-tune wheel odometry against AprilTags 13/14/15.")
-    parser.add_argument("--config", default="control/configs/config.json", help="Unified config JSON path.")
+    parser.add_argument("--config", default=str(default_config_path()), help="Robot runtime config JSON path.")
     parser.add_argument("--calibration", default="autonomy/apriltag-follow/camera_calibration.yaml", help="Camera calibration YAML.")
     parser.add_argument("--video-shm", default="", help="Override shared video socket path.")
     parser.add_argument("--width", type=int, default=0, help="Override shared stream width.")

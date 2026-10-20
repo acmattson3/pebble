@@ -9,14 +9,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 DOCUMENTED_PATHS = {
     "README.md": [
-        ("control/configs/config.json.example", "control/configs/config.json.example"),
+        ("control/configs/robot.json.example", "control/configs/robot.json.example"),
+        ("web-interface/config.json.example", "web-interface/config.json.example"),
         ("firmware/MINILAMP_seeed-xiao-c6/private_config.h.example", "firmware/MINILAMP_seeed-xiao-c6/private_config.h.example"),
         ("systemd/pebble-control.service.example", "systemd/pebble-control.service.example"),
         ("tests/on_robot_smoke.py", "tests/on_robot_smoke.py"),
         ("web-interface/web-control.py", "web-interface/web-control.py"),
     ],
     "control/README.md": [
-        ("control/configs/config.json.example", "control/configs/config.json.example"),
+        ("control/configs/robot.json.example", "control/configs/robot.json.example"),
         ("systemd/pebble-control.service.example", "systemd/pebble-control.service.example"),
         ("control/services/serial_standard.md", "control/services/serial_standard.md"),
     ],
@@ -61,7 +62,7 @@ class RepoConsistencyTests(unittest.TestCase):
                     self.assertTrue((REPO_ROOT / target_path).exists(), target_path)
 
     def test_web_dockerfile_copy_sources_exist(self):
-        dockerfile = (REPO_ROOT / "web-interface" / "Dockerfile").read_text(encoding="utf-8")
+        dockerfile = (REPO_ROOT / "Dockerfile").read_text(encoding="utf-8")
         copy_sources: list[str] = []
         for line in dockerfile.splitlines():
             stripped = line.strip()
@@ -73,11 +74,12 @@ class RepoConsistencyTests(unittest.TestCase):
 
         self.assertEqual(
             copy_sources,
-            ["./web-interface/requirements.txt", "./web-interface", "./control/configs"],
+            ["./web-interface/requirements.txt", "."],
         )
         for rel_path in copy_sources:
             with self.subTest(copy_source=rel_path):
-                self.assertTrue((REPO_ROOT / rel_path[2:]).exists(), rel_path)
+                source_path = rel_path[2:] if rel_path.startswith("./") else rel_path
+                self.assertTrue((REPO_ROOT / source_path).exists(), rel_path)
 
     def test_readmes_do_not_reference_removed_web_config_or_old_name(self):
         for rel_path in [

@@ -1,0 +1,62 @@
+{
+  "log_level": "INFO",
+  "host": "0.0.0.0",
+  "port": 8080,
+  "robot_discovery": {
+    "seed_configured": true
+  },
+  "mqtt": {
+    "host": "127.0.0.1",
+    "port": 1883,
+    "keepalive": 60,
+    "username": "",
+    "password": "",
+    "tls": {
+      "enabled": false,
+      "ca_cert": "",
+      "client_cert": "",
+      "client_key": "",
+      "insecure": false,
+      "ciphers": ""
+    }
+  },
+  "mqtt_history": {
+    "enabled": false,
+    "uri": "mongodb://127.0.0.1:27017",
+    "database": "pebble",
+    "collection": "mqtt_history",
+    "max_bytes": 53687091200,
+    "subscribe_all_topics": true,
+    "prune_check_every_messages": 2000,
+    "prune_chunk_documents": 50000,
+    "prune_target_ratio": 0.9
+  },
+  "robots": [
+    {
+      "id": "my-robot",
+      "name": "My Robot",
+      "type": "robots",
+      "video": {
+        "subtopic": "outgoing/front-camera",
+        "controls": true
+      },
+      "audio": {
+        "subtopic": "outgoing/audio",
+        "uplink_subtopic": "incoming/audio-stream",
+        "rate": 16000,
+        "channels": 1,
+        "chunk_ms": 20,
+        "concealment_ms": 100,
+        "controls": true
+      },
+      "reboot": {
+        "controls": true
+      },
+      "service_restart": {
+        "controls": true
+      }
+    }
+  ],
+  "system": "pebble",
+  "component_type": "robots"
+}

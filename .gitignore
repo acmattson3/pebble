@@ -8,7 +8,9 @@ venv/
 
 # Local runtime configs and secrets
 control/configs/config.json
+control/configs/robot.json
 !control/configs/*.example.json
+web-interface/config.json
 control/secrets/
 firmware/*/private_config.h
 .env

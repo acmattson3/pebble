@@ -13,6 +13,10 @@ from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 TARGET_SCRIPT = SCRIPT_DIR / "april-follow-test.py"
+REPO_ROOT = SCRIPT_DIR.parents[1]
+DEFAULT_CONFIG_PATH = REPO_ROOT / "control" / "configs" / "robot.json"
+if not DEFAULT_CONFIG_PATH.exists():
+    DEFAULT_CONFIG_PATH = REPO_ROOT / "control" / "configs" / "config.json"
 
 
 def _load_defaults(config_path: Path) -> dict[str, dict[str, Any]]:
@@ -98,7 +102,7 @@ def _run_target(target_argv: list[str]) -> int:
 
 def _parse_args() -> tuple[argparse.Namespace, list[str]]:
     parser = argparse.ArgumentParser(description="Run AprilTag follow with config-backed defaults.")
-    parser.add_argument("--config", type=str, default="control/configs/config.json", help="Unified runtime config JSON.")
+    parser.add_argument("--config", type=str, default=str(DEFAULT_CONFIG_PATH), help="Robot runtime config JSON.")
     return parser.parse_known_args()
 
 

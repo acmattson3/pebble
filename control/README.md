@@ -49,23 +49,30 @@
 
 ## Runtime Config
 
-Runtime config is a single local file:
+Robot runtime settings live in:
 
-- `control/configs/config.json`
+- `control/configs/robot.json`
 
-Do not commit this file; it is gitignored.
+Web deployment settings live separately in `web-interface/config.json`. Both
+files are gitignored. Existing installs can keep using the unified
+`control/configs/config.json` file.
+When a launcher-managed web handler uses `services.web_handler.web_config`, a
+relative path is resolved from the repository root.
 
 Create it by copying the template:
 
 ```bash
-cp control/configs/config.json.example control/configs/config.json
+cp control/configs/robot.json.example control/configs/robot.json
+cp web-interface/config.json.example web-interface/config.json
 ```
 
 Then edit as needed.
 
 Reference schema:
 
-- `control/configs/config.json.example`
+- `control/configs/robot.json.example`
+- `web-interface/config.json.example`
+- `control/configs/config.json.example` (legacy unified config)
 - `services.mqtt_bridge.remote_mqtt.transport` supports `tcp` (default) and
   `websockets`; `websocket_path` selects the WebSocket endpoint path. For the
   public Compose broker, use `mqtt.sssn.us:443`, transport `websockets`, path
@@ -239,7 +246,7 @@ instead of mirroring them remotely.
 Run directly from repo root:
 
 ```bash
-python3 control/launcher.py --config control/configs/config.json
+python3 control/launcher.py --config control/configs/robot.json
 ```
 
 ## Autonomy Topics

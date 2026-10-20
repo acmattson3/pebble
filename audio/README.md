@@ -24,15 +24,15 @@ Opus transport remains future work.
 
 ## Configuration and manual use
 
-The publisher and receiver read `control/configs/config.json`, especially
+The publisher and receiver read `control/configs/robot.json`, especially
 `services.mqtt_bridge.remote_mqtt` and the respective
 `services.mqtt_bridge.media.audio_publisher` / `audio_receiver` sections.
 Media lifecycle is normally managed by the AV daemon when demand mode is
 enabled. For manual diagnostics, run from the repository root:
 
 ```bash
-python3 audio/audio_publisher.py --config control/configs/config.json
-python3 audio/audio_receiver.py --config control/configs/config.json
+python3 audio/audio_publisher.py --config control/configs/robot.json
+python3 audio/audio_receiver.py --config control/configs/robot.json
 ```
 
 The publisher consumes the AV daemon's shared microphone stream and does not

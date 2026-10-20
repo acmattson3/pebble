@@ -25,7 +25,7 @@ transitional compatibility paths.
 
 ## Configuration and diagnostics
 
-Runtime settings are in `control/configs/config.json`:
+Runtime settings are in `control/configs/robot.json`:
 
 - `services.av_daemon.video` selects the camera backend, device, and capture
   settings.
@@ -37,14 +37,14 @@ Runtime settings are in `control/configs/config.json`:
 To run the publisher manually:
 
 ```bash
-python3 video/camera_publisher.py --config control/configs/config.json --profile default
+python3 video/camera_publisher.py --config control/configs/robot.json --profile default
 ```
 
 The local preview and bitrate monitor are still available:
 
 ```bash
-python3 video/video_receiver_test.py --config control/configs/config.json --profile default
-python3 video/video_bitrate_monitor.py --config control/configs/config.json --profile default --interval 1.0
+python3 video/video_receiver_test.py --config control/configs/robot.json --profile default
+python3 video/video_bitrate_monitor.py --config control/configs/robot.json --profile default --interval 1.0
 ```
 
 OpenCV, NumPy, Paho MQTT, and GStreamer are used by the current paths. H.264

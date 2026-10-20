@@ -8,10 +8,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from control.common.config import default_config_path
 from control.common.topics import identity_from_config, resolve_topic
 
 
-DEFAULT_RUNTIME_CONFIG_PATH = Path(__file__).resolve().parents[1] / "control" / "configs" / "config.json"
+DEFAULT_RUNTIME_CONFIG_PATH = default_config_path()
 
 
 class CameraProfileError(RuntimeError):

@@ -213,13 +213,19 @@
       }
     },
     "serial_mcu_bridge": {
-      "enabled": false
+      "enabled": false,
+      "drive": {
+        "swap_motor_outputs": false
+      }
     },
     "soundboard_handler": {
       "enabled": false
     },
     "autonomy_manager": {
       "enabled": false
+    },
+    "web_handler": {
+      "web_config": "web-interface/config.json"
     }
   }
 }

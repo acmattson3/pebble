@@ -6,11 +6,19 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_CONFIG_PATH = Path("control/configs/config.json")
+CONFIG_ROOT = Path(__file__).resolve().parents[2]
+
+
+def default_config_path(repo_root: Path | None = None) -> Path:
+    """Prefer the split robot config, while retaining the unified config fallback."""
+    root = repo_root or CONFIG_ROOT
+    robot_path = root / "control" / "configs" / "robot.json"
+    legacy_path = root / "control" / "configs" / "config.json"
+    return robot_path if robot_path.exists() else legacy_path
 
 
 def load_config(path_value: str | None) -> tuple[dict[str, Any], Path]:
-    path = Path(path_value).expanduser() if path_value else DEFAULT_CONFIG_PATH
+    path = Path(path_value).expanduser() if path_value else default_config_path()
     if not path.is_absolute():
         path = path.resolve()
     if not path.exists():
