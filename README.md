@@ -283,7 +283,9 @@ retained `.../o/manifest`. Shared modules live in `modules/`; robot-specific
 modules and compositions live in `robots/`. The `/` page remains available for
 deployments still using the compatibility controls. Goob's example module
 configuration includes shared drive, soundboard, lights, telemetry, log viewer,
-and autonomy modules.
+autonomy, and robot-defined administration modules. Administrative actions are
+allowlisted by the robot configuration, require confirmation in the interface,
+and call existing local handlers.
 The autonomy manager advertises its configured scripts and validates their
 options before starting them. The log viewer reads structured `o/logs` events
 and keeps a bounded recent history in gateway memory; use the broker logger or

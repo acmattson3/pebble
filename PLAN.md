@@ -176,9 +176,10 @@ one-way listening or speech intelligibility.
 - The shared autonomy module advertises configured scripts and bounded
   argument descriptors through the generic module UI. The existing manager
   retains process, dependency, and compatibility-topic behavior.
-- Add a shared administrative module for reboot, repository update, and service
-  restart. It should use explicit confirmation for disruptive actions and
-  adapt to the robot's configured administrative handlers.
+- The shared administrative module provides fixed reboot, repository update,
+  and service-restart actions. Robots select supported actions, and the generic
+  UI confirms them before calling existing local handlers. Handler execution
+  status is not yet published.
 - Add safe, bounded audio volume controls for supported ALSA devices.
 - Add soundboard repeat and timed-repeat modes with a clear stop command.
 - Goob's serial bridge preserves the MCU's flashing startup pattern, then sends
