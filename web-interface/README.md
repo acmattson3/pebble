@@ -10,7 +10,9 @@ The Flask service provides two pages:
 
 A robot needs only the Pebble MQTT contract for basic interoperability. The
 module host and module manifest are optional; they add discovered controls and
-robot-defined views.
+robot-defined views. Shared widgets include telemetry, soundboard, autonomy,
+lights, media, and logs. The autonomy form is built from each robot's advertised
+scripts and argument descriptors.
 
 ## Run and configure
 

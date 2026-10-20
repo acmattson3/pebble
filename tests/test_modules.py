@@ -38,7 +38,7 @@ class ModuleTests(unittest.TestCase):
     def test_shared_and_robot_local_modules_are_data_only(self):
         built = make_built()
         manifest, adapters = built
-        assert [m['type'] for m in manifest['modules']] == ['pebble.drive', 'pebble.soundboard', 'pebble.lights', 'pebble.telemetry', 'pebble.logs', 'goob.gripper-demo']
+        assert [m['type'] for m in manifest['modules']] == ['pebble.drive', 'pebble.soundboard', 'pebble.lights', 'pebble.telemetry', 'pebble.logs', 'pebble.autonomy', 'goob.gripper-demo']
         assert 'adapters' not in json.dumps(manifest)
         assert adapters[manifest['base'] + '/i/drive']['topic'].endswith('/incoming/drive-values')
         assert adapters[manifest['base'] + '/i/soundboard/command']['topic'].endswith('/incoming/soundboard-command')

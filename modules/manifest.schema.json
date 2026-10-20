@@ -296,6 +296,7 @@
                         "video",
                         "audio",
                         "soundboard",
+                        "autonomy",
                         "lights",
                         "telemetry",
                         "logs"
@@ -368,6 +369,10 @@
                       "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
                     },
                     "status_endpoint": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                    },
+                    "scripts_endpoint": {
                       "type": "string",
                       "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
                     },

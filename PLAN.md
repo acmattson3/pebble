@@ -54,6 +54,8 @@ outcomes rather than duplicating implementation details from the READMEs.
 - Shared telemetry is enabled for Goob; its example module configuration now
   includes the log viewer. The log module uses non-retained events and bounded
   gateway history.
+- The shared autonomy module and Goob example configuration are implemented in
+  the repository. Goob deployment and start/stop verification are pending.
 - The module UI remains at `/modules`; the existing compatibility interface
   remains at `/` until the replacement passes the migration criteria.
 
@@ -168,12 +170,11 @@ one-way listening or speech intelligibility.
 ### 5. Improve robot services and operator feedback
 
 - Add shared sound cue names and helper utilities for autonomy/control scripts.
-- Expose autonomy scripts through a robot-defined module so robots can publish
-  their available scripts and the interface can start/stop them without a
-  Pebble-wide hard-coded autonomy panel.
-- The shared log-viewer module is implemented and enabled for Goob. Add a
-  robot-defined autonomy module so available scripts and their controls are
-  advertised by each robot.
+- The shared log-viewer module is implemented; Goob's example configuration
+  includes it.
+- Verify the shared autonomy module on Goob: advertise discovered scripts and
+  bounded argument descriptors, render generic start/stop controls, and retain
+  the existing manager's process and dependency safety behavior.
 - Add a shared administrative module for reboot, repository update, and service
   restart. It should use explicit confirmation for disruptive actions and
   adapt to the robot's configured administrative handlers.
@@ -199,14 +200,14 @@ one-way listening or speech intelligibility.
 **Acceptance:** a Jev prototype is removable, cannot bypass local safety
 controls, and has a clear timeout/failure behavior.
 
-### Next implementation slice: autonomy module
+### Next implementation slice: verify autonomy module on Goob
 
-- Adapt the current autonomy script list and start/stop behavior into a
-  robot-owned module with declared state and command endpoints.
-- Keep per-script options bounded and schema-described; publish available
-  scripts from the robot and render them through generic module controls.
-- Keep the existing autonomy manager and its safety behavior behind an
-  explicit adapter until the new module is verified on Goob.
+- Deploy the shared module definition, manager adapter, and web renderer to
+  Goob and ARL while preserving the current autonomy manager behavior.
+- Verify script discovery, typed configuration rendering, and start/stop state
+  without removing the legacy topic compatibility paths.
+- Do not start a motion-producing script during validation; confirm the module
+  can issue a stop and that invalid/unadvertised script names remain rejected.
 
 ## Deferred by choice
 

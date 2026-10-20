@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import math
 import os
 import queue
 import signal
@@ -26,6 +27,8 @@ from control.common.mqtt import create_client, mqtt_auth_and_tls
 from control.common.topics import identity_from_config, resolve_mapped_topic
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+MAX_MODULE_SCRIPTS = 128
+MAX_MODULE_CONFIGS = 64
 
 
 def _parse_float(value: Any, default: float) -> float:
@@ -61,6 +64,9 @@ class AutonomyManager:
         self.command_topic = resolve_mapped_topic(self.identity, self.service_cfg, "command", "incoming/autonomy-command")
         self.files_topic = resolve_mapped_topic(self.identity, self.service_cfg, "files", "outgoing/autonomy-files")
         self.status_topic = resolve_mapped_topic(self.identity, self.service_cfg, "status", "outgoing/autonomy-status")
+        self.module_command_topic = self.identity.topic("i", "autonomy/command")
+        self.module_scripts_topic = self.identity.topic("o", "autonomy/scripts")
+        self.module_status_topic = self.identity.topic("o", "autonomy/status")
 
         autonomy_root_raw = str(self.service_cfg.get("autonomy_root") or "autonomy")
         autonomy_root = Path(autonomy_root_raw).expanduser()
@@ -170,7 +176,8 @@ class AutonomyManager:
             logging.error("Local MQTT connect failed rc=%s", rc)
             return
         logging.info("Local MQTT connected; subscribing %s", self.command_topic)
-        client.subscribe(self.command_topic, qos=1)
+        for topic in {self.command_topic, self.module_command_topic}:
+            client.subscribe(topic, qos=1)
         self._refresh_scripts(force=True)
         self._publish_status()
         self.next_retained_republish_at = time.time() + self.retained_publish_interval_seconds
@@ -208,6 +215,9 @@ class AutonomyManager:
                 delay = min(delay * 2, 60.0)
 
     def _on_message(self, _client: mqtt.Client, _userdata: Any, msg: mqtt.MQTTMessage) -> None:
+        if getattr(msg, "retain", False):
+            logging.warning("Ignoring retained autonomy command on %s", msg.topic)
+            return
         try:
             payload = json.loads(msg.payload.decode("utf-8"))
         except json.JSONDecodeError:
@@ -765,7 +775,45 @@ class AutonomyManager:
             "controls": True,
             "timestamp": time.time(),
         }
-        self._publish_json(self.files_topic, payload, qos=1, retain=True)
+        if self.files_topic != self.module_scripts_topic:
+            self._publish_json(self.files_topic, payload, qos=1, retain=True)
+        scripts = []
+        for item in self.available_files_payload[:MAX_MODULE_SCRIPTS]:
+            file_name = str(item.get("file") or "")
+            if not file_name or len(file_name) > 128:
+                continue
+            configs = []
+            for field in item.get("configs", [])[:MAX_MODULE_CONFIGS]:
+                key = str(field.get("key") or "")
+                if not key or len(key) > 128:
+                    continue
+                descriptor = {
+                    "key": key,
+                    "label": str(field.get("label") or field.get("key") or "")[:160],
+                    "type": field.get("type") if field.get("type") in {"string", "int", "float", "bool", "enum"} else "string",
+                    "required": bool(field.get("required", False)),
+                }
+                if field.get("default") is not None:
+                    default = field["default"]
+                    descriptor["default"] = str(default).lower() if isinstance(default, bool) else str(default)
+                    descriptor["default"] = descriptor["default"][:2048]
+                for bound in ("min", "max"):
+                    if isinstance(field.get(bound), (int, float)) and not isinstance(field.get(bound), bool) and math.isfinite(field[bound]):
+                        descriptor[bound] = field[bound]
+                options = field.get("options")
+                if isinstance(options, list):
+                    descriptor["options"] = [str(option)[:256] for option in options[:64]]
+                configs.append(descriptor)
+            scripts.append({
+                "file": file_name,
+                "label": str(item.get("label") or file_name)[:160],
+                "configs": configs,
+            })
+        self._publish_json(self.module_scripts_topic, {
+            "scripts": scripts,
+            "controls": True,
+            "timestamp": payload["timestamp"],
+        }, qos=1, retain=True)
 
     def _status_payload(self) -> dict[str, Any]:
         proc = self.process
@@ -792,7 +840,16 @@ class AutonomyManager:
         }
 
     def _publish_status(self) -> None:
-        self._publish_json(self.status_topic, self._status_payload(), qos=1, retain=True)
+        payload = self._status_payload()
+        if self.status_topic != self.module_status_topic:
+            self._publish_json(self.status_topic, payload, qos=1, retain=True)
+        self._publish_json(self.module_status_topic, {
+            "running": payload["running"],
+            "file": str(payload["file"])[:128] if payload["file"] is not None else None,
+            "pid": payload["pid"],
+            "error": str(payload["error"])[:2048] if payload["error"] is not None else None,
+            "timestamp": payload["timestamp"],
+        }, qos=1, retain=True)
 
     def _republish_retained_if_due(self) -> None:
         now = time.time()

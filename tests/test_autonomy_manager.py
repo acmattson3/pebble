@@ -56,12 +56,17 @@ class AutonomyManagerTests(unittest.TestCase):
 
         manager._refresh_scripts(force=True)
 
-        self.assertEqual(len(manager.client.publish_calls), 1)
+        self.assertEqual(len(manager.client.publish_calls), 2)
         topic, payload, qos, retain = manager.client.publish_calls[0]
         self.assertEqual(topic, manager.files_topic)
         self.assertEqual(qos, 1)
         self.assertTrue(retain)
         self.assertIn("apriltag-follow", payload)
+        module_topic, module_payload, module_qos, module_retain = manager.client.publish_calls[1]
+        self.assertEqual(module_topic, manager.module_scripts_topic)
+        self.assertEqual(module_qos, 1)
+        self.assertTrue(module_retain)
+        self.assertIn('"scripts"', module_payload)
 
     def test_start_command_launches_selected_script_with_mapped_args(self):
         manager, cfg_path = self._manager()
@@ -146,6 +151,8 @@ class AutonomyManagerTests(unittest.TestCase):
         topics = [call[0] for call in manager.client.publish_calls]
         self.assertIn(manager.files_topic, topics)
         self.assertIn(manager.status_topic, topics)
+        self.assertIn(manager.module_scripts_topic, topics)
+        self.assertIn(manager.module_status_topic, topics)
 
 
 if __name__ == "__main__":

@@ -31,7 +31,7 @@ def _payload_validator_cached(serialized: str) -> Draft202012Validator:
     # Descriptors arrive through MQTT. Keep validation local and bounded: no
     # remote references, executable expressions, or attacker-supplied regexes.
     allowed = {"type", "properties", "required", "additionalProperties", "minimum",
-               "maximum", "enum", "const", "items", "minItems", "maxItems",
+               "maximum", "enum", "const", "items", "minItems", "maxItems", "maxProperties",
                "minLength", "maxLength", "title", "description", "default"}
     def check(node, depth=0):
         if not isinstance(node, dict) or depth > 12 or set(node) - allowed:
@@ -155,6 +155,27 @@ def validate_manifest(manifest: dict) -> dict:
                 status_schema = status["schema"].get("properties", {})
                 if status["schema"].get("type") != "object" or status_schema.get("playing", {}).get("type") != "boolean":
                     raise ValueError("Soundboard status endpoint must provide a playing flag")
+            if kind == "autonomy":
+                command = endpoints.get(widget.get("command_endpoint"))
+                scripts = endpoints.get(widget.get("scripts_endpoint"))
+                status = endpoints.get(widget.get("status_endpoint"))
+                if (not command or command["kind"] != "command"
+                        or not scripts or scripts["kind"] != "state"
+                        or not status or status["kind"] != "state"):
+                    raise ValueError("Autonomy widget requires command, scripts, and status endpoints")
+                command_schema = command["schema"]
+                if (command_schema.get("type") != "object"
+                        or command_schema.get("properties", {}).get("action", {}).get("enum") != ["start", "stop"]):
+                    raise ValueError("Autonomy command must declare start/stop actions")
+                scripts_schema = scripts["schema"].get("properties", {}).get("scripts", {})
+                if (scripts["schema"].get("type") != "object"
+                        or scripts_schema.get("type") != "array"
+                        or scripts_schema.get("items", {}).get("type") != "object"):
+                    raise ValueError("Autonomy scripts endpoint must provide script descriptors")
+                status_properties = status["schema"].get("properties", {})
+                if (status["schema"].get("type") != "object"
+                        or status_properties.get("running", {}).get("type") != "boolean"):
+                    raise ValueError("Autonomy status endpoint must provide a running flag")
             if kind == "lights":
                 solid = endpoints.get(widget.get("solid_endpoint"))
                 flash = endpoints.get(widget.get("flash_endpoint"))

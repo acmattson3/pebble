@@ -191,6 +191,72 @@ function syncTelemetryWidget(ctx, item) {
     else metric.value.textContent=String(datum);
   }
 }
+function renderAutonomyFields(ctx,item,descriptors) {
+  item.fields.replaceChildren();item.inputs=[];
+  for(const spec of descriptors) {
+    const type=['string','int','float','bool','enum'].includes(spec.type)?spec.type:'string';
+    let input;
+    if(type==='bool') {
+      input=element('input');input.type='checkbox';input.checked=String(spec.default??'false').toLowerCase()==='true';
+    } else if(type==='enum'&&Array.isArray(spec.options)&&spec.options.length) {
+      input=element('select');
+      for(const optionValue of (Array.isArray(spec.options)?spec.options:[])) {
+        const option=element('option',optionValue);option.value=optionValue;input.append(option);
+      }
+      if(spec.default!==undefined)input.value=spec.default;
+    } else if(type==='int'||type==='float') {
+      input=element('input');input.type='number';input.step=type==='int'?'1':'any';
+      if(Number.isFinite(spec.min))input.min=spec.min;
+      if(Number.isFinite(spec.max))input.max=spec.max;
+      input.value=spec.default??'';
+    } else {
+      input=element('input');input.type='text';input.value=spec.default??'';
+    }
+    input.setAttribute('aria-label',spec.label);
+    item.fields.append(labeled(spec.label,input));item.inputs.push({spec,input,type});
+  }
+  item.fields.hidden=descriptors.length===0;
+}
+function syncAutonomyWidget(ctx,item) {
+  const state=ctx.latestState?.states?.[ctx.module.id]??{};
+  const scriptsState=state[item.widget.scripts_endpoint]?.value;
+  const status=state[item.widget.status_endpoint]?.value;
+  const scripts=Array.isArray(scriptsState?.scripts)?scriptsState.scripts:[];
+  const previous=item.script.value;
+  item.script.replaceChildren();
+  if(!scripts.length)item.script.append(element('option',scriptsState?'No scripts available':'Waiting for script list…'));
+  for(const script of scripts) {const option=element('option',script.label);option.value=script.file;item.script.append(option);}
+  if(scripts.some(script=>script.file===previous))item.script.value=previous;
+  const selected=scripts.find(script=>script.file===item.script.value);
+  const selectedKey=selected?.file??'';
+  if(selectedKey!==item.renderedFile) {
+    item.renderedFile=selectedKey;
+    renderAutonomyFields(ctx,item,selected?.configs??[]);
+  }
+  const canControl=scriptsState?.controls!==false;
+  item.script.disabled=!online||!scripts.length||!canControl;
+  item.start.disabled=!online||!selected||!canControl;
+  item.stop.disabled=!online;
+  item.status.textContent=status?.error?String(status.error):status?.running?`Running: ${status.file||'script'}${status.pid?` · PID ${status.pid}`:''}`:scriptsState?`Ready · ${scripts.length} script${scripts.length===1?'':'s'}`:'Waiting for autonomy manager…';
+  item.status.classList.toggle('error',Boolean(status?.error));
+  for(const {input} of item.inputs)input.disabled=!online||!canControl;
+}
+function autonomyConfig(item) {
+  const config={};
+  for(const {spec,input,type} of item.inputs) {
+    const raw=type==='bool'?input.checked:input.value;
+    if(type!=='bool'&&raw==='') {
+      if(spec.required)throw new Error(`${spec.label} is required`);
+      continue;
+    }
+    if(type==='int') {
+      const number=Number(raw);if(!Number.isInteger(number))throw new Error(`${spec.label} must be a whole number`);config[spec.key]=number;
+    } else if(type==='float') {
+      const number=Number(raw);if(!Number.isFinite(number))throw new Error(`${spec.label} must be a number`);config[spec.key]=number;
+    } else config[spec.key]=raw;
+  }
+  return config;
+}
 function syncLogsWidget(ctx, item) {
   const state=ctx.latestState?.states?.[ctx.module.id]?.[item.widget.endpoint]?.value;
   const limit=Number.isInteger(item.widget.limit)?item.widget.limit:200;
@@ -218,7 +284,7 @@ function render(manifest) {
   const robot=base;
   for(const module of manifest.modules) {
     const card=element('section',undefined,'module');card.dataset.module=module.id;
-    const ctx={module,card,bindings:loadBindings(module),valueNodes:new Map(),stateNodes:[],controlNodes:[],mediaWidgets:[],soundboardWidgets:[],lightsWidgets:[],telemetryWidgets:[],logsWidgets:[],latestState:null};
+    const ctx={module,card,bindings:loadBindings(module),valueNodes:new Map(),stateNodes:[],controlNodes:[],mediaWidgets:[],soundboardWidgets:[],autonomyWidgets:[],lightsWidgets:[],telemetryWidgets:[],logsWidgets:[],latestState:null};
     ctx.engine=new InputEngine(module,(command,payload)=>{
       const endpoint=module.endpoints?.[command.endpoint];
       if(['audio-stream','video-stream'].includes(endpoint?.resource)) {
@@ -299,6 +365,25 @@ function render(manifest) {
           if(!beginInteraction())return;
           queueCommand(robot,module,{endpoint:widget.command_endpoint},{action:'stop',file:''},manifest.revision);
         });
+      } else if(widget.kind==='autonomy') {
+        const node=element('div',undefined,'autonomy-widget');
+        const script=element('select');script.setAttribute('aria-label',`${widget.label} script`);
+        const fields=element('div',undefined,'autonomy-fields');
+        const actions=element('div',undefined,'autonomy-actions');
+        const start=element('button','Start');const stop=element('button','Stop');stop.className='stop';
+        const status=element('p','Waiting for autonomy manager…','autonomy-status');
+        actions.append(start,stop);node.append(element('strong',widget.label,'autonomy-title'),script,fields,actions,status);controls.append(node);
+        const item={widget,script,fields,start,stop,status,inputs:[],renderedFile:''};ctx.autonomyWidgets.push(item);
+        script.addEventListener('change',()=>{item.renderedFile='';syncAutonomyWidget(ctx,item);});
+        start.addEventListener('click',()=>{
+          if(!beginInteraction())return;
+          try {queueCommand(robot,module,{endpoint:widget.command_endpoint},{action:'start',file:script.value,config:autonomyConfig(item)},manifest.revision);}
+          catch(error){say(error.message,true);}
+        });
+        stop.addEventListener('click',()=>{
+          if(!beginInteraction())return;
+          queueCommand(robot,module,{endpoint:widget.command_endpoint},{action:'stop'},manifest.revision);
+        });
       } else if(widget.kind==='lights') {
         const lights=new LightsWidget({widget,send:(endpoint,payload)=>api('/modules/api/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({robot,module:module.id,endpoint,payload,revision:manifest.revision})})});
         ctx.lightsWidgets.push(lights);controls.append(lights.node);
@@ -349,6 +434,7 @@ function applyState(state) {
       value.textContent=datum===undefined?'—':(typeof datum==='object'?JSON.stringify(datum):String(datum));
     }
     for(const item of ctx.telemetryWidgets)syncTelemetryWidget(ctx,item);
+    for(const item of ctx.autonomyWidgets)syncAutonomyWidget(ctx,item);
     for(const item of ctx.logsWidgets)syncLogsWidget(ctx,item);
     syncValues(ctx);
   }

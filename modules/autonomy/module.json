@@ -1,0 +1,108 @@
+{
+  "type": "pebble.autonomy",
+  "version": 1,
+  "title": "Autonomy",
+  "description": "Discover and run robot-advertised autonomy scripts.",
+  "endpoints": {
+    "command": {
+      "topic": "i/autonomy/command",
+      "kind": "command",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {"type": "string", "enum": ["start", "stop"]},
+          "file": {"type": "string", "minLength": 1, "maxLength": 128},
+          "config": {
+            "type": "object",
+            "maxProperties": 64,
+            "additionalProperties": {"type": ["string", "number", "boolean"]}
+          }
+        },
+        "required": ["action"],
+        "additionalProperties": false
+      },
+      "qos": 0,
+      "retain": false
+    },
+    "scripts": {
+      "topic": "o/autonomy/scripts",
+      "kind": "state",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "scripts": {
+            "type": "array",
+            "maxItems": 128,
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": {"type": "string", "minLength": 1, "maxLength": 128},
+                "label": {"type": "string", "maxLength": 160},
+                "configs": {
+                  "type": "array",
+                  "maxItems": 64,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "key": {"type": "string", "minLength": 1, "maxLength": 128},
+                      "label": {"type": "string", "maxLength": 160},
+                      "type": {"type": "string", "enum": ["string", "int", "float", "bool", "enum"]},
+                      "default": {"type": "string", "maxLength": 2048},
+                      "required": {"type": "boolean"},
+                      "min": {"type": "number"},
+                      "max": {"type": "number"},
+                      "options": {"type": "array", "maxItems": 64, "items": {"type": "string", "maxLength": 256}}
+                    },
+                    "required": ["key", "label", "type", "required"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["file", "label", "configs"],
+              "additionalProperties": false
+            }
+          },
+          "controls": {"type": "boolean"},
+          "timestamp": {"type": "number"}
+        },
+        "required": ["scripts", "controls", "timestamp"],
+        "additionalProperties": false
+      },
+      "qos": 1,
+      "retain": true
+    },
+    "status": {
+      "topic": "o/autonomy/status",
+      "kind": "state",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "running": {"type": "boolean"},
+          "file": {"type": ["string", "null"], "maxLength": 128},
+          "pid": {"type": ["integer", "null"], "minimum": 0},
+          "error": {"type": ["string", "null"], "maxLength": 2048},
+          "timestamp": {"type": "number"}
+        },
+        "required": ["running", "file", "pid", "error", "timestamp"],
+        "additionalProperties": false
+      },
+      "qos": 1,
+      "retain": true
+    }
+  },
+  "actions": {},
+  "commands": [],
+  "bindings": [],
+  "ui": {
+    "columns": 1,
+    "controls": [
+      {
+        "kind": "autonomy",
+        "label": "Autonomy scripts",
+        "command_endpoint": "command",
+        "scripts_endpoint": "scripts",
+        "status_endpoint": "status"
+      }
+    ]
+  }
+}

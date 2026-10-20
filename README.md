@@ -281,10 +281,13 @@ still provide single-robot defaults when no web config exists.
 The `/modules` page discovers robot-advertised controls and media from the
 retained `.../o/manifest`. Shared modules live in `modules/`; robot-specific
 modules and compositions live in `robots/`. The `/` page remains available for
-deployments still using the compatibility controls. Goob's module set includes
-shared drive, soundboard, lights, telemetry, and log viewer modules. The log
-viewer reads structured `o/logs` events and keeps a bounded recent history in
-gateway memory; use the broker logger or MQTT history for durable capture.
+deployments still using the compatibility controls. Goob's example module
+configuration includes shared drive, soundboard, lights, telemetry, log viewer,
+and autonomy modules.
+The autonomy manager advertises its configured scripts and validates their
+options before starting them. The log viewer reads structured `o/logs` events
+and keeps a bounded recent history in gateway memory; use the broker logger or
+MQTT history for durable capture.
 If `mqtt_history.enabled=true`, the UI can also persist all MQTT
 message history to MongoDB (`pymongo` dependency).
 

@@ -355,6 +355,9 @@ compact paths; legacy service examples are explicitly labeled.
 | `{base}/o/manifest` | Retained robot-advertised module definitions |
 | `{base}/o/modules/status` | Module host availability |
 | `{base}/o/logs` | Structured, non-retained runtime log events |
+| `{base}/i/autonomy/command` | Start/stop a robot-advertised autonomy script |
+| `{base}/o/autonomy/scripts` | Retained autonomy script and argument descriptors |
+| `{base}/o/autonomy/status` | Retained active-script status |
 | `{base}/i/drive` | Drive command, adapted locally to the existing drive bridge |
 | `{base}/i/lights/solid`, `{base}/i/lights/flash` | Solid/flash RGB commands from the shared lights module |
 | `{base}/i/camera`, `{base}/i/audio`, `{base}/i/speaker` | Media requests |
@@ -377,6 +380,14 @@ event: `t` is the Unix timestamp in milliseconds; `level` is `DEBUG`, `INFO`,
 identify the source and record. Events are non-retained. A gateway may keep a
 bounded recent buffer for display; use the broker logger or MQTT history for
 durable storage.
+
+The shared `pebble.autonomy` module uses the compact command and state topics
+above. A start command names a discovered script and supplies optional scalar
+configuration values; the robot's autonomy manager validates values against
+that script's configured argument types and bounds. A stop command requires no
+script name. The manager retains its existing `outgoing/autonomy-files` and
+`outgoing/autonomy-status` compatibility topics and accepts its existing
+`incoming/autonomy-command` commands. Compact commands are non-retained.
 
 #### Legacy incoming topics still implemented here
 

@@ -70,6 +70,10 @@
           "use": "modules/logs/module.json"
         },
         {
+          "id": "autonomy",
+          "use": "modules/autonomy/module.json"
+        },
+        {
           "id": "gripper-demo",
           "use": "robots/goob/modules/gripper-demo/module.json",
           "adapters": {

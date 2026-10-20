@@ -32,7 +32,7 @@ A module definition contains:
   actions. Axes support dead zones, scale/inversion and offsets. Reset bindings
   release held actions. Keyboard auto-repeat is ignored.
 - `ui`: a grid of generic joystick, range, button, reset, state, telemetry and
-  log widgets, plus reusable media, soundboard, and lights widgets.
+  log widgets, plus reusable media, soundboard, autonomy, and lights widgets.
 
 Module format version 1 supports numeric action bindings and object commands.
 The soundboard widget is a reusable typed control that reads the robot's WAV
@@ -41,6 +41,13 @@ play/stop commands to a declared command endpoint. Definitions contain no
 arbitrary JavaScript, HTML, expressions, remote schema references, or
 robot-specific web routes. Schemas support the bounded local JSON Schema subset
 enforced by `control/common/modules.py`.
+
+The autonomy widget reads script names and bounded argument descriptors from
+the robot, then builds typed inputs for string, integer, float, boolean, and
+enumerated options. Start/stop requests use a declared command endpoint. The
+robot's existing autonomy manager remains responsible for discovering allowed
+scripts, validating argument bounds, managing dependencies, and stopping the
+current process before starting another.
 
 The lights widget uses declared solid and flash command endpoints. The shared
 `modules/lights/module.json` defines color and flash-period payloads; robots
@@ -92,6 +99,9 @@ The launcher starts `control.services.module_host` automatically when enabled.
 - Shared `modules/logs/module.json`: recent structured runtime messages with
   level filtering. The launcher publishes compact events while retaining the
   configured compatibility feed for existing log consumers.
+- Shared `modules/autonomy/module.json`: robot-advertised autonomy scripts,
+  configurable arguments, and start/stop controls. Goob's autonomy manager
+  publishes compact module state while keeping its legacy topics available.
 - Robot-local `robots/goob/modules/gripper-demo/module.json`: a virtual position
   slider, open/close buttons, G/H keys and controller buttons 0/1. Its echo
   adapter updates retained `o/gripper-demo/state` and never touches hardware.
@@ -150,7 +160,7 @@ there is no reverse alias or wildcard topic rewrite.
 ## Validation
 
 ```bash
-python3 -m unittest tests.test_modules tests.test_mqtt_bridge tests.test_common tests.test_example_configs tests.test_launcher tests.test_unified_config
+python3 -m unittest tests.test_modules tests.test_mqtt_bridge tests.test_common tests.test_example_configs tests.test_launcher tests.test_autonomy_manager tests.test_unified_config
 node --test tests/test_module_inputs.mjs
 ```
 
