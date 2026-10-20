@@ -155,6 +155,10 @@ one-way listening or speech intelligibility.
 - Add shared sound cue names and helper utilities for autonomy/control scripts.
 - Add safe, bounded audio volume controls for supported ALSA devices.
 - Add soundboard repeat and timed-repeat modes with a clear stop command.
+- Preserve the MCU's flashing startup pattern, then have `serial_mcu_bridge`
+  send a lights-off command immediately after establishing serial
+  communication. This gives a visible startup check for MCU power, bridge
+  connectivity, and successful command delivery.
 - Improve structured runtime diagnostics with service metadata and optional
   health states while keeping robot-wide availability separate from individual
   service health.
