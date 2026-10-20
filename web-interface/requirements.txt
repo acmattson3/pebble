@@ -3,3 +3,5 @@ paho-mqtt>=1.6
 opencv-python-headless>=4.9
 numpy>=1.26
 pymongo>=4.6
+jsonschema>=4,<5
+av>=10,<19

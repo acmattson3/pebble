@@ -160,7 +160,7 @@ def make_base_config(robot_id: str = "testbot") -> dict[str, Any]:
                 },
                 "heartbeat": {
                     "enabled": True,
-                    "interval_seconds": 0.25,
+                    "interval_seconds": 60.0,
                     "qos": 1,
                     "retain": True,
                 },
@@ -199,7 +199,7 @@ def make_base_config(robot_id: str = "testbot") -> dict[str, Any]:
                 "heartbeat": {
                     "enabled": True,
                     "topic": f"pebble/robots/{robot_id}/outgoing/online",
-                    "interval_seconds": 0.25,
+                    "interval_seconds": 60.0,
                     "qos": 1,
                     "retain": True,
                 },

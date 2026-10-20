@@ -47,11 +47,18 @@ class MqttBridge:
             raise SystemExit("services.mqtt_bridge.remote_mqtt.host is required")
         self.remote_port = int(remote_cfg.get("port") or 1883)
         self.remote_keepalive = int(remote_cfg.get("keepalive") or 60)
+        self.remote_transport = str(remote_cfg.get("transport") or "tcp").strip().lower()
+        self.remote_websocket_path = str(remote_cfg.get("websocket_path") or "/mqtt")
+        if self.remote_transport not in {"tcp", "websockets"}:
+            raise SystemExit("services.mqtt_bridge.remote_mqtt.transport must be 'tcp' or 'websockets'")
         self.same_broker_mode = self._brokers_match()
 
         self.base = self.identity.base
         self.incoming_prefix = f"{self.base}/incoming/"
         self.outgoing_prefix = f"{self.base}/outgoing/"
+        self.module_incoming_prefix = f"{self.base}/i/"
+        self.module_outgoing_prefix = f"{self.base}/o/"
+        self.module_retained_topics = {f"{self.base}/o/manifest", f"{self.base}/o/modules/status", f"{self.base}/o/media/state"}
         self.flags_prefix = f"{self.base}/incoming/flags/"
         ignored_outgoing_topics: set[str] = set()
         for _instance_name, instance_cfg in enabled_service_instances(config, "serial_mcu_bridge"):
@@ -79,7 +86,7 @@ class MqttBridge:
         heartbeat_cfg = self.service_cfg.get("heartbeat") if isinstance(self.service_cfg.get("heartbeat"), dict) else {}
         self.heartbeat_enabled = bool(heartbeat_cfg.get("enabled", True))
         self.heartbeat_topic = str(heartbeat_cfg.get("topic") or f"{self.base}/outgoing/online")
-        self.heartbeat_interval = max(0.05, float(heartbeat_cfg.get("interval_seconds") or 0.25))
+        self.heartbeat_interval = max(0.05, float(heartbeat_cfg.get("interval_seconds") or 60.0))
         self.heartbeat_qos = int(heartbeat_cfg.get("qos") or 1)
         self.heartbeat_retain = bool(heartbeat_cfg.get("retain", True))
         self.next_heartbeat_at = 0.0
@@ -104,6 +111,7 @@ class MqttBridge:
         self.git_pull_ignore_retained = bool(self.git_pull_control_cfg.get("ignore_retained", True))
         media_cfg = self.service_cfg.get("media") if isinstance(self.service_cfg.get("media"), dict) else {}
         audio_rx_cfg = media_cfg.get("audio_receiver") if isinstance(media_cfg.get("audio_receiver"), dict) else {}
+        self.media_managed_by_av = bool(config.get("services", {}).get("av_daemon", {}).get("demand_enabled", False))
         self.audio_stream_topic = str(audio_rx_cfg.get("topic") or f"{self.base}/incoming/audio-stream")
 
         self.stop_event = threading.Event()
@@ -138,6 +146,12 @@ class MqttBridge:
         if self.local_host != self.remote_host:
             return False
         if self.local_port != self.remote_port:
+            return False
+        local_transport = str(self.local_mqtt_cfg.get("transport") or "tcp").strip().lower()
+        if local_transport != self.remote_transport:
+            return False
+        local_ws_path = str(self.local_mqtt_cfg.get("websocket_path") or "/mqtt")
+        if local_transport == "websockets" and local_ws_path != self.remote_websocket_path:
             return False
         if str(self.local_mqtt_cfg.get("username") or "") != str(self.remote_mqtt_cfg.get("username") or ""):
             return False
@@ -197,7 +211,11 @@ class MqttBridge:
                 delay = min(delay * 2, 60.0)
 
     def _connect_remote(self) -> None:
-        client = create_client(client_id=f"{self.base}-remote-bridge")
+        client = create_client(
+            client_id=f"{self.base}-remote-bridge",
+            transport=self.remote_transport,
+            websocket_path=self.remote_websocket_path,
+        )
         mqtt_auth_and_tls(client, self.remote_mqtt_cfg, self.config_path.parent)
         client.on_connect = self._on_remote_connect
         client.on_disconnect = self._on_remote_disconnect
@@ -228,6 +246,7 @@ class MqttBridge:
         if self.same_broker_mode:
             return
         client.subscribe(f"{self.outgoing_prefix}#", qos=1)
+        client.subscribe(f"{self.module_outgoing_prefix}#", qos=1)
         self._refresh_mirror_subscription(force=True)
 
     def _on_remote_connect(self, client: mqtt.Client, _userdata: Any, _flags: dict[str, Any], rc: int) -> None:
@@ -239,6 +258,7 @@ class MqttBridge:
         else:
             logging.info("Remote MQTT connected; subscribing %s#", self.incoming_prefix)
             client.subscribe(f"{self.incoming_prefix}#", qos=1)
+            client.subscribe(f"{self.module_incoming_prefix}#", qos=1)
         self.next_heartbeat_at = 0.0
         self._publish_heartbeat()
         if not self.same_broker_mode:
@@ -304,14 +324,28 @@ class MqttBridge:
             return
         self._handle_standard_discovery(topic, parsed)
 
-        if topic.startswith(self.outgoing_prefix):
+        if topic == f"{self.base}/o/manifest" and isinstance(parsed, dict):
+            from control.common.modules import validate_manifest
+            try:
+                manifest = validate_manifest(parsed)
+                if manifest["base"] == self.base:
+                    self.module_retained_topics = {f"{self.base}/o/manifest", f"{self.base}/o/modules/status", f"{self.base}/o/media/state"}
+                    self.module_retained_topics.update(e["topic"] for m in manifest["modules"]
+                                                      for e in m["endpoints"].values() if e["retain"])
+            except Exception:
+                logging.warning("Ignoring invalid module manifest for retained routing")
+
+        if topic.startswith((self.outgoing_prefix, self.module_outgoing_prefix)):
             if self._is_ignored_outgoing_topic(topic):
                 logging.debug("Ignoring local-only outgoing topic for remote mirror: %s", topic)
                 return
-            if bool(msg.retain):
+            # MQTT 3.1.1 clears RETAIN on live deliveries. Module contracts tell
+            # us which states must stay retained on the other broker.
+            retain = bool(msg.retain) or topic in self.module_retained_topics
+            if retain:
                 with self.state_lock:
                     self.retained_local_outgoing[topic] = (payload_bytes, int(msg.qos), True)
-            self._publish_remote_raw(topic, payload_bytes, msg.qos, msg.retain)
+            self._publish_remote_raw(topic, payload_bytes, msg.qos, retain)
             return
 
         if not topic.startswith(self.incoming_prefix):
@@ -436,6 +470,8 @@ class MqttBridge:
             self._start_git_pull_command()
 
     def _handle_media_topics(self, topic: str, parsed: Any) -> None:
+        if self.media_managed_by_av:
+            return
         if topic == self.audio_control_topic:
             desired = parse_bool_payload(parsed)
             if desired is None:
@@ -491,7 +527,7 @@ class MqttBridge:
         if self.same_broker_mode:
             return
         topic = msg.topic
-        if not topic.startswith(self.incoming_prefix):
+        if not topic.startswith((self.incoming_prefix, self.module_incoming_prefix)):
             return
         if topic == self.audio_stream_topic:
             return
@@ -698,6 +734,8 @@ class MqttBridge:
             logging.error("Failed to execute git pull command: %s", exc)
 
     def _start_video_process(self) -> None:
+        if self.media_managed_by_av:
+            return
         command = self.video_control_cfg.get("command")
         if not command:
             logging.warning("mqtt_video enabled but services.mqtt_bridge.video_control.command is missing")
@@ -761,6 +799,8 @@ class MqttBridge:
         return env
 
     def _start_audio_stack(self) -> None:
+        if self.media_managed_by_av:
+            return
         with self.media_lock:
             started_any = False
             for role, label in (("publisher", "MQTT audio publisher"), ("receiver", "MQTT audio receiver")):

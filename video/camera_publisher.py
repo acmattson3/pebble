@@ -9,6 +9,7 @@ import struct
 import subprocess
 import sys
 import time
+import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -42,6 +43,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--profile", default="default", help="Profile name from config.services.mqtt_bridge.media.video_publisher.")
     parser.add_argument("--config", default=str(DEFAULT_CONFIG_PATH), help="Path to unified runtime config JSON.")
     parser.add_argument("--robot-id", help="Robot ID used for topic validation/defaulting.")
+    parser.add_argument("--codec", choices=["pbvd", "h264"], help="Video encoding backend (default from config).")
     parser.add_argument("--topic", help="MQTT topic override.")
     parser.add_argument("--host", help="MQTT broker host override.")
     parser.add_argument("--port", type=int, help="MQTT broker port override.")
@@ -185,6 +187,16 @@ def run_profile(profile_name: str, *, config_path: str, cli_args: Optional[argpa
     target_fps = float(encoding_cfg["target_fps"])
     keyframe_interval = int(encoding_cfg["keyframe_interval"])
     jpeg_quality = int(encoding_cfg["jpeg_quality"])
+    codec_name = getattr(cli_args, "codec", None) or encoding_cfg.get("codec", "pbvd")
+    if codec_name not in {"pbvd", "h264"}:
+        raise CameraProfileError("Video codec must be pbvd or h264")
+    if codec_name == "h264":
+        from control.common.h264 import Encoder
+        # Fail at startup if the dependency or software encoder is unavailable.
+        probe = Encoder(int(encoding_cfg["publish_width"]), int(encoding_cfg["publish_height"]),
+            int(target_fps), int(encoding_cfg.get("bitrate",400000)), keyframe_interval,
+            str(encoding_cfg.get("preset","ultrafast")))
+        del probe
     publish_width = int(encoding_cfg.get("publish_width") or source_cfg.get("width") or 640)
     publish_height = int(encoding_cfg.get("publish_height") or source_cfg.get("height") or 480)
 
@@ -230,9 +242,9 @@ def run_profile(profile_name: str, *, config_path: str, cli_args: Optional[argpa
 
         frame_id = 0
         reference_frame: Optional[np.ndarray] = None
-        last_send_time = 0.0
-        start_time = time.time()
-        frame_index = 0
+        next_send_at = 0.0
+        encoder = None
+        pending_publish = None
 
         try:
             while capture.isOpened():
@@ -241,29 +253,47 @@ def run_profile(profile_name: str, *, config_path: str, cli_args: Optional[argpa
                     print("Shared video feed lost. Reconnecting...", file=sys.stderr)
                     break
 
+                now = time.monotonic()
+                if now < next_send_at:
+                    continue
+                # Drop before encoding when the previous packet has not reached
+                # the socket. Keep latency bounded and preserve reference order.
+                if pending_publish is not None and not pending_publish.is_published():
+                    if client.is_connected():
+                        continue
+                    encoder = None
+                    reference_frame = None
+                if not _ensure_mqtt_connection(client, mqtt_cfg):
+                    encoder = None
+                    reference_frame = None
+                    continue
+                if client._pebble_video_reconnected.is_set():
+                    client._pebble_video_reconnected.clear()
+                    encoder = None
+                    reference_frame = None
+                timestamp_ms = int(time.time()*1000)
                 frame = _apply_rotation(frame, rotation)
                 frame = _resize_for_publish(frame, publish_width, publish_height)
-
-                expected_time = start_time + frame_index * frame_duration
-                now = time.time()
-                delay = expected_time - now
-                if delay > 0:
-                    time.sleep(delay)
-                    now = time.time()
-
-                if frame_duration == 0 or now - last_send_time >= frame_duration:
+                if codec_name == "h264":
+                    if encoder is None:
+                        encoder = Encoder(publish_width,publish_height,int(target_fps),
+                            int(encoding_cfg.get("bitrate",400000)),keyframe_interval,
+                            str(encoding_cfg.get("preset","ultrafast")))
+                    charging_indicator.decorate(frame)
+                    payload = encoder.encode(frame,timestamp_ms)
+                else:
                     is_keyframe = reference_frame is None or (frame_id % keyframe_interval) == 0
                     frame_to_send = _prepare_frame(frame, reference_frame, is_keyframe)
                     charging_indicator.decorate(frame_to_send)
+                    payload, decoded_frame = _encode_payload(frame_to_send, frame_id, is_keyframe, jpeg_quality, timestamp_ms)
+                    reference_frame = _reconstruct_published_frame(reference_frame, decoded_frame, is_keyframe)
+                    frame_id += 1
+                pending_publish = client.publish(topic,payload,qos=0,retain=False)
+                if pending_publish.rc != mqtt.MQTT_ERR_SUCCESS:
+                    encoder = None
+                    reference_frame = None
+                next_send_at = max(next_send_at+frame_duration,now)
 
-                    if _ensure_mqtt_connection(client, mqtt_cfg):
-                        payload, decoded_frame = _encode_payload(frame_to_send, frame_id, is_keyframe, jpeg_quality)
-                        client.publish(topic, payload)
-                        reference_frame = _reconstruct_published_frame(reference_frame, decoded_frame, is_keyframe)
-                        last_send_time = now
-                        frame_id += 1
-
-                frame_index += 1
         except Exception as exc:
             print(f"Error in video publish loop: {exc}", file=sys.stderr)
         finally:
@@ -286,6 +316,11 @@ def _create_mqtt_client(cfg: Dict[str, Any]) -> mqtt.Client:
 
     host_index = 0
     client = create_client()
+    client._pebble_video_reconnected = threading.Event()
+    def on_connect(_client, _userdata, _flags, rc):
+        if rc == 0:
+            _client._pebble_video_reconnected.set()
+    client.on_connect = on_connect
     username = cfg.get("username")
     password = cfg.get("password")
     if username:
@@ -392,7 +427,7 @@ def _resize_for_publish(frame: np.ndarray, width: int, height: int) -> np.ndarra
     return cv2.resize(frame, (int(width), int(height)), interpolation=interpolation)
 
 
-def _encode_payload(frame: np.ndarray, frame_id: int, is_keyframe: bool, jpeg_quality: int) -> tuple[bytes, np.ndarray]:
+def _encode_payload(frame: np.ndarray, frame_id: int, is_keyframe: bool, jpeg_quality: int, timestamp_ms: Optional[int] = None) -> tuple[bytes, np.ndarray]:
     encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), int(jpeg_quality)]
     success, jpeg = cv2.imencode(".jpg", frame, encode_params)
     if not success:
@@ -409,7 +444,7 @@ def _encode_payload(frame: np.ndarray, frame_id: int, is_keyframe: bool, jpeg_qu
         frame_type,
         0,
         int(frame_id) & 0xFFFFFFFF,
-        int(time.time() * 1000),
+        int(timestamp_ms if timestamp_ms is not None else time.time() * 1000),
     )
     return header + jpeg_bytes, decoded
 

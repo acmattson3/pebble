@@ -294,6 +294,10 @@ class ManagedPipeline:
             return
 
         logging.warning("%s pipeline exited rc=%s; scheduling restart.", self.name, rc)
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
         self.process = None
         self.next_start_at = now + self.restart_delay
 
@@ -301,12 +305,23 @@ class ManagedPipeline:
         proc = self.process
         self.process = None
         if proc and proc.poll() is None:
-            proc.terminate()
+            try:
+                os.killpg(proc.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
             try:
                 proc.wait(timeout=self.stop_timeout)
             except subprocess.TimeoutExpired:
-                proc.kill()
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
                 proc.wait(timeout=self.stop_timeout)
+        if proc:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
         self._remove_socket()
 
     def _start(self, now: float) -> None:
@@ -321,7 +336,7 @@ class ManagedPipeline:
         self._remove_socket()
 
         try:
-            self.process = subprocess.Popen(command, env=self.env, cwd=self.cwd)
+            self.process = subprocess.Popen(command, env=self.env, cwd=self.cwd, start_new_session=True)
         except OSError as exc:
             logging.error("Failed to start %s pipeline: %s", self.name, exc)
             self.process = None
@@ -398,15 +413,27 @@ class AvDaemon:
         if not self.pipelines:
             raise SystemExit("av_daemon has no enabled pipelines (video/audio).")
 
+        self.lifecycle = None
+        if self.svc_cfg.get("demand_enabled", False):
+            from control.services.media_lifecycle import MediaLifecycle
+            self.lifecycle = MediaLifecycle(config, config_path, self.pipelines, ManagedPipeline)
+
     def start(self) -> None:
+        if self.lifecycle:
+            self.lifecycle.start()
         while not self.stop_event.is_set():
             now = time.monotonic()
-            for pipeline in self.pipelines:
-                pipeline.tick(now)
+            if self.lifecycle:
+                self.lifecycle.tick(now)
+            else:
+                for pipeline in self.pipelines:
+                    pipeline.tick(now)
             self.stop_event.wait(0.2)
 
     def stop(self) -> None:
         self.stop_event.set()
+        if self.lifecycle:
+            self.lifecycle.stop()
         for pipeline in self.pipelines:
             pipeline.stop()
 

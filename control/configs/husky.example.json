@@ -52,13 +52,15 @@
       "enabled": true,
       "log_level": "INFO",
       "remote_mqtt": {
-        "host": "",
-        "port": 1883,
+        "host": "mqtt.sssn.us",
+        "port": 443,
+        "transport": "websockets",
+        "websocket_path": "/",
         "keepalive": 60,
         "username": "",
         "password": "",
         "tls": {
-          "enabled": false,
+          "enabled": true,
           "ca_cert": "",
           "client_cert": "",
           "client_key": "",
@@ -79,7 +81,7 @@
       "heartbeat": {
         "enabled": true,
         "topic": "pebble/robots/husky/outgoing/online",
-        "interval_seconds": 0.25,
+        "interval_seconds": 60.0,
         "qos": 1,
         "retain": true
       },
@@ -129,7 +131,7 @@
       "heartbeat": {
         "enabled": false,
         "topic": "pebble/robots/husky/outgoing/online",
-        "interval_seconds": 0.25,
+        "interval_seconds": 60.0,
         "qos": 1,
         "retain": true
       },

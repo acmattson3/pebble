@@ -1,184 +1,65 @@
 # Video Streaming
 
-This directory handles robot camera streaming over MQTT.
+Pebble supports two MQTT camera formats: the original PBVD JPEG delta stream
+and the newer PBVH H.264 stream. Goob is configured to use H.264. The shared
+camera module defaults to PBVD for compatibility; the robot's publisher config
+and advertised module codec must agree. See [H.264 setup and live observations](../modules/H264.md)
+for configuration, wire framing, recovery behavior, and benchmark results.
 
-Current architecture:
-- `control/services/av_daemon.py` is the only process that opens the physical camera.
-- `video/camera_publisher.py` reads frames from AV-daemon shared memory (`shmsrc`) and publishes to MQTT.
-- Test subscribers in this directory read the published MQTT stream.
+## Data path
 
-## Files
+1. The AV daemon opens the physical camera only while video capture is needed
+   and exports BGR frames over shared memory.
+2. The camera publisher consumes that local stream and encodes PBVD or H.264.
+3. Encoded frames are published non-retained at QoS 0 on the robot's advertised
+   `o/video` topic.
+4. The web gateway decodes frames; its current HTTP endpoint serves JPEG to the
+   browser. H.264 is currently used on robot-to-MQTT-to-gateway, not natively in
+   the browser.
 
-- `camera_publisher.py`
-  - Publishes outgoing camera frames to MQTT from shared video input.
-- `camera_config.py`
-  - Reads unified runtime config and derives video profile settings.
-- `video_receiver_test.py`
-  - Local test subscriber/decoder that displays video from MQTT.
-- `video_bitrate_monitor.py`
-  - Reports MQTT video bitrate/stats.
+Demand is requested through the camera module's View/Stop controls. Requests
+are renewable leases, so publisher and capture processes stop after the last
+consumer releases its request or its lease expires. Older
+`incoming/flags/mqtt-video` and `incoming/front-camera` controls remain
+transitional compatibility paths.
 
-## Unified Config
+## Configuration and diagnostics
 
-Scripts in this directory use:
-- `control/configs/config.json`
+Runtime settings are in `control/configs/config.json`:
 
-Main sections used:
-- `robot`
-- `services.mqtt_bridge.remote_mqtt`
-- `services.av_daemon.video`
-- `services.mqtt_bridge.media.video_publisher`
+- `services.av_daemon.video` selects the camera backend, device, and capture
+  settings.
+- `services.mqtt_bridge.media.video_publisher` configures publisher codec,
+  bitrate/quality, output dimensions, and frame rate.
+- `services.module_host.modules` camera instance `formats.stream.codec` tells
+  the web interface which decoder to use.
 
-`camera_publisher.py` profile names are derived from
-`services.mqtt_bridge.media.video_publisher.profile` (default `default`).
-
-## Data Path
-
-1. AV daemon captures camera and exports BGR frames through shared memory.
-2. `camera_publisher.py` consumes that shared stream.
-3. Publisher encodes and sends MQTT payloads (keyframe/delta JSON payload).
-4. Receivers decode and reconstruct frames.
-
-You can decouple capture and MQTT stream sizes:
-- Capture/input shape comes from `video_publisher.width/height/fps` (or AV daemon defaults).
-- MQTT output shape/fps comes from `video_publisher.publish_width/publish_height/publish_fps`.
-- If `publish_*` is omitted, publisher uses the capture/input shape.
-
-## MQTT Topic Convention
-
-Topic format:
-- `{system}/{type}/{id}/outgoing/front-camera`
-
-Default topic is derived from `robot` identity unless overridden in
-`services.mqtt_bridge.media.video_publisher.topic`.
-
-## Payload Format
-
-`camera_publisher.py` publishes JSON payload with:
-- `id` (int): frame counter
-- `keyframe` (bool): `true` for full frame, `false` for delta frame
-- `data` (str): base64-encoded zlib-compressed JPEG bytes
-- `timestamp` (float): UNIX seconds at publish time
-
-### Delta-frame details
-
-Keyframe path:
-- Encode full BGR frame as JPEG.
-- Compress with zlib and base64.
-- Publish with `keyframe: true`.
-- Receiver stores this as reference frame.
-
-Delta path:
-- Compute per-pixel delta against the sender's last reconstructed reference frame:
-  - `raw_delta = current.astype(int16) - reference.astype(int16)`
-- Shift to unsigned byte domain:
-  - `encoded_delta = clip(raw_delta + 128, 0, 255).astype(uint8)`
-- JPEG encode `encoded_delta`, then zlib + base64.
-- Publish with `keyframe: false`.
-- Sender updates its reference from the JPEG-decoded payload it actually transmitted.
-
-Receiver reconstruction:
-- Decode payload image to `decoded`.
-- If keyframe:
-  - `reference = decoded`
-- If delta:
-  - `raw_delta = decoded.astype(int16) - 128`
-  - `reconstructed = clip(reference.astype(int16) + raw_delta, 0, 255).astype(uint8)`
-  - `reference = reconstructed`
-
-Behavior notes:
-- Delta frames require reference keyframe state.
-- Packet loss/out-of-order can cause drift until next keyframe.
-- Regular keyframes limit recovery time.
-
-## Manual run
-
-From repo root:
+To run the publisher manually:
 
 ```bash
-python3 video/camera_publisher.py \
-  --config control/configs/config.json \
-  --profile default
+python3 video/camera_publisher.py --config control/configs/config.json --profile default
 ```
 
-Optional overrides:
-- `--robot-id`, `--topic`
-- `--host`, `--port`, `--username`, `--password`
-- `--input-shm`, `--input-retry`
-
-## Integration with mqtt_bridge
-
-Default `services.mqtt_bridge.video_control.command` in `config.json.example`:
-
-```json
-"command": [
-  "python3",
-  "video/camera_publisher.py",
-  "--config",
-  "control/configs/config.json"
-]
-```
-
-Bridge media controls:
-- `.../incoming/flags/mqtt-video`
-- `.../incoming/front-camera`
-
-`mqtt_bridge` controls process lifecycle only. `camera_publisher.py` publishes
-video directly to the remote broker configured at
-`services.mqtt_bridge.remote_mqtt`.
-
-## Test utilities
-
-Receiver preview:
+The local preview and bitrate monitor are still available:
 
 ```bash
 python3 video/video_receiver_test.py --config control/configs/config.json --profile default
-```
-
-Bitrate monitor:
-
-```bash
 python3 video/video_bitrate_monitor.py --config control/configs/config.json --profile default --interval 1.0
 ```
 
-## Dependencies
-
-Python:
-- `opencv-contrib-python`
-- `numpy`
-- `paho-mqtt`
-
-System:
-- `gstreamer1.0-tools`
-- `gstreamer1.0-plugins-base`
-- `gstreamer1.0-plugins-good`
-
-## GStreamer/libcamera caveats
-
-- AV daemon `video.backend=libcamera` requires system libcamera GStreamer integration
-  (for example `gstreamer1.0-libcamera` on Debian/Raspberry Pi OS).
-- OpenCV consumers require a build with GStreamer enabled (`cv2.CAP_GSTREAMER`).
-- Shared stream format assumptions must match (`BGR`, width/height/fps).
+OpenCV, NumPy, Paho MQTT, and GStreamer are used by the current paths. H.264
+encoding/decoding uses PyAV/libav; Goob currently uses software x264. No
+hardware encoder was configured. Check [the benchmark notes](../modules/H264.md)
+before selecting settings for another robot: camera capture and encoding load
+depend on hardware, resolution, and scene.
 
 ## Troubleshooting
 
-If publisher logs "Video source unavailable":
-- Ensure AV daemon is running.
-- Verify shared socket path matches between AV daemon and video publisher config.
-- Verify required GStreamer plugins are installed.
-
-If no frames arrive on MQTT:
-- Confirm `camera_publisher.py` process is running.
-- Confirm remote broker settings (`services.mqtt_bridge.remote_mqtt`) and topic config.
-- Confirm robot identity in `control/configs/config.json` (`robot.system/type/id`).
-  If identity remains at a placeholder/default, topic auto-derivation will publish there.
-
-If CPU is high in `camera_publisher.py`:
-- Reduce `publish_width`/`publish_height` and/or `publish_fps`.
-- Keep AV daemon capture settings independent if local consumers need higher quality.
-
-## Future enhancements
-
-- Optional migration from delta-frame payload to a more efficient encoded transport.
-- Structured error publication to `{system}/{type}/{id}/outgoing/errors`.
-- Expanded subsystem/integration tests under `tests/`.
+- If the publisher reports an unavailable source, confirm the AV daemon is
+  running and that shared socket paths match.
+- If no MQTT frames arrive, confirm a live camera lease, publisher process,
+  remote broker settings, and the robot's `pebble/robots/<id>` identity.
+- If H.264 frames fail to decode, confirm the manifest advertises `h264` and
+  that the publisher and gateway have PyAV/libav available.
+- If CPU usage is high, reduce publish dimensions or frame rate; local capture
+  settings can remain higher for autonomy consumers.

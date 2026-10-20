@@ -198,7 +198,7 @@ class Ros1Bridge:
         heartbeat_cfg = _as_dict(self.service_cfg.get("heartbeat"))
         self.heartbeat_enabled = bool(heartbeat_cfg.get("enabled", True))
         self.heartbeat_topic = str(heartbeat_cfg.get("topic") or self.identity.topic("outgoing", "online"))
-        self.heartbeat_interval = max(0.05, _parse_float(heartbeat_cfg.get("interval_seconds"), 0.25))
+        self.heartbeat_interval = max(0.05, _parse_float(heartbeat_cfg.get("interval_seconds"), 60.0))
         self.heartbeat_qos = int(heartbeat_cfg.get("qos") or 1)
         self.heartbeat_retain = bool(heartbeat_cfg.get("retain", True))
         self.next_heartbeat_at = 0.0

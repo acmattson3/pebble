@@ -1,0 +1,107 @@
+{
+  "type": "pebble.camera",
+  "version": 1,
+  "title": "Camera",
+  "description": "Capture starts on demand and stops when the last consumer releases it.",
+  "endpoints": {
+    "request": {
+      "topic": "i/camera",
+      "kind": "command",
+      "resource": "video-stream",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "consumer": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "ttl_seconds": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 15
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "additionalProperties": false
+      },
+      "qos": 0,
+      "retain": false
+    },
+    "stream": {
+      "topic": "o/video",
+      "kind": "video",
+      "schema": {},
+      "codec": "pbvd",
+      "qos": 0,
+      "retain": false
+    },
+    "state": {
+      "topic": "o/camera/state",
+      "kind": "state",
+      "schema": {
+        "type": "object"
+      },
+      "qos": 1,
+      "retain": true
+    }
+  },
+  "actions": {
+    "enabled": {
+      "label": "View camera",
+      "min": 0,
+      "max": 1,
+      "neutral": 0,
+      "step": 1,
+      "reset_on_release": false
+    }
+  },
+  "commands": [
+    {
+      "endpoint": "request",
+      "fields": {
+        "enabled": "enabled"
+      },
+      "repeat_ms": 2000
+    }
+  ],
+  "bindings": [
+    {
+      "id": "view",
+      "input": "keyboard",
+      "code": "KeyV",
+      "action": "enabled",
+      "value": 1
+    },
+    {
+      "id": "hide",
+      "input": "keyboard",
+      "code": "KeyB",
+      "action": "enabled",
+      "value": 0
+    }
+  ],
+  "ui": {
+    "columns": 1,
+    "controls": [
+      {
+        "kind": "video",
+        "label": "Camera",
+        "endpoint": "stream",
+        "action": "enabled"
+      },
+      {
+        "kind": "state",
+        "label": "Capture active",
+        "endpoint": "state",
+        "field": "capture"
+      }
+    ]
+  }
+}

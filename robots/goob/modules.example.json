@@ -1,0 +1,34 @@
+{
+  "robot": {
+    "system": "pebble",
+    "type": "robots",
+    "id": "goob"
+  },
+  "services": {
+    "module_host": {
+      "enabled": true,
+      "modules": [
+        {
+          "id": "drive",
+          "use": "modules/drive/module.json",
+          "adapters": {
+            "command": {
+              "kind": "forward",
+              "topic": "incoming/drive-values"
+            }
+          }
+        },
+        {
+          "id": "gripper-demo",
+          "use": "robots/goob/modules/gripper-demo/module.json",
+          "adapters": {
+            "command": {
+              "kind": "echo",
+              "state_endpoint": "state"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

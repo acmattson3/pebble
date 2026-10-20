@@ -1,0 +1,125 @@
+{
+  "type": "goob.gripper-demo",
+  "version": 1,
+  "title": "Gripper demo",
+  "description": "Virtual gripper: commands update an MQTT state value. This module demonstrates a robot-defined layout and input mappings.",
+  "endpoints": {
+    "command": {
+      "topic": "i/gripper-demo",
+      "kind": "command",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "position"
+        ],
+        "additionalProperties": false
+      },
+      "qos": 0,
+      "retain": false
+    },
+    "state": {
+      "topic": "o/gripper-demo/state",
+      "kind": "state",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "position"
+        ],
+        "additionalProperties": false
+      },
+      "qos": 1,
+      "retain": true
+    }
+  },
+  "actions": {
+    "position": {
+      "label": "Opening",
+      "min": 0,
+      "max": 1,
+      "neutral": 0,
+      "step": 0.05,
+      "reset_on_release": false
+    }
+  },
+  "commands": [
+    {
+      "endpoint": "command",
+      "fields": {
+        "position": "position"
+      },
+      "repeat_ms": 0
+    }
+  ],
+  "bindings": [
+    {
+      "id": "open-key",
+      "input": "keyboard",
+      "code": "KeyG",
+      "action": "position",
+      "value": 1
+    },
+    {
+      "id": "close-key",
+      "input": "keyboard",
+      "code": "KeyH",
+      "action": "position",
+      "value": 0
+    },
+    {
+      "id": "open-button",
+      "input": "gamepad-button",
+      "index": 0,
+      "action": "position",
+      "value": 1
+    },
+    {
+      "id": "close-button",
+      "input": "gamepad-button",
+      "index": 1,
+      "action": "position",
+      "value": 0
+    }
+  ],
+  "ui": {
+    "columns": 2,
+    "controls": [
+      {
+        "kind": "range",
+        "label": "Opening",
+        "action": "position"
+      },
+      {
+        "kind": "button",
+        "label": "Open",
+        "action": "position",
+        "value": 1
+      },
+      {
+        "kind": "button",
+        "label": "Close",
+        "action": "position",
+        "value": 0
+      },
+      {
+        "kind": "state",
+        "label": "Reported opening",
+        "endpoint": "state",
+        "field": "position"
+      }
+    ]
+  }
+}

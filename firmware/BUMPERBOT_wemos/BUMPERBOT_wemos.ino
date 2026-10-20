@@ -43,7 +43,7 @@ unsigned long lastChargingMs = 0;
 unsigned long lastTimeSyncAttemptMs = 0;
 
 const unsigned long MOTOR_CMD_TIMEOUT_MS = 1000;
-const unsigned long HEARTBEAT_PERIOD_MS = 250;
+const unsigned long HEARTBEAT_PERIOD_MS = 60000;
 const unsigned long CHARGING_PERIOD_MS = 5000;
 const unsigned long TIME_SYNC_RETRY_MS = 10000;
 

@@ -24,6 +24,44 @@
     "defaults": {
       "retained_publish_interval_seconds": 3600
     },
+    "module_host": {
+      "enabled": true,
+      "modules": [
+        {
+          "id": "drive",
+          "use": "modules/drive/module.json",
+          "adapters": {
+            "command": {
+              "kind": "forward",
+              "topic": "incoming/drive-values"
+            }
+          }
+        },
+        {
+          "id": "gripper-demo",
+          "use": "robots/goob/modules/gripper-demo/module.json",
+          "adapters": {
+            "command": {
+              "kind": "echo",
+              "state_endpoint": "state"
+            }
+          }
+        },
+        {
+          "id": "camera",
+          "use": "modules/camera/module.json",
+          "formats": {
+            "stream": {
+              "codec": "h264"
+            }
+          }
+        },
+        {
+          "id": "audio",
+          "use": "modules/audio/module.json"
+        }
+      ]
+    },
     "launcher": {
       "enabled": true,
       "restart_delay_seconds": 2.0,
@@ -71,11 +109,12 @@
         "source": "alsa",
         "device": "hw:4,0",
         "rate": 16000,
-        "channels": 2,
+        "channels": 1,
         "socket_path": "/tmp/pebble-audio.sock",
         "shm_size": 524288,
         "wait_for_connection": false
-      }
+      },
+      "demand_enabled": true
     },
     "mqtt_bridge": {
       "enabled": true,
@@ -83,6 +122,8 @@
       "remote_mqtt": {
         "host": "",
         "port": 1883,
+        "transport": "tcp",
+        "websocket_path": "/mqtt",
         "keepalive": 60,
         "username": "",
         "password": "",
@@ -108,14 +149,14 @@
       "heartbeat": {
         "enabled": true,
         "topic": "pebble/robots/goob/outgoing/online",
-        "interval_seconds": 0.25,
+        "interval_seconds": 60.0,
         "qos": 1,
         "retain": true
       },
       "media": {
         "video_publisher": {
           "profile": "default",
-          "topic": "pebble/robots/goob/outgoing/front-camera",
+          "topic": "pebble/robots/goob/o/video",
           "input_shm": "/tmp/pebble-video.sock",
           "input_retry_seconds": 2.0,
           "width": 1920,
@@ -128,24 +169,29 @@
           "keyframe_interval": 5,
           "jpeg_quality": 10,
           "rotate_degrees": 0,
-          "reconnect_seconds": 10
+          "reconnect_seconds": 10,
+          "codec": "h264",
+          "bitrate": 400000,
+          "preset": "ultrafast"
         },
         "audio_publisher": {
-          "topic": "pebble/robots/goob/outgoing/audio",
+          "topic": "pebble/robots/goob/o/audio",
           "input_shm": "/tmp/pebble-audio.sock",
           "input_retry_seconds": 2.0,
           "rate": 16000,
-          "channels": 2,
+          "channels": 1,
           "chunk_ms": 20,
-          "qos": 0
+          "qos": 0,
+          "codec": "opus",
+          "bitrate": 24000
         },
         "audio_receiver": {
-          "topic": "pebble/robots/goob/incoming/audio-stream",
+          "topic": "pebble/robots/goob/i/audio-stream",
           "device": "default",
           "rate": 16000,
-          "channels": 2,
-          "queue_limit": 48,
-          "concealment_ms": 100,
+          "channels": 1,
+          "queue_limit": 16,
+          "concealment_ms": 40,
           "qos": 0
         }
       },
@@ -179,21 +225,37 @@
         "env": {}
       },
       "reboot_control": {
-        "command": ["sudo", "-n", "/sbin/reboot"],
+        "command": [
+          "sudo",
+          "-n",
+          "/sbin/reboot"
+        ],
         "cwd": "",
         "cooldown_seconds": 30,
         "ignore_retained": true,
         "env": {}
       },
       "service_restart_control": {
-        "command": ["sudo", "-n", "/usr/bin/systemctl", "restart", "pebble-control.service"],
+        "command": [
+          "sudo",
+          "-n",
+          "/usr/bin/systemctl",
+          "restart",
+          "pebble-control.service"
+        ],
         "cwd": "",
         "cooldown_seconds": 10,
         "ignore_retained": true,
         "env": {}
       },
       "git_pull_control": {
-        "command": ["git", "-C", "/opt/pebble", "pull", "--ff-only"],
+        "command": [
+          "git",
+          "-C",
+          "/opt/pebble",
+          "pull",
+          "--ff-only"
+        ],
         "cwd": "",
         "cooldown_seconds": 60,
         "ignore_retained": true,
@@ -267,7 +329,9 @@
       },
       "playback": {
         "directory": "/var/lib/pebble/sounds",
-        "player_command": ["aplay"],
+        "player_command": [
+          "aplay"
+        ],
         "stop_timeout": 5,
         "scan_interval": 10,
         "cwd": "",

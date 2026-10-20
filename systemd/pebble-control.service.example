@@ -1,7 +1,6 @@
 [Unit]
 Description=Pebble Control Launcher
-After=network-online.target mosquitto.service
-Wants=network-online.target
+After=network.target
 
 [Service]
 Type=simple

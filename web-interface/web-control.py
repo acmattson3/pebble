@@ -40,6 +40,9 @@ except ImportError:  # pragma: no cover - optional dependency
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+from module_ui import ModuleUI
 REPLAY_DIR = Path(__file__).resolve().parent / "replay"
 if str(REPLAY_DIR) not in sys.path:
     sys.path.insert(0, str(REPLAY_DIR))
@@ -369,6 +372,7 @@ def _normalize_config(raw: Dict[str, Any]) -> Dict[str, Any]:
 
     mqtt_override = web_cfg.get("mqtt") if isinstance(web_cfg.get("mqtt"), dict) else {}
     mqtt_cfg = {
+        "auto_connect": bool(mqtt_override.get("auto_connect", False)),
         "host": str(mqtt_override.get("host") or local_mqtt_cfg.get("host") or "127.0.0.1"),
         "port": _coerce_int(mqtt_override.get("port"), _coerce_int(local_mqtt_cfg.get("port"), 1883)),
         "keepalive": _coerce_int(mqtt_override.get("keepalive"), _coerce_int(local_mqtt_cfg.get("keepalive"), 60)),
@@ -1298,6 +1302,9 @@ def _publish_video_control(robot_id: str, enabled: bool) -> bool:
     return _publish_command(topic, payload)
 
 
+module_ui = ModuleUI(app, _publish_command, lambda: mqtt_connected.is_set())
+
+
 def _publish_audio_control(robot_id: str, enabled: bool) -> bool:
     payload = {"enabled": bool(enabled)}
     topic = _audio_command_topic_for_robot(robot_id)
@@ -1334,27 +1341,16 @@ def _publish_git_pull_flag(robot_id: str) -> bool:
     return _publish_command(topic, payload, qos=1, retain=False)
 
 
-def _decode_audio_packet(payload: bytes) -> Optional[Dict[str, Any]]:
-    if len(payload) < AUDIO_PACKET_HEADER.size:
+_legacy_audio_decoders = {}
+
+
+def _decode_audio_packet(payload: bytes, stream: str = "default") -> Optional[Dict[str, Any]]:
+    from control.common.opus import AudioDecoder
+    try:
+        decoder = _legacy_audio_decoders.setdefault(stream, AudioDecoder())
+        return decoder.parse(payload)
+    except (ValueError, OSError):
         return None
-    header = payload[: AUDIO_PACKET_HEADER.size]
-    body = payload[AUDIO_PACKET_HEADER.size :]
-    magic, version, codec, channels, _flags, rate, frame_samples, seq, timestamp_ms = AUDIO_PACKET_HEADER.unpack(header)
-    if magic != AUDIO_MAGIC or version != 1 or codec != AUDIO_CODEC_PCM_S16LE:
-        return None
-    if channels <= 0 or rate <= 0 or frame_samples <= 0:
-        return None
-    expected_len = frame_samples * channels * 2
-    if len(body) < expected_len:
-        return None
-    return {
-        "seq": int(seq),
-        "timestamp": float(timestamp_ms) / 1000.0,
-        "rate": int(rate),
-        "channels": int(channels),
-        "frame_samples": int(frame_samples),
-        "data": body[:expected_len],
-    }
 
 
 def _encode_audio_packet(seq: int, rate: int, channels: int, pcm_bytes: bytes) -> Optional[bytes]:
@@ -3100,7 +3096,7 @@ def _decode_video_frame(robot_id: str, payload_bytes: bytes) -> Optional[tuple[b
 def _handle_audio_payload(robot_id: str, payload_bytes: bytes) -> None:
     placeholder = _ensure_robot_placeholder(robot_id)
     robot_key = str(placeholder.get("key") or _robot_key(robot_id))
-    packet = _decode_audio_packet(payload_bytes)
+    packet = _decode_audio_packet(payload_bytes, robot_key)
     if not packet:
         logging.debug("Invalid binary audio payload from %s", robot_id)
         return
@@ -3159,11 +3155,14 @@ def _on_mqtt_connect(client: mqtt.Client, _userdata: Any, _flags: Dict[str, Any]
         _init_mqtt_history_logger()
 
     logging.info("MQTT connected; subscribing to telemetry topics.")
-    subscribe_all = (
-        mqtt_history_enabled and mqtt_history_collection is not None and bool(MQTT_HISTORY_CFG.get("subscribe_all_topics", True))
-    )
+    module_ui.subscribe(client)
+    # Keep the MQTT subscription broad even when MongoDB is temporarily
+    # unavailable. _log_mqtt_history retries Mongo initialization as messages
+    # arrive, so narrowing the subscription here would permanently miss topics
+    # that are not in the telemetry fallback list (until the next reconnect).
+    subscribe_all = mqtt_history_enabled and bool(MQTT_HISTORY_CFG.get("subscribe_all_topics", True))
     if subscribe_all:
-        logging.info("MQTT history logging active; subscribing to all topics (#).")
+        logging.info("MQTT history configured for all topics; subscribing to (#).")
         client.subscribe("#", qos=0)
     else:
         client.subscribe("+/infrastructure", qos=1)
@@ -3238,7 +3237,19 @@ def _parse_infrastructure_topic(topic: str) -> Optional[str]:
 
 
 def _on_mqtt_message(_client: mqtt.Client, _userdata: Any, msg: mqtt.MQTTMessage) -> None:
-    _log_mqtt_history(msg)
+    # Keep history capture independent from the web UI's topic-specific
+    # handlers. A malformed or binary payload must not kill Paho's network
+    # thread and stop all subsequent MQTT history writes.
+    try:
+        handled = module_ui.handle_message(_client, msg)
+        _log_mqtt_history(msg)
+        if not handled:
+            _process_mqtt_message(_client, _userdata, msg)
+    except Exception:
+        logging.exception("Unhandled MQTT message processing error on %s", msg.topic)
+
+
+def _process_mqtt_message(_client: mqtt.Client, _userdata: Any, msg: mqtt.MQTTMessage) -> None:
 
     system = _parse_infrastructure_topic(msg.topic)
     if system:
@@ -3289,6 +3300,8 @@ def _on_mqtt_message(_client: mqtt.Client, _userdata: Any, msg: mqtt.MQTTMessage
     if not parsed:
         return
     system, component_type, component_id, direction, metric = parsed
+    if direction not in ("incoming", "outgoing"):
+        return
     robot_key = _component_key(system, component_type, component_id)
     if direction == "outgoing" and metric == "logs":
         payload: Any
@@ -3302,7 +3315,7 @@ def _on_mqtt_message(_client: mqtt.Client, _userdata: Any, msg: mqtt.MQTTMessage
 
     try:
         payload = json.loads(msg.payload.decode("utf-8"))
-    except json.JSONDecodeError:
+    except (UnicodeDecodeError, json.JSONDecodeError):
         logging.debug("Non-JSON MQTT payload on %s", msg.topic)
         return
     if direction == "incoming":
@@ -3693,6 +3706,7 @@ def _robot_options_html() -> str:
       <label for="robotSelect">Component:</label>
       <select id="robotSelect"></select>
       <button type="button" id="replayNavBtn" onclick="window.location.href='/replay'">Replay</button>
+      <button type="button" onclick="window.location.href='/modules'">Module controls</button>
       <span id="activeRobot" class="mono"></span>
     </div>
     <div class="component-actions">
@@ -8043,10 +8057,10 @@ def post_f(robot_id: str):
 
 
 def main() -> None:
-    if mqtt_history_enabled:
+    if mqtt_history_enabled or MQTT_CFG.get("auto_connect", False):
         ok, error = _connect_mqtt(MQTT_CFG)
         if not ok:
-            logging.error("MQTT history startup connect failed: %s", error)
+            logging.error("MQTT startup connect failed: %s", error)
     app.run(host=WEB_HOST, port=WEB_PORT, debug=False)
 
 

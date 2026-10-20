@@ -1,0 +1,379 @@
+{
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "pebble-manifest/v2"
+    },
+    "revision": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "identity": {
+      "type": "object",
+      "properties": {
+        "system": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+        },
+        "type": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+        }
+      },
+      "required": [
+        "system",
+        "type",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "base": {
+      "type": "string",
+      "maxLength": 160
+    },
+    "availability_topic": {
+      "type": "string",
+      "maxLength": 160
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+          },
+          "type": {
+            "type": "string",
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+          },
+          "version": {
+            "const": 1
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1200
+          },
+          "endpoints": {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 32,
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "topic": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "kind": {
+                  "enum": [
+                    "command",
+                    "state",
+                    "video",
+                    "audio",
+                    "uplink"
+                  ]
+                },
+                "schema": {
+                  "type": "object"
+                },
+                "qos": {
+                  "enum": [
+                    0,
+                    1
+                  ]
+                },
+                "retain": {
+                  "type": "boolean"
+                },
+                "resource": {
+                  "enum": [
+                    "video-stream",
+                    "audio-stream",
+                    "speaker"
+                  ]
+                },
+                "codec": {
+                  "enum": [
+                    "pbvd",
+                    "opus",
+                    "h264"
+                  ]
+                },
+                "rate": {
+                  "enum": [
+                    8000,
+                    12000,
+                    16000,
+                    24000,
+                    48000
+                  ]
+                },
+                "channels": {
+                  "enum": [
+                    1,
+                    2
+                  ]
+                }
+              },
+              "required": [
+                "topic",
+                "kind",
+                "schema",
+                "qos",
+                "retain"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "actions": {
+            "type": "object",
+            "maxProperties": 32,
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "min": {
+                  "type": "number"
+                },
+                "max": {
+                  "type": "number"
+                },
+                "neutral": {
+                  "type": "number"
+                },
+                "step": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "reset_on_release": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "label",
+                "min",
+                "max",
+                "neutral",
+                "reset_on_release"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "commands": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "endpoint": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                },
+                "fields": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "maxProperties": 32,
+                  "propertyNames": {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                  }
+                },
+                "repeat_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 60000
+                }
+              },
+              "required": [
+                "endpoint",
+                "fields",
+                "repeat_ms"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 32
+          },
+          "bindings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                },
+                "input": {
+                  "enum": [
+                    "keyboard",
+                    "gamepad-axis",
+                    "gamepad-button"
+                  ]
+                },
+                "action": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                },
+                "code": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "index": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 63
+                },
+                "value": {
+                  "type": "number"
+                },
+                "scale": {
+                  "type": "number"
+                },
+                "offset": {
+                  "type": "number"
+                },
+                "deadzone": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 0.95
+                },
+                "reset": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "input"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 128
+          },
+          "ui": {
+            "type": "object",
+            "properties": {
+              "columns": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3
+              },
+              "controls": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "joystick",
+                        "range",
+                        "button",
+                        "reset",
+                        "state",
+                        "video",
+                        "audio"
+                      ]
+                    },
+                    "label": {
+                      "type": "string",
+                      "maxLength": 160
+                    },
+                    "action": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                    },
+                    "x": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                    },
+                    "y": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                    },
+                    "invert_y": {
+                      "type": "boolean"
+                    },
+                    "value": {
+                      "type": "number"
+                    },
+                    "endpoint": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                    },
+                    "field": {
+                      "type": "string",
+                      "maxLength": 160
+                    },
+                    "uplink": {
+                      "type": "string"
+                    },
+                    "talk_action": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "label"
+                  ],
+                  "additionalProperties": false
+                },
+                "maxItems": 64
+              }
+            },
+            "required": [
+              "columns",
+              "controls"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "version",
+          "title",
+          "description",
+          "endpoints",
+          "actions",
+          "commands",
+          "bindings",
+          "ui"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 32
+    }
+  },
+  "required": [
+    "schema",
+    "revision",
+    "identity",
+    "base",
+    "availability_topic",
+    "modules"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

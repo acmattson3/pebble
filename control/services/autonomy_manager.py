@@ -104,6 +104,7 @@ class AutonomyManager:
         self.last_error: Optional[str] = None
         self.last_config: Optional[dict[str, Any]] = None
 
+        self.next_media_renewal = 0.0
         self.next_scan_at = 0.0
         self.next_retained_republish_at = 0.0
 
@@ -113,6 +114,7 @@ class AutonomyManager:
         while not self.stop_event.is_set():
             self._drain_command_queue()
             self._poll_process()
+            self._renew_media_demand()
             self._refresh_scripts()
             self._republish_retained_if_due()
             self.stop_event.wait(0.05)
@@ -121,12 +123,29 @@ class AutonomyManager:
         self.stop_event.set()
         self._stop_process(publish_status=False, clear_error=False)
         if self.client:
+            self._publish_json(self.identity.base+"/i/media/lease", {"consumer":"autonomy-manager", "resources":[], "ttl_seconds":8}, qos=0)
             try:
                 self.client.loop_stop()
                 self.client.disconnect()
             except Exception:
                 logging.debug("MQTT disconnect failed", exc_info=True)
             self.client = None
+
+    def _renew_media_demand(self) -> None:
+        if not self.config.get("services", {}).get("av_daemon", {}).get("demand_enabled", False):
+            return
+        if time.monotonic() < self.next_media_renewal:
+            return
+        self.next_media_renewal = time.monotonic()+2
+        names = []
+        if self.process and self.process.poll() is None and self.running_file:
+            names.append(self.running_file)
+        names.extend(entry["file"] for entry in self.dependency_processes if entry.get("process") and entry["process"].poll() is None)
+        resources = set()
+        for name in names:
+            resources.update(self.available_scripts.get(name, {}).get("media_resources", []))
+        resources &= {"video", "microphone"}
+        self._publish_json(self.identity.base+"/i/media/lease", {"consumer":"autonomy-manager", "resources":sorted(resources), "ttl_seconds":8}, qos=0)
 
     def _connect_local_mqtt(self) -> None:
         client = create_client(client_id=f"{self.identity.base}-autonomy")
@@ -260,6 +279,7 @@ class AutonomyManager:
                 "args": args_schema,
                 "defaults": default_cfg,
                 "dependencies": dependencies,
+                "media_resources": script_cfg.get("media_resources", json.loads((script_dir/"media-resources.json").read_text()) if (script_dir/"media-resources.json").exists() else []),
             }
 
             files_payload.append(
@@ -977,6 +997,12 @@ class AutonomyManager:
             return
 
         self._stop_process(publish_status=False, clear_error=True)
+        if self.config.get("services", {}).get("av_daemon", {}).get("demand_enabled", False):
+            resources = set(script.get("media_resources", []))
+            for dep in script.get("dependencies", []):
+                resources.update(self.available_scripts.get(dep.get("file"), {}).get("media_resources", []))
+            self._publish_json(self.identity.base+"/i/media/lease", {"consumer":"autonomy-manager", "resources":sorted(resources & {"video","microphone"}), "ttl_seconds":8}, qos=0)
+            self.next_media_renewal = 0
         try:
             self._start_dependency_processes(script)
             self.process = subprocess.Popen(cmd, cwd=cwd, env=merged_env)

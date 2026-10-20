@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pebble · Modules</title>
+  <link rel="stylesheet" href="/modules/assets/style.css">
+  <script type="module" src="/modules/assets/app.mjs"></script>
+</head>
+<body>
+  <header><a class="brand" href="/modules">● Pebble</a><span class="badge">Module controls</span><a class="legacy" href="/">Classic controls</a></header>
+  <main>
+    <div class="intro"><div><h1>Your robot, its controls.</h1><p>Controls and input mappings supplied by the selected robot.</p></div><div id="connection" role="status">Connecting…</div></div>
+    <section class="toolbar" aria-label="Robot and inputs">
+      <label>Robot<select id="robot"><option value="">Waiting for robots…</option></select></label>
+      <label class="check"><input type="checkbox" id="keyboard" checked> Keyboard</label>
+      <label class="check"><input type="checkbox" id="gamepad"> Controller</label>
+      <label>Controller device<select id="device"><option value="">No controller connected</option></select></label>
+      <button id="stop" class="stop">Release inputs</button>
+    </section>
+    <p id="message" role="status">Waiting for a robot to advertise its modules.</p>
+    <div id="modules"></div>
+  </main>
+  <footer>Module definitions stay with the robot. Your mapping overrides stay in this browser.</footer>
+</body>
+</html>

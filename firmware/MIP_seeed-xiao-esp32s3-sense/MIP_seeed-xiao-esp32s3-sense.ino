@@ -1700,7 +1700,7 @@ void telemetryTick() {
 
 void periodicPublishTick() {
   unsigned long now = millis();
-  if ((now - lastHeartbeatMs) >= 1000UL) {
+  if ((now - lastHeartbeatMs) >= 60000UL) {
     lastHeartbeatMs = now;
     publishHeartbeat();
   }

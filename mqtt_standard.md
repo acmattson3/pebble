@@ -19,34 +19,36 @@ This standard is intended to be reusable beyond the exact setup implemented in
 this repository. To keep that distinction clear:
 
 - unqualified sections describe the general standard
-- any section or table explicitly labeled `Example implementation in this
-  repository` describes the current codebase only
+- any section or table explicitly labeled as repository behavior describes the
+  current codebase only
 - example topic names, payloads, and schemas are illustrative, not mandatory
   for future users
 
-The standard topic base is:
+The topic base is:
 
 ```text
 {system}/{type}/{id}
 ```
 
-The default full topic form is:
+The compact Pebble topic form is:
 
 ```text
-{system}/{type}/{id}/{incoming|outgoing}/{metric}
+{system}/{type}/{id}/{i|o}/{metric}
 ```
 
-Any component-specific topic defined by this standard MUST follow that topic
-shape. Additional path segments are permitted only inside the `{metric}`
-portion.
+New Pebble component topics SHOULD use this shape. `i` means input to the
+component (commands and requests); `o` means output from it (state, telemetry,
+and media). Additional path segments are permitted inside `{metric}`. Existing
+deployments may retain the longer `incoming` and `outgoing` segments during
+migration; implementations that need compatibility MAY support both forms.
 
 Examples:
 
 ```text
-luminsim/robots/astra1/incoming/drive-values
-luminsim/satellites/lunanet-sat-1/outgoing/status
-luminsim/towers/tower-3/outgoing/power
-luminsim/people/operator-1/outgoing/location
+luminsim/robots/astra1/i/drive
+luminsim/satellites/lunanet-sat-1/o/status
+luminsim/towers/tower-3/o/power
+luminsim/people/operator-1/o/location
 ```
 
 Important notes:
@@ -87,8 +89,8 @@ deployment.
 
 By convention:
 
-- `incoming` means data intended to be consumed by that component
-- `outgoing` means data published by that component
+- `i` means data intended to be consumed by that component
+- `o` means data published by that component
 
 This is a logical direction, not necessarily a statement about broker location.
 For example, an `incoming` topic may be published on a remote broker and then
@@ -96,22 +98,25 @@ bridged locally.
 
 ### 3.3 Topic Examples
 
-Examples:
+Compact Pebble examples:
 
-- `{system}/robots/{id}/incoming/drive-values`
-- `{system}/robots/{id}/outgoing/online`
-- `{system}/satellites/{id}/outgoing/status`
-- `{system}/towers/{id}/outgoing/capabilities`
-- `{system}/people/{id}/outgoing/location`
+- `{system}/robots/{id}/i/drive`
+- `{system}/robots/{id}/o/online`
+- `{system}/satellites/{id}/o/status`
+- `{system}/towers/{id}/o/manifest`
+- `{system}/people/{id}/o/location`
 
 ### 3.4 Wildcards
 
 Examples:
 
 - `{system}/#` for all live system traffic
-- `{system}/+/+/outgoing/online` for all heartbeat topics
-- `{system}/robots/+/outgoing/#` for all robot-published telemetry
-- `{system}/towers/+/outgoing/status` for status of all towers
+- `{system}/+/+/o/online` for all heartbeat topics
+- `{system}/robots/+/o/#` for all robot-published telemetry
+- `{system}/towers/+/o/status` for status of all towers
+
+Legacy deployments may use equivalent `incoming/...` and `outgoing/...`
+filters.
 
 ## 4. Message Conventions
 
@@ -191,8 +196,8 @@ improves compatibility.
 
 The simplest deployment uses one broker for all components. In this case:
 
-- components publish `outgoing/...` directly
-- components subscribe to `incoming/...` directly
+- components publish `o/...` directly
+- components subscribe to `i/...` directly
 - retained discovery and current-state topics are resolved by the broker alone
 
 ### 5.2 Multi-Broker Or Bridged Deployment
@@ -211,7 +216,12 @@ In those cases:
 - implementers SHOULD make it clear which broker is authoritative for each
   topic family
 
-### Example implementation in this repository
+### Current bridge behavior in this repository
+
+Compact module topics are routed according to their manifest declarations.
+Older service topics continue to use the legacy names described below. Some
+media is routed outside the local broker entirely; that is an implementation
+choice, not a requirement of this standard.
 
 The current repository uses:
 
@@ -222,12 +232,11 @@ Current bridge behavior:
 
 | Source side | Topic class | Result |
 | --- | --- | --- |
-| local broker | `{base}/outgoing/#` | always forwarded to remote |
-| remote broker | `{base}/incoming/#` | always forwarded to local, except `incoming/audio-stream` |
-| remote broker | `{base}/outgoing/#` | never forwarded back into local |
-| local broker | `{base}/incoming/flags/#` | always mirrored to remote |
-| local broker | other `{base}/incoming/#` | mirrored only when `incoming/flags/remote-mirror` is `true` |
-| local broker | retained `outgoing/...` topics | cached and replayed to remote after remote reconnect |
+| local broker | `{base}/o/#` and legacy `{base}/outgoing/#` | component output forwarded to remote |
+| remote broker | `{base}/i/#` and legacy `{base}/incoming/#` | commands forwarded to local, subject to media routing exceptions |
+| remote broker | `{base}/o/#` and legacy `{base}/outgoing/#` | never forwarded back into local |
+| local broker | declared control inputs | mirrored according to bridge policy |
+| local broker | retained `o/...` topics | cached and replayed to remote after remote reconnect |
 
 The current repository also routes some media outside the local broker entirely.
 That is an example deployment choice, not a requirement of this standard.
@@ -239,14 +248,14 @@ complete required set.
 
 | Topic family | Direction | Purpose | Typical retain / QoS |
 | --- | --- | --- | --- |
-| `{base}/incoming/<command>` | incoming | control commands for a component | non-retained, QoS 1 |
-| `{base}/incoming/flags/<flag>` | incoming | mode toggles or control gating | often retained, QoS 1 |
-| `{base}/outgoing/online` | outgoing | heartbeat / liveness indicator | retained, QoS 1 |
-| `{base}/outgoing/capabilities` | outgoing | retained discovery and control metadata | retained, QoS 1 |
-| `{base}/outgoing/status` | outgoing | summarized current state | often retained, QoS 1 |
-| `{base}/outgoing/logs` | outgoing | structured diagnostics | non-retained, QoS 0 or 1 |
-| `{base}/outgoing/<telemetry>` | outgoing | sensor/state telemetry | retain/QoS depend on metric |
-| `{base}/outgoing/<media>` | outgoing | video/audio/media streams | non-retained, often QoS 0 |
+| `{base}/i/<command>` | input | control commands for a component | non-retained, QoS 1 |
+| `{base}/i/flags/<flag>` | input | mode toggles or control gating | often retained, QoS 1 |
+| `{base}/o/online` | output | heartbeat / liveness indicator | retained, QoS 1 |
+| `{base}/o/manifest` | output | retained module/control discovery | retained, QoS 1 |
+| `{base}/o/status` | output | summarized current state | often retained, QoS 1 |
+| `{base}/o/logs` | output | structured diagnostics | non-retained, QoS 0 or 1 |
+| `{base}/o/<telemetry>` | output | sensor/state telemetry | retain/QoS depend on metric |
+| `{base}/o/<media>` | output | video/audio/media streams | non-retained, often QoS 0 |
 
 Not every system needs all of these. A satellite-only system may never publish
 `drive-values`; a tower may never publish audio; a person-carried device may
@@ -272,26 +281,44 @@ RECOMMENDED characteristics:
 - includes topic names for control and telemetry where those names are
   configurable
 
-Future users MAY define any schema identifier and any capability structure that
-fits their system.
+Future users MAY define any schema identifier and any discovery structure that
+fits their system. Pebble's current robot-module discovery is `o/manifest`; the
+older capabilities format remains for compatibility with the classic interface.
 
 If a system publishes a current-state discovery or capability topic intended for
 late subscribers, that topic MUST be retained.
 
 ## 8. Example Implementation In This Repository
 
-Everything in this section is an example of the current codebase. Future users
-are not expected to implement every one of these topics or payload families.
+Pebble is migrating its runtime services toward compact `i/` and `o/` topics.
+The robot-owned module system already uses these names for declared controls,
+media, state, and discovery. Existing service integrations still use many of
+the legacy topic names listed below, and adapters preserve those paths during
+migration. Future users are not expected to implement every example topic or
+payload family.
 
 ### 8.1 Example Default Topic Set
 
-Here `{base}` means `{system}/{type}/{id}` in the current repository.
+Here `{base}` means `{system}/{type}/{id}`. Module media/control examples use
+compact paths; legacy service examples are explicitly labeled.
 
-#### Incoming Topics Implemented Here
+#### Compact module topics in use
+
+| Example topic | Purpose |
+| --- | --- |
+| `{base}/o/manifest` | Retained robot-advertised module definitions |
+| `{base}/o/modules/status` | Module host availability |
+| `{base}/i/drive` | Drive command, adapted locally to the existing drive bridge |
+| `{base}/i/camera`, `{base}/i/audio`, `{base}/i/speaker` | Media requests |
+| `{base}/o/video`, `{base}/o/audio` | H.264/PBVD video and Opus audio |
+| `{base}/i/audio-stream` | Opus audio sent to robot speaker |
+| `{base}/i/media/lease`, `{base}/o/media/state` | Capture demand and AV service state |
+
+#### Legacy incoming topics still implemented here
 
 | Example topic | Current producer(s) | Current consumer(s) | Notes |
 | --- | --- | --- | --- |
-| `{base}/incoming/drive-values` | web UI, teleop, autonomy scripts | serial MCU bridge, ROS 1 bridge, wheel-odometry direction tracker | Optional; only meaningful for drive-capable components. |
+| `{base}/incoming/drive-values` | web UI, teleop, autonomy scripts, compact drive adapter | serial MCU bridge, ROS 1 bridge, wheel-odometry direction tracker | Legacy actuator command destination; compact drive modules adapt to it. |
 | `{base}/incoming/lights-solid` | web UI | serial MCU bridge | Optional visual-control topic. |
 | `{base}/incoming/lights-flash` | web UI | serial MCU bridge | Optional visual-control topic. |
 | `{base}/incoming/front-camera` | web UI | MQTT bridge | Optional video start/stop request. |
@@ -306,7 +333,7 @@ Here `{base}` means `{system}/{type}/{id}` in the current repository.
 | `{base}/incoming/flags/service-restart` | web UI | MQTT bridge | Optional one-shot service restart control. |
 | `{base}/incoming/flags/git-pull` | web UI | MQTT bridge | Optional one-shot repo-update control. |
 
-#### Outgoing Topics Implemented Here
+#### Legacy outgoing topics still implemented here
 
 | Example topic | Current producer(s) | Current consumer(s) | Notes |
 | --- | --- | --- | --- |
@@ -322,8 +349,8 @@ Here `{base}` means `{system}/{type}/{id}` in the current repository.
 | `{base}/outgoing/navigation/local-plan` | ROS 1 bridge | replay, tooling | Optional sampled local plan. |
 | `{base}/outgoing/navigation/global-plan` | ROS 1 bridge | replay, tooling | Optional sampled global plan. |
 | `{base}/outgoing/diagnostics` | ROS 1 bridge | replay, tooling | Optional low-rate diagnostics summary. |
-| `{base}/outgoing/front-camera` | camera publisher | web UI, replay, receivers | Optional video stream. |
-| `{base}/outgoing/audio` | audio publisher | web UI, replay, receivers | Optional uplink audio stream. |
+| `{base}/outgoing/front-camera` | legacy camera publisher config | legacy UI, replay, receivers | Legacy video; module path is `{base}/o/video`. |
+| `{base}/outgoing/audio` | legacy audio publisher config | legacy UI, replay, receivers | Legacy audio; module path is `{base}/o/audio`. |
 | `{base}/outgoing/soundboard-files` | soundboard handler | web UI | Optional sound catalog. |
 | `{base}/outgoing/soundboard-status` | soundboard handler | web UI, replay | Optional sound playback state. |
 | `{base}/outgoing/autonomy-files` | autonomy manager | web UI | Optional script catalog. |
@@ -424,9 +451,9 @@ Current heartbeat payload:
 In the current repository this is published on `outgoing/online`, typically
 retained with QoS 1.
 
-### 8.6 Example Capability Payload Used Here
+### 8.6 Legacy Capabilities Payload
 
-The current repository uses the schema id:
+The classic interface and compatibility services use the schema id:
 
 ```text
 pebble-capabilities/v1
@@ -459,7 +486,7 @@ Example envelope:
 }
 ```
 
-The current repository may populate the following `value` sections:
+The legacy capabilities publisher may populate the following `value` sections:
 
 - `identity`
 - `video`
@@ -490,9 +517,9 @@ Current structured log payload:
 }
 ```
 
-### 8.8 Example Video Stream Used Here
+### 8.8 Legacy PBVD Video Stream
 
-The current repository's example video topic is:
+The legacy video topic is:
 
 ```text
 {base}/outgoing/front-camera
@@ -509,7 +536,7 @@ Payload:
 }
 ```
 
-Current encoding rules:
+PBVD encoding rules:
 
 - keyframes contain full JPEG frames
 - delta frames encode `(current - previous) + 128` before JPEG + zlib + base64
@@ -519,19 +546,21 @@ Current encoding rules:
 This is a repository-specific transport choice. Future users may replace it with
 another video payload format or omit video entirely.
 
-### 8.9 Example Audio Stream Used Here
+### 8.9 Legacy PCM Audio Stream
 
-The current repository uses:
+The legacy audio topics are:
 
 - `{base}/outgoing/audio` for outbound component audio
 - `{base}/incoming/audio-stream` for inbound playback audio
 
-Both use the same binary packet format:
+The PBAT packet format supports PCM16LE (`codec: 1`) and Opus (`codec: 2`).
+Legacy PCM topic consumers use this binary packet format:
 
 - big-endian header struct: `!4sBBBBHHIQ`
 - `magic`: `PBAT`
 - `version`: `1`
-- `codec`: `1` (`pcm_s16le`)
+- `codec`: `1` (`pcm_s16le`) for the legacy paths; compact media modules
+  currently advertise Opus (`codec: 2`)
 - `channels`: channel count
 - `flags`: currently `0`
 - `rate`: sample rate in Hz

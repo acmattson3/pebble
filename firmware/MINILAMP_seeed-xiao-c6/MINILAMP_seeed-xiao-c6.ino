@@ -96,7 +96,7 @@ float targetGrouser = 0.0f;
 unsigned long lastChargingMs = 0;
 const unsigned long CHARGING_PERIOD_MS = 5000;
 unsigned long lastHeartbeatMs = 0;
-const unsigned long HEARTBEAT_PERIOD_MS = 250;
+const unsigned long HEARTBEAT_PERIOD_MS = 60000;
 unsigned long lastTimeSyncAttemptMs = 0;
 const unsigned long TIME_SYNC_RETRY_MS = 10000;
 

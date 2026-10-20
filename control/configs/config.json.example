@@ -24,6 +24,10 @@
     "defaults": {
       "retained_publish_interval_seconds": 3600
     },
+    "module_host": {
+      "enabled": false,
+      "modules": []
+    },
     "launcher": {
       "enabled": true,
       "restart_delay_seconds": 2.0,
@@ -85,6 +89,8 @@
       "remote_mqtt": {
         "host": "",
         "port": 1883,
+        "transport": "tcp",
+        "websocket_path": "/mqtt",
         "keepalive": 60,
         "username": "",
         "password": "",
@@ -110,7 +116,7 @@
       "heartbeat": {
         "enabled": true,
         "topic": "pebble/robots/my-robot/outgoing/online",
-        "interval_seconds": 0.25,
+        "interval_seconds": 60.0,
         "qos": 1,
         "retain": true
       },
@@ -223,7 +229,7 @@
       "heartbeat": {
         "enabled": true,
         "topic": "pebble/robots/my-robot/outgoing/online",
-        "interval_seconds": 0.25,
+        "interval_seconds": 60.0,
         "qos": 1,
         "retain": true
       },

@@ -26,6 +26,7 @@ if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from control.common.mqtt import create_client
+from control.common.opus import Opus, packet
 
 MAGIC = b"PBAT"
 CODEC_PCM_S16LE = 1
@@ -146,6 +147,8 @@ def _runtime_audio_config(cfg: dict[str, Any]) -> Optional[dict[str, Any]]:
             "channels": int(audio_pub_cfg.get("channels") or 1),
             "chunk_ms": int(audio_pub_cfg.get("chunk_ms") or 20),
             "qos": int(audio_pub_cfg.get("qos") or 0),
+            "codec": audio_pub_cfg.get("codec", "pcm"),
+            "bitrate": int(audio_pub_cfg.get("bitrate", 24000)),
         },
     }
 
@@ -371,6 +374,7 @@ def main() -> None:
     signal.signal(signal.SIGINT, _sig_handler)
     signal.signal(signal.SIGTERM, _sig_handler)
 
+    encoder = Opus(rate, channels, int(publisher_cfg.get("bitrate",24000))) if publisher_cfg.get("codec") == "opus" else None
     seq = 0
     while not stopped:
         proc: Optional[subprocess.Popen] = None
@@ -397,9 +401,9 @@ def main() -> None:
                     seq += 1
                     if seq > 0xFFFFFFFF:
                         seq = 1
-                    packet = _build_packet(chunk, seq, rate, channels)
-                    if packet is not None:
-                        client.publish(topic, packet, qos=qos)
+                    audio_packet = packet(chunk, seq, rate, channels, encoder) if encoder else _build_packet(chunk, seq, rate, channels)
+                    if audio_packet is not None:
+                        client.publish(topic, audio_packet, qos=qos)
         except FileNotFoundError:
             print("[audio_publisher] gst-launch-1.0 not found; retrying.", file=sys.stderr)
             time.sleep(input_retry)

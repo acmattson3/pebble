@@ -24,6 +24,7 @@ DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[1] / "control" / "configs
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+from control.common.opus import AudioDecoder
 from control.common.mqtt import create_client
 
 MAGIC = b"PBAT"
@@ -273,21 +274,17 @@ def _start_aplay(device: Optional[str], rate: int, channels: int) -> subprocess.
         raise SystemExit(f"Failed to launch aplay: {exc}") from exc
 
 
+_audio_decoder = AudioDecoder()
+
+
 def _parse_packet(payload: bytes) -> Optional[Tuple[int, int, int, int, bytes]]:
-    if len(payload) < HEADER_STRUCT.size:
+    try:
+        value = _audio_decoder.parse(payload)
+    except (ValueError, OSError):
         return None
-    header = payload[: HEADER_STRUCT.size]
-    body = payload[HEADER_STRUCT.size :]
-    magic, version, codec, channels, _flags, rate, frame_samples, seq, _timestamp_ms = HEADER_STRUCT.unpack(header)
-    if magic != MAGIC or version != 1 or codec != CODEC_PCM_S16LE:
-        return None
-    if channels <= 0 or rate <= 0 or frame_samples <= 0:
-        return None
-    expected = frame_samples * channels * 2
-    if len(body) < expected:
-        return None
-    pcm = body[:expected]
-    return seq, rate, channels, frame_samples, pcm
+    if value:
+        return value['seq'], value['rate'], value['channels'], value['frame_samples'], value['data']
+    return None
 
 
 class PCMPlayer:
@@ -312,6 +309,7 @@ class PCMPlayer:
         self.concealment_ms = max(0, int(concealment_ms))
 
         self._expected_seq: Optional[int] = None
+        self._played_generation = None
         self._last_pcm: Optional[bytes] = None
         self._last_rate = self.fallback_rate
         self._last_channels = self.fallback_channels
@@ -331,7 +329,7 @@ class PCMPlayer:
         self._thread.join(timeout=2.0)
         self._close_proc()
 
-    def submit(self, packet: Tuple[int, int, int, int, bytes]) -> None:
+    def submit(self, packet: tuple) -> None:
         if self.queue.full():
             try:
                 self.queue.get_nowait()
@@ -424,7 +422,13 @@ class PCMPlayer:
                 continue
             if self._stop.is_set():
                 break
-            seq, rate, channels, frame_samples, pcm = packet
+            seq, rate, channels, frame_samples, pcm = packet[:5]
+            generation = packet[5] if len(packet) > 5 else None
+            if generation is not None and generation != self._played_generation:
+                self._expected_seq = None
+                self._last_pcm = b""
+                self._concealed_ms = 0.0
+                self._played_generation = generation
             if not pcm:
                 continue
             try:
@@ -525,7 +529,7 @@ def main() -> None:
         parsed = _parse_packet(msg.payload)
         if not parsed:
             return
-        player.submit(parsed)
+        player.submit((*parsed, _audio_decoder.generation))
 
     client.on_connect = _on_connect
     client.on_disconnect = _on_disconnect

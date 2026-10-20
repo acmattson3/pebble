@@ -1,0 +1,17 @@
+{
+  "frames": 120,
+  "width": 640,
+  "height": 360,
+  "fps": 15,
+  "capture_elapsed_seconds": 7.9824264330000005,
+  "reference": "BGR decoded by the existing camera capture; not sensor ground truth",
+  "workloads": {
+    "live": "Unmodified live shared capture, resized to 640x360",
+    "motion": "Synthetic moving crop, with horizontal view flips at frames 41 and 81"
+  },
+  "current_publisher": {
+    "publish_fps": 15,
+    "jpeg_quality": 8,
+    "keyframe_interval": 5
+  }
+}

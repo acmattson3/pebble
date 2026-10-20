@@ -113,6 +113,9 @@ def _profiles_from_runtime_config(data: dict[str, Any]) -> dict[str, Any]:
             "target_fps": target_fps,
             "keyframe_interval": int(keyframe_interval),
             "jpeg_quality": int(video_pub_cfg.get("jpeg_quality") or 10),
+            "codec": str(video_pub_cfg.get("codec") or "pbvd").lower(),
+            "bitrate": int(video_pub_cfg.get("bitrate") or 400000),
+            "preset": str(video_pub_cfg.get("preset") or "ultrafast"),
         },
         "frame_transform": {
             "rotate_degrees": int(rotate_degrees or 0)

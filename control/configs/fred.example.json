@@ -87,6 +87,8 @@
       "remote_mqtt": {
         "host": "",
         "port": 1883,
+        "transport": "tcp",
+        "websocket_path": "/mqtt",
         "keepalive": 60,
         "username": "",
         "password": "",
@@ -112,7 +114,7 @@
       "heartbeat": {
         "enabled": true,
         "topic": "pebble/robots/fred/outgoing/online",
-        "interval_seconds": 0.25,
+        "interval_seconds": 60.0,
         "qos": 1,
         "retain": true
       },

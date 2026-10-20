@@ -44,6 +44,10 @@ class UnifiedConfigTests(unittest.TestCase):
 
         fake_cv2 = types.ModuleType("cv2")
         fake_np = types.ModuleType("numpy")
+        # Module routing has its own Flask/browser coverage. These adapter tests
+        # deliberately provide a minimal Flask fake with no Blueprint support.
+        fake_module_ui = types.ModuleType("module_ui")
+        fake_module_ui.ModuleUI = mock.Mock()
 
         with mock.patch.dict(
             "os.environ",
@@ -54,6 +58,7 @@ class UnifiedConfigTests(unittest.TestCase):
                 "flask": self._fake_flask_module(),
                 "cv2": fake_cv2,
                 "numpy": fake_np,
+                "module_ui": fake_module_ui,
             },
         ):
             assert spec is not None and spec.loader is not None
@@ -591,6 +596,19 @@ class UnifiedConfigTests(unittest.TestCase):
         self.assertEqual(len(payload.get("shapes") or []), 2)
         first_point = payload["shapes"][1][0]
         self.assertEqual(first_point, [0.0, 0.5])
+
+
+    def test_web_mqtt_auto_connect_is_opt_in(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "config.json"
+            cfg = self._runtime_cfg()
+            path.write_text(json.dumps(cfg))
+            module = self._load_web_module(path)
+            self.assertFalse(module.MQTT_CFG["auto_connect"])
+            cfg.setdefault("web_interface", {}).setdefault("mqtt", {})["auto_connect"] = True
+            path.write_text(json.dumps(cfg))
+            module = self._load_web_module(path)
+            self.assertTrue(module.MQTT_CFG["auto_connect"])
 
 
 if __name__ == "__main__":

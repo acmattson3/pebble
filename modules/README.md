@@ -1,0 +1,131 @@
+# Robot-owned control modules
+
+This is the first module milestone. The generic page is `/modules`; the classic
+page links to it. A robot advertises its own modules through its local broker.
+`mqtt_bridge` carries compact module outputs to the remote broker and compact
+commands back to the local broker. Existing topics remain available through
+explicit adapters.
+
+For a dedicated web host, set `web_interface.mqtt.auto_connect` to `true` in its
+private runtime config so discovery works immediately after service restart.
+The default is `false`; classic manual broker connection remains available.
+
+## Contracts
+
+The retained discovery topic is `{system}/{type}/{id}/o/manifest`, with schema
+`pebble-manifest/v2`. `manifest.schema.json` defines its structure. The robot
+runtime expands relative endpoint topics under the identity prefix. Goob's base
+is `pebble/robots/goob`.
+
+A module definition contains:
+
+- `type`, `version`, `title`, `description`: reusable module metadata.
+- `endpoints`: relative `i/...` command and `o/...` state topics with JSON payload
+  schemas and explicit QoS/retention. Commands are never retained.
+- `actions`: named numeric values with ranges, neutral values and release behavior.
+- `commands`: object fields bound to named actions, with an optional hold-repeat
+  interval. All fields are published together in one command.
+- `bindings`: keyboard codes, controller axes and controller buttons mapped to
+  actions. Axes support dead zones, scale/inversion and offsets. Reset bindings
+  release held actions. Keyboard auto-repeat is ignored.
+- `ui`: a grid of generic joystick, range, button, reset and state widgets.
+
+Module format version 1 supports numeric action bindings and object commands.
+It deliberately has no arbitrary JavaScript, HTML, expressions, remote schema
+references, or robot-specific web routes. Other endpoint shapes, new widgets,
+and future versions can be added as their use cases arise. Schemas support the
+bounded local JSON Schema subset enforced by `control/common/modules.py`.
+
+Each configured instance supplies an `id` and `use` (a module JSON path relative
+to the repo, or an absolute path for a local/private module). Optional `topics`,
+`bindings`, `ui`, `title`, and `description` override that instance's defaults.
+Adapters remain private robot configuration and are not sent to the browser.
+
+## Goob's first modules
+
+Merge `robots/goob/modules.example.json`'s `services.module_host` section into
+the robot's private runtime config. Install `jsonschema>=4,<5` in the runtime
+environment (or Debian's `python3-jsonschema` for a system Python service).
+The launcher starts `control.services.module_host` automatically when enabled.
+
+- Shared `modules/drive/module.json`: forward/turn actions, an on-screen stick,
+  sliders, WASD, Space to release, and controller axes 0/1. Its compact command
+  endpoint `i/drive` forwards once to `incoming/drive-values` locally, so the
+  existing MCU/ROS bridge and drive watchdog still apply.
+- Robot-local `robots/goob/modules/gripper-demo/module.json`: a virtual position
+  slider, open/close buttons, G/H keys and controller buttons 0/1. Its echo
+  adapter updates retained `o/gripper-demo/state` and never touches hardware.
+
+To promote a robot-specific module into the shared library, move its definition
+under `modules/`, choose its public type/version, and update `use`. The renderer
+and input engine need no feature-specific changes. Hardware adaptation belongs
+in the robot runtime, not the shared control definition.
+
+## Browser input behavior
+
+All widgets, keys and controllers update the same named actions. Held actions
+return to neutral on release; position-like actions can latch their value.
+Held commands repeat at their declared cadence using a 50 ms browser tick.
+Opening the page does not publish drive commands. Forms do not trigger keyboard
+shortcuts; key releases still clear an earlier hold after focus changes.
+
+Expand **Input mappings** on a module to change a key, axis/button index, action,
+value, scale, dead zone or offset, or add/remove bindings. Changes are stored in
+this browser per robot, module instance and version. Keyboard overrides are
+independent of controller profiles; controller overrides are keyed by device ID.
+**Robot defaults** restores advertised mappings. Enable the Controller checkbox
+to use the selected device. Browser/controller axis layouts vary, so indexes
+are editable. Releasing inputs also disables controller input until re-enabled.
+
+Focus loss, robot changes and controller disconnection release held inputs.
+There is at most one HTTP command in flight per endpoint and one pending latest
+value, with final neutral commands queued in order. Unload delivery is best
+effort; the existing robot watchdog remains the final stop mechanism. Explicit
+control ownership is outside this milestone.
+
+## Runtime and gateway behavior
+
+The module host publishes retained availability every five seconds at
+`o/modules/status`, with a boot ID and MQTT last will. The web page treats a
+module host as offline after 20 seconds without availability or when its broker
+connection is down. Supported controls and actual host availability are separate.
+Echo state survives broker reconnection within a process; the virtual demo starts
+at its declared neutral after a process restart.
+
+The web gateway accepts commands only for advertised command endpoints, validates
+payload ranges and shape, and rejects stale manifest revisions. It accepts no
+arbitrary browser-selected topic. `published` is a gateway result, not an
+actuator acknowledgement. Tombstoning the retained manifest removes its controls.
+
+On MQTT 3.1.1 live deliveries do not preserve the publisher's RETAIN flag. The
+bridge therefore derives retained module-state routing from the manifest, so
+new remote subscribers receive discovery/state immediately. Only the declared
+forward adapter translates the compact command into its legacy destination;
+there is no reverse alias or wildcard topic rewrite.
+
+## Validation
+
+```bash
+python3 -m unittest tests.test_modules tests.test_mqtt_bridge tests.test_common tests.test_example_configs tests.test_launcher tests.test_unified_config
+node --test tests/test_module_inputs.mjs
+```
+
+Optional end-to-end browser validation requires Playwright Chromium, Flask,
+Paho, and a cached `eclipse-mosquitto:2.0.22` Docker image:
+
+```bash
+PYTHONPATH=. python3 tests/module_browser_smoke.py
+```
+
+It creates two temporary loopback-only brokers on ports 18884/18885 and a local
+web gateway on 18086. It exercises real MQTT forwarding, generic custom controls,
+keyboard remapping and persistence, controller and pointer input, neutral release,
+and retained discovery/state. Its drive commands stay inside isolated brokers.
+
+## Media modules
+
+[Camera and audio modules](MEDIA.md) add demand-controlled capture, Opus over
+MQTT, shared media widgets, and mappable view/listen/talk actions.
+
+[H.264 backend](H264.md) documents codec selection, framing, recovery, live
+measurements, and the browser Talk upload queue correction.

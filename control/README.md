@@ -4,6 +4,11 @@
 
 ## Services
 
+- `services/module_host.py`
+  - Publishes the robot's versioned module manifest at `o/manifest`.
+  - Runs explicit command adapters for shared and robot-local controls.
+  - Publishes host availability and supports virtual state echo modules.
+  - See [module controls and input bindings](../modules/README.md).
 - `launcher.py`
   - Starts and supervises enabled control services.
   - Publishes retained `{system}/{type}/{id}/outgoing/capabilities` from `config.json`.
@@ -60,6 +65,11 @@ Then edit as needed.
 Reference schema:
 
 - `control/configs/config.json.example`
+- `services.mqtt_bridge.remote_mqtt.transport` supports `tcp` (default) and
+  `websockets`; `websocket_path` selects the WebSocket endpoint path. For the
+  public Compose broker, use `mqtt.sssn.us:443`, transport `websockets`, path
+  `/`, and TLS verification. Keep the robot's local broker on its local MQTT
+  endpoint.
 - Shared retained-topic default interval:
   - `services.defaults.retained_publish_interval_seconds` (default `3600`).
 - ROS 1 drive bridge config:
@@ -70,16 +80,24 @@ Reference schema:
   - `services.ros1_bridge.telemetry.*`
   - `services.ros1_bridge.motion.max_linear_speed_mps|max_angular_speed_radps`
   - `services.ros1_bridge.safety.*`
+  - Local joystick and Arduino auger controls are part of the Husky ROS control workspace, outside Pebble. See `../../HuskyROS/README.md` in the deployment workspace.
+
 - Autonomy manager config:
   - `services.autonomy_manager.topics.command|files|status`
   - `services.autonomy_manager.scripts.<name>.args[]` (web-editable runtime fields mapped to script CLI args)
 ## Topic Format
 
-This runtime uses the topic format:
+New robot-owned modules use compact topics:
 
-- `{system}/{type}/{id}/{incoming|outgoing}/{metric}`
+- `{system}/{type}/{id}/i/{metric}` for commands and requests
+- `{system}/{type}/{id}/o/{metric}` for state, telemetry, and streams
 
-No `/components/` segment.
+The retained module manifest is at `o/manifest`; module endpoints are declared
+in that manifest. Many established control services still use
+`incoming/...` and `outgoing/...` paths, with module-host adapters connecting
+the new contracts to those service topics during migration. Both conventions
+coexist today. See [the MQTT topic standard](../mqtt_standard.md) and
+[module contracts](../modules/README.md).
 
 ## Mirror + Media Flags
 

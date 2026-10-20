@@ -7,10 +7,18 @@ from typing import Any
 import paho.mqtt.client as mqtt
 
 
-def create_client(*, client_id: str = "") -> mqtt.Client:
+def create_client(
+    *,
+    client_id: str = "",
+    transport: str = "tcp",
+    websocket_path: str = "/mqtt",
+) -> mqtt.Client:
     # Force MQTT 3.1.1 so the client does not negotiate MQTT 5 flow-control
     # properties like receive-maximum with the broker.
-    return mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv311)
+    client = mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv311, transport=transport)
+    if transport == "websockets":
+        client.ws_set_options(path=websocket_path)
+    return client
 
 
 def normalize_tls_config(value: Any) -> dict[str, Any]:

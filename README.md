@@ -17,6 +17,8 @@ These platform directories are preserved as repository examples:
 ## Repository Layout
 
 - `control/` - local runtime services (`launcher`, `av_daemon`, `mqtt_bridge`, `ros1_bridge`, `serial_mcu_bridge`, `soundboard_handler`, `autonomy_manager`) plus service-specific support files such as `control/services/serial_standard.md`
+- `modules/` - versioned robot-owned control contracts and reusable UI/input modules; see [module controls](modules/README.md)
+- `robots/` - robot-local module definitions and composition examples
 - `web-interface/` - web UI service and Docker runtime files
 - `autonomy/apriltag-follow/` - AprilTag/autonomy utilities
 - `audio/` - MQTT audio publisher/receiver scripts
@@ -27,9 +29,19 @@ These platform directories are preserved as repository examples:
 
 ## MQTT Topic Format
 
-Pebble uses the topic format documented in `mqtt_standard.md`:
+The general/legacy topic format documented in `mqtt_standard.md` is:
 
 - `{system}/{type}/{id}/{incoming|outgoing}/{metric}`
+
+New robot modules use shorter direction segments:
+
+- `{system}/{type}/{id}/i/{metric}` for commands and inputs
+- `{system}/{type}/{id}/o/{metric}` for state, telemetry, and streams
+
+The robot identity remains unchanged. This is a gradual migration: module
+endpoints use `i/` and `o/`, while established services and compatibility
+adapters still use `incoming/` and `outgoing/`. Both conventions currently
+coexist; see [module controls](modules/README.md) and [the topic standard](mqtt_standard.md).
 
 Infrastructure discovery remains reserved at:
 
@@ -192,6 +204,11 @@ Update at least:
 - `WorkingDirectory`
 - `ExecStart`
 
+Keep this service independent of `network-online.target` and `mosquitto.service`.
+The Pebble MQTT services retry their connections, so the launcher can start
+while networking and the local broker are still coming up. On ROS robots, add
+`ros.service` to the unit's `After=` line so the ROS launch service starts first.
+
 Keep these example-unit lines unless you have a deliberate replacement:
 - `PAMName=login`
 - `Environment=XDG_RUNTIME_DIR=/run/user/%U`
@@ -252,10 +269,11 @@ Web interface MQTT/robot defaults now come from `control/configs/config.json`
 under the `web_interface` section.
 For a dedicated web-only config file, set `PEBBLE_CONFIG` when starting
 `web-control.py`.
-Robots can also self-advertise features through retained
-`.../outgoing/capabilities`, enabling dynamic UI capability discovery.
-When capability + heartbeat telemetry is present, `web_interface.robots` can stay empty.
-The UI includes soundboard and autonomy panels; autonomy start/stop publishes to
+Robots can publish a retained module manifest at `.../o/manifest`. The web UI
+uses it to discover each robot's controls and available media modules. Shared
+modules live in `modules/`; robot-specific modules and compositions live in
+`robots/`. The earlier capabilities system remains available for the classic UI
+and migration compatibility. Autonomy start/stop publishes to
 `.../incoming/autonomy-command` using scripts/config fields reported on
 `.../outgoing/autonomy-files`.
 If `web_interface.mqtt_history.enabled=true`, the UI can also persist all MQTT
@@ -278,21 +296,39 @@ docker run --rm \
   pebble
 ```
 
-For your server deployment, point both `local_mqtt.host` and
-`services.mqtt_bridge.remote_mqtt.host` at the existing `mosquitto_broker`
-container and enable only the services you want active on this machine.
+For a server deployment, point `local_mqtt.host` at the existing
+`mosquitto_broker` container and enable only the services you want active on
+this machine. Remote robots can connect to the public broker through secure
+WebSockets using `mqtt.sssn.us:443`, transport `websockets`, path `/`, and TLS
+verification; keep their local broker endpoint separate.
 
 ## Future Work
 
-- Expand `tests/` with deeper subsystem + integration coverage:
-  - `mqtt_bridge` routing/flags/loop-prevention
-  - `serial_mcu_bridge` command and telemetry behavior
-  - `soundboard_handler` command/files/status behavior
-  - `av_daemon` lifecycle behavior
-  - end-to-end local/remote broker scenarios
-- Extend structured `{system}/{type}/{id}/outgoing/logs` diagnostics:
-  - Include richer service metadata and optional media-source unavailability annotations.
-- Evaluate replacing current delta-frame MQTT video payload with a more efficient encoded video transport.
+- Finish migrating legacy `incoming/` and `outgoing/` service topics to compact
+  `i/` and `o/` module endpoints, retaining adapters where needed for older
+  robots and tools.
+- Expand first-pass unit and browser coverage with more failure/reconnect cases
+  and on-robot integration coverage. Existing coverage is listed in
+  [`tests/README.md`](tests/README.md).
+- Improve structured runtime diagnostics with richer service metadata and
+  explicit media-source-unavailable state.
+- Improve module authoring with a simple layout designer or reusable widget
+  library as real robot interfaces emerge. Current modules declare a bounded
+  JSON layout and use shared widgets/input mappings; they do not send arbitrary
+  robot HTML or JavaScript to the gateway.
+- Consider browser-native video and audio transports to reduce the remaining
+  gateway JPEG and browser PCM conversion work.
+- Evaluate audio echo cancellation for full-duplex conversation. Goob currently
+  uses separate capture, MQTT, and playback paths; practical acoustic echo
+  cancellation will likely require a coordinated full-duplex audio pipeline at
+  both the operator and robot ends.
+- Consider a Jev layer as an optional, high-level autonomy decision component.
+  Jev (TypeSafe System One) answers typed, bounded questions from supplied state;
+  it is not an LLM chat interface and is not integrated into Pebble. A future
+  adapter could turn robot observations into discrete intents (for example,
+  follow, stop, or request operator help). Any such decisions should pass local
+  safety checks and never replace the robot's fast control loop or stop/watchdog
+  behavior. See [Jev's quickstart](https://docs.typesafe.ai/introduction/quickstart).
 - Standardize robot-wide soundboard event cues for scripts:
   - Define stable cue names (for example `error`, `warning`, `info`, `success`) mapped to consistent sounds.
   - Add helper utilities so autonomy/control scripts can publish soundboard commands with a shared contract.
@@ -302,6 +338,11 @@ container and enable only the services you want active on this machine.
 - Add soundboard repeat playback modes:
   - Support a repeat toggle that loops a selected sound until a manual stop command is received.
   - Support timed repeat (for example "repeat for X seconds") for alert and status cues.
+
+These are candidates, not a committed roadmap. H.264 video transport, Opus
+robot-to-gateway audio, demand-controlled media capture, robot-advertised
+controls, and editable input mappings are already implemented in the current
+worktree. See [media modules](modules/MEDIA.md) and [H.264 observations](modules/H264.md).
 
 ## Troubleshooting
 

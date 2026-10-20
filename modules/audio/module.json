@@ -1,0 +1,159 @@
+{
+  "type": "pebble.audio",
+  "version": 1,
+  "title": "Audio",
+  "description": "Capture starts on demand and stops when the last consumer releases it.",
+  "endpoints": {
+    "request": {
+      "topic": "i/audio",
+      "kind": "command",
+      "resource": "audio-stream",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "consumer": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "ttl_seconds": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 15
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "additionalProperties": false
+      },
+      "qos": 0,
+      "retain": false
+    },
+    "stream": {
+      "topic": "o/audio",
+      "kind": "audio",
+      "schema": {},
+      "codec": "opus",
+      "qos": 0,
+      "retain": false,
+      "rate": 16000,
+      "channels": 1
+    },
+    "speaker": {
+      "topic": "i/speaker",
+      "kind": "command",
+      "resource": "speaker",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "consumer": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "ttl_seconds": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 15
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "additionalProperties": false
+      },
+      "qos": 0,
+      "retain": false
+    },
+    "uplink": {
+      "topic": "i/audio-stream",
+      "kind": "uplink",
+      "schema": {},
+      "codec": "opus",
+      "qos": 0,
+      "retain": false,
+      "rate": 16000,
+      "channels": 1
+    },
+    "state": {
+      "topic": "o/audio/state",
+      "kind": "state",
+      "schema": {
+        "type": "object"
+      },
+      "qos": 1,
+      "retain": true
+    }
+  },
+  "actions": {
+    "enabled": {
+      "label": "Listen",
+      "min": 0,
+      "max": 1,
+      "neutral": 0,
+      "step": 1,
+      "reset_on_release": false
+    },
+    "talk": {
+      "label": "Talk",
+      "min": 0,
+      "max": 1,
+      "neutral": 0,
+      "step": 1,
+      "reset_on_release": true
+    }
+  },
+  "commands": [
+    {
+      "endpoint": "request",
+      "fields": {
+        "enabled": "enabled"
+      },
+      "repeat_ms": 2000
+    },
+    {
+      "endpoint": "speaker",
+      "fields": {
+        "enabled": "talk"
+      },
+      "repeat_ms": 2000
+    }
+  ],
+  "bindings": [
+    {
+      "id": "talk",
+      "input": "keyboard",
+      "code": "KeyT",
+      "action": "talk",
+      "value": 1
+    }
+  ],
+  "ui": {
+    "columns": 1,
+    "controls": [
+      {
+        "kind": "audio",
+        "label": "Listen",
+        "endpoint": "stream",
+        "action": "enabled",
+        "uplink": "uplink",
+        "talk_action": "talk"
+      },
+      {
+        "kind": "state",
+        "label": "Capture active",
+        "endpoint": "state",
+        "field": "capture"
+      }
+    ]
+  }
+}
