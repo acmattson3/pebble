@@ -42,6 +42,10 @@ outcomes rather than duplicating implementation details from the READMEs.
   `subtopics` in the example configs. One shared resolver handles defaults,
   preserves legacy full `topic`/`topics` values, and rejects unsafe local
   subtopics.
+- The robot/web config split is deployed: Goob uses `robot.json`, and ARL's
+  web service uses `web-interface/config.json`. Goob's robot-local topic
+  settings now use subtopics while resolving to the same MQTT topics. Its
+  motor output swap is configured rather than patched into source.
 
 ## Roadmap
 
@@ -105,6 +109,11 @@ running Pebble's Linux services, module host, or web interface.
 
 - Continue promoting proven robot-local modules into `modules/` with stable
   type/version contracts and examples.
+- Convert soundboard controls into a robot-owned module. Define the shared
+  command, file-list, status, layout, and input-binding contract; let each
+  robot opt in and adapt it to its playback hardware and sound collection.
+  The web gateway should render it through the generic module UI, without
+  robot-specific soundboard code.
 - Keep input-to-action mapping in the module contract so keyboard, gamepad, and
   future inputs use the same command path.
 - Add module examples for common drive variants and one or more robot-specific
@@ -138,8 +147,11 @@ one-way listening or speech intelligibility.
 
 ### 5. Improve robot services and operator feedback
 
-- Add shared soundboard cue names and helper utilities for autonomy/control
-  scripts.
+- Set Goob's soundboard asset directory to `/opt/sounds` and remove the
+  legacy `/var/lib/pebblebot/sounds` assumption. Keep the path configurable for
+  other robots and document the needed filesystem permissions.
+- After the robot-owned soundboard module is established, add shared cue names
+  and helper utilities for autonomy/control scripts.
 - Add safe, bounded audio volume controls for supported ALSA devices.
 - Add soundboard repeat and timed-repeat modes with a clear stop command.
 - Improve structured runtime diagnostics with service metadata and optional
@@ -159,6 +171,19 @@ one-way listening or speech intelligibility.
 **Acceptance:** a Jev prototype is removable, cannot bypass local safety
 controls, and has a clear timeout/failure behavior.
 
+### Next implementation slice: robot-owned soundboard
+
+First specify the module manifest and MQTT contract for listing, selecting,
+playing, stopping, and reporting sounds. Then add the reusable module and a
+Goob adapter, set Goob's sound root to `/opt/sounds`, and remove legacy
+`pebblebot` path assumptions. Verify that the gateway discovers and renders
+the module from robot-published metadata and that playback stays inside the
+configured sound directory.
+
+**Acceptance:** a robot can expose soundboard controls by publishing its
+module definition and implementing the declared MQTT endpoints; adding or
+changing its sounds does not require web-interface code changes.
+
 ## Deferred by choice
 
 - Explicit control ownership/locking.
@@ -174,18 +199,19 @@ adapter, and verify that Goob's runtime and the multi-robot web interface still
 resolve the same effective settings. Extract audio/video profiles only after
 that boundary is clear.
 
-The robot/web boundary is now represented by separate examples and local
-runtime paths. The loader prefers `robot.json`, the web UI prefers its own
+The robot/web boundary is represented by separate examples and runtime paths.
+The loader prefers `robot.json`, the web UI prefers its own
 `web-interface/config.json`, and the old unified file remains a fallback.
+Goob and the ARL web service are running with the split files. Goob's local
+topics resolve through subtopics with unchanged effective MQTT endpoints.
 Audio/video profile extraction remains a later step after this boundary has
 been exercised on Goob and the web host.
 
 **Completed slice:** the serial MCU bridge accepts
 `services.serial_mcu_bridge.drive.swap_motor_outputs` as a boolean. The default
 preserves left/right order; Goob's example enables the swap for its current
-motor wiring.
+motor wiring, and Goob's live robot config enables it.
 
-**Next verification:** exercise `robot.json` and `web-interface/config.json` on
-Goob and the web host, confirm they produce the same effective MQTT endpoints,
-then move Goob's motor swap from its local source edit into
-`drive.swap_motor_outputs: true`.
+**Remaining verification:** resolve four full-suite web test failures in topic
+discovery and audio sequence rewind, then continue with the robot-owned
+soundboard slice above.
