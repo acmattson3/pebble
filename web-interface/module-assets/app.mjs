@@ -7,7 +7,26 @@ let base='', revision='', manifest=null, online=false, suspended=false;
 let contexts=[], keys=new Set(), buttonStates=new Map(), pollsBusy=false, stateBusy=false;
 let lastDeviceProfile='default', devices=[];
 const queues=new Map();
-const mediaSession=crypto.randomUUID?.() || Array.from(crypto.getRandomValues(new Uint8Array(24)),n=>n.toString(16).padStart(2,'0')).join('');
+function mediaPreferenceKey(robot,module,endpoint) {
+  return `pebble.modules.media-preference.v1:${robot}:${module}:${endpoint}`;
+}
+function mediaPreference(robot,module,endpoint,value) {
+  const key=mediaPreferenceKey(robot,module,endpoint);
+  try {
+    if(value===undefined)return localStorage.getItem(key)==='true';
+    localStorage.setItem(key,value?'true':'false');
+  } catch (_) {}
+  return false;
+}
+function stableMediaSession() {
+  const key='pebble.modules.media-session.v1';
+  try {
+    let value=localStorage.getItem(key);
+    if(!value){value=crypto.randomUUID?.() || Array.from(crypto.getRandomValues(new Uint8Array(24)),n=>n.toString(16).padStart(2,'0')).join('');localStorage.setItem(key,value);}
+    return value;
+  } catch (_) { return crypto.randomUUID?.() || Array.from(crypto.getRandomValues(new Uint8Array(24)),n=>n.toString(16).padStart(2,'0')).join(''); }
+}
+const mediaSession=stableMediaSession();
 
 function element(tag, text, cls) {
   const el=document.createElement(tag);
@@ -47,10 +66,11 @@ async function drain(state) {
     if (state.next) drain(state);
   }
 }
-function releaseAll(publish=true) {
+function releaseAll(publish=true, preserveMedia=false) {
   keys.clear(); buttonStates.clear();
   $('gamepad').checked=false;
-  for (const ctx of contexts) { ctx.engine.reset(publish && online && !suspended); ctx.releaseView?.(); for(const media of ctx.mediaWidgets??[])media.stop(); syncValues(ctx); }
+  const resetOptions=preserveMedia?{preserveResources:['audio-stream','video-stream']}:undefined;
+  for (const ctx of contexts) { ctx.engine.reset(publish && online && !suspended,resetOptions); ctx.releaseView?.(); for(const media of ctx.mediaWidgets??[])media.stop(); syncValues(ctx,!preserveMedia); }
 }
 function beginInteraction() {
   if (!online) return false;
@@ -127,7 +147,7 @@ function renderMappings(ctx,target) {
   const reset=element('button','Robot defaults');reset.addEventListener('click',()=>{ctx.bindings=structuredClone(ctx.module.bindings);persist(ctx);renderMappings(ctx,target);});
   actions.append(add,reset);target.append(actions);
 }
-function syncValues(ctx) {
+function syncValues(ctx, syncMedia=true) {
   for(const [action,nodes] of ctx.valueNodes) for(const node of nodes) {
     const value=ctx.engine.values[action];
     if(node.tagName==='INPUT')node.value=value;
@@ -135,7 +155,7 @@ function syncValues(ctx) {
   }
   for(const input of ctx.controlNodes)input.disabled=!online;
   ctx.card.classList.toggle('offline',!online);
-  for(const media of ctx.mediaWidgets??[])media.sync(ctx.engine.values, online && !suspended);
+  if(syncMedia)for(const media of ctx.mediaWidgets??[])media.sync(ctx.engine.values, online && !suspended && document.visibilityState!=='hidden');
   for(const widget of ctx.soundboardWidgets??[])syncSoundboardWidget(ctx,widget);
 }
 function syncSoundboardWidget(ctx, item) {
@@ -164,7 +184,18 @@ function render(manifest) {
   for(const module of manifest.modules) {
     const card=element('section',undefined,'module');card.dataset.module=module.id;
     const ctx={module,card,bindings:loadBindings(module),valueNodes:new Map(),stateNodes:[],controlNodes:[],mediaWidgets:[],soundboardWidgets:[],latestState:null};
-    ctx.engine=new InputEngine(module,(command,payload)=>queueCommand(robot,module,command,payload,manifest.revision));
+    ctx.engine=new InputEngine(module,(command,payload)=>{
+      const endpoint=module.endpoints?.[command.endpoint];
+      if(['audio-stream','video-stream'].includes(endpoint?.resource)) {
+        mediaPreference(robot,module.id,command.endpoint,Number(payload[Object.keys(command.fields)[0]])>=.5);
+      }
+      queueCommand(robot,module,command,payload,manifest.revision);
+    });
+    for(const command of module.commands) {
+      const resource=module.endpoints?.[command.endpoint]?.resource;
+      if(!['audio-stream','video-stream'].includes(resource)||!mediaPreference(robot,module.id,command.endpoint))continue;
+      for(const action of Object.values(command.fields))ctx.engine.values[action]=module.actions[action].max;
+    }
     contexts.push(ctx);
     const title=element('h2',module.title);title.append(element('span',`${module.type} · v${module.version}`,'type'));
     card.append(title,element('p',module.description,'description'));
@@ -241,10 +272,22 @@ function render(manifest) {
   }
 }
 function applyState(state) {
+  const wasOnline=online;
   online=state.online;
   $('connection').textContent=online?`Online · ${manifest?.modules.length??0} modules`:'Robot offline';
   for(const ctx of contexts) {
     ctx.latestState=state;
+    if(online&&(!ctx.persistentMediaRestored||!wasOnline)) {
+      ctx.persistentMediaRestored=true;
+      for(const command of ctx.module.commands) {
+        const resource=ctx.module.endpoints?.[command.endpoint]?.resource;
+        if(!['audio-stream','video-stream'].includes(resource))continue;
+        const action=Object.values(command.fields)[0];
+        if(mediaPreference(base,ctx.module.id,command.endpoint))ctx.engine.values[action]=ctx.module.actions[action].max;
+        else ctx.engine.values[action]=ctx.module.actions[action].neutral;
+        if(ctx.engine.values[action]>.5){ctx.engine.touched.add(action);ctx.engine.flush();}
+      }
+    }
     for(const {widget,value} of ctx.stateNodes) {
       const body=state.states[ctx.module.id]?.[widget.endpoint]?.value;
       const datum=widget.field?body?.[widget.field]:body;
@@ -350,8 +393,8 @@ $('gamepad').addEventListener('change',()=>{const enabled=$('gamepad').checked;r
 $('device').addEventListener('change',changeDevice);
 $('stop').addEventListener('click',()=>releaseAll());
 robotSelect.addEventListener('change',()=>changeRobot(robotSelect.value));
-window.addEventListener('blur',()=>releaseAll());
-document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll();});
-window.addEventListener('pagehide',()=>releaseAll());
+window.addEventListener('blur',()=>releaseAll(true,true));
+document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll(true,true);});
+window.addEventListener('pagehide',()=>releaseAll(true,true));
 window.addEventListener('gamepadconnected',refreshDevices);window.addEventListener('gamepaddisconnected',refreshDevices);
 setInterval(refreshRobots,3000);setInterval(refreshState,500);refreshRobots();

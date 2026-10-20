@@ -44,12 +44,20 @@ export class InputEngine {
     }
     this.touched.clear();
   }
-  reset(publish = true) {
+  reset(publish = true, {preserveResources = []} = {}) {
     this.sources.clear();
+    const preservedEndpoints = new Set(this.module.commands
+      .filter(command => preserveResources.includes(this.module.endpoints?.[command.endpoint]?.resource))
+      .map(command => command.endpoint));
+    const preservedActions = new Set(this.module.commands
+      .filter(command => preservedEndpoints.has(command.endpoint))
+      .flatMap(command => Object.values(command.fields)));
     for (const [a,spec] of Object.entries(this.module.actions)) {
+      if (preservedActions.has(a)) continue;
       if (spec.reset_on_release || this.module.commands.some(c=>this.module.endpoints?.[c.endpoint]?.resource && Object.values(c.fields).includes(a))) this.values[a] = spec.neutral;
     }
     for (const command of this.module.commands) {
+      if (preservedEndpoints.has(command.endpoint)) continue;
       if (!this.module.endpoints?.[command.endpoint]?.resource && !Object.values(command.fields).some(a => this.module.actions[a].reset_on_release)) continue;
       if (publish && this.last.has(command.endpoint)) {
         this.send(command, Object.fromEntries(Object.entries(command.fields).map(([f,a]) => [f,this.values[a]])));

@@ -355,6 +355,15 @@ compact paths; legacy service examples are explicitly labeled.
 | `{base}/i/audio-stream` | Opus audio sent to robot speaker |
 | `{base}/i/media/lease`, `{base}/o/media/state` | Capture demand and AV service state |
 
+Media resource requests normally use a short lease (`ttl_seconds` up to 15),
+renewed by the consumer and removed with `enabled: 0`. The camera and microphone
+stream request endpoints may explicitly set `persistent: true` with a
+`ttl_seconds` of 86400. Persistent capture survives a web page closing and is
+released by a later `enabled: 0` request from the same consumer or when the AV
+service restarts. The TTL field remains required by those endpoint schemas, but
+the persistent flag holds the lease independently of expiry. Other media
+resources, including speaker playback, remain short leases.
+
 #### Legacy incoming topics still implemented here
 
 | Example topic | Current producer(s) | Current consumer(s) | Notes |

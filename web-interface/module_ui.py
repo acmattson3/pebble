@@ -83,7 +83,15 @@ class ModuleUI:
                     if not re.fullmatch(r"[a-zA-Z0-9-]{16,64}", session):
                         return jsonify(error="Media controls require a session identifier"), 400
                     consumer = "web:"+hashlib.sha256((session+body["module"]+body["endpoint"]).encode()).hexdigest()[:40]
-                    payload = {**payload, "consumer": consumer, "ttl_seconds": 8}
+                    schema_properties = endpoint.get("schema", {}).get("properties", {})
+                    supports_persistent = schema_properties.get("persistent", {}).get("type") == "boolean"
+                    persistent_capture = (
+                        endpoint.get("resource") in {"audio-stream", "video-stream"}
+                        and supports_persistent
+                    )
+                    payload = {**payload, "consumer": consumer, "ttl_seconds": 86400 if persistent_capture else 8}
+                    if persistent_capture:
+                        payload["persistent"] = True
                     try:
                         validate_payload(endpoint, payload)
                     except (ValueError, TypeError, ValidationError):

@@ -85,30 +85,38 @@ class MediaLifecycle:
                 enabled = body.get('enabled', body.get('value')) if isinstance(body, dict) else body
                 if not isinstance(enabled, bool):
                     return
-                # Classic controls retain explicit on/off semantics; browser modules use expiring leases.
+                # Classic controls and persistent browser capture use explicit on/off semantics;
+                # ordinary browser consumers use expiring leases.
                 self.request('classic:'+msg.topic, self.legacy[msg.topic] if enabled else set(), 86400, legacy=True)
                 return
             if msg.topic in self.routes:
-                if not isinstance(body, dict) or set(body)-{'enabled','consumer','ttl_seconds'} or not isinstance(body.get('enabled'),(int,float)) or not 0 <= body['enabled'] <= 1:
+                if not isinstance(body, dict) or set(body)-{'enabled','consumer','ttl_seconds','persistent'} or not isinstance(body.get('enabled'),(int,float)) or not 0 <= body['enabled'] <= 1:
                     return
                 resource = self.routes[msg.topic]
                 consumer = body.get('consumer', 'direct:'+msg.topic)
-                self.request(consumer, {resource} if body['enabled'] >= .5 else set(), body.get('ttl_seconds', 8))
+                persistent = body.get('persistent', False)
+                if not isinstance(persistent, bool) or (persistent and resource not in {'audio-stream', 'video-stream'}):
+                    return
+                ttl = body.get('ttl_seconds', 8)
+                if persistent and ttl != 86400:
+                    return
+                self.request(consumer, {resource} if body['enabled'] >= .5 else set(), ttl, persistent=persistent)
             elif msg.topic == self.base+'/i/media/lease':
                 self.request(body['consumer'], set(body['resources']), body.get('ttl_seconds',8))
         except (ValueError, TypeError, KeyError):
             logging.warning('Rejected media demand on %s', msg.topic)
 
-    def request(self, consumer, resources, ttl, legacy=False):
+    def request(self, consumer, resources, ttl, legacy=False, persistent=False):
         if not isinstance(consumer, str) or not 1 <= len(consumer) <= 160 or not resources <= RESOURCES:
             raise ValueError('Invalid resource lease')
-        if not isinstance(ttl, (int,float)) or not 1 <= ttl <= (86400 if legacy else 15):
+        if not isinstance(ttl, (int,float)) or not 1 <= ttl <= (86400 if legacy or persistent else 15):
             raise ValueError('Invalid lease lifetime')
         with self.lock:
             if resources:
                 if consumer not in self.leases and len(self.leases) >= 256:
                     raise ValueError('Media consumer limit reached')
-                self.leases[consumer] = (resources, time.monotonic()+ttl)
+                expires_at = float('inf') if persistent else time.monotonic()+ttl
+                self.leases[consumer] = (resources, expires_at)
             else:
                 self.leases.pop(consumer, None)
 

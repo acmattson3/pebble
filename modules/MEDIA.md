@@ -24,10 +24,14 @@ the Talk button or **T** to send microphone audio to the robot's speaker. **V**
 starts viewing; **B** stops viewing. All these actions support the same keyboard
 and controller mapping editor as drive and custom modules.
 
-Tabs have independent consumer identifiers. Requests renew every two seconds
-and expire after eight seconds without renewal. Hiding the page, losing focus,
-changing robot/controller, or releasing inputs releases media demand too.
-Capture stays active if another tab or a local autonomy consumer still needs it.
+Browser camera and listening requests persist until explicitly stopped or the
+AV service restarts, so navigating away or closing the page does not turn off
+capture. The browser reuses its consumer identity on return; pressing **Stop**
+releases that request. The
+microphone uplink used by Talk remains a short lease and is released when the
+page loses focus. Explicitly stopping a resource or restarting the AV service
+still releases it. Capture stays active if another browser or local autonomy
+consumer still needs it.
 `Capture active` reflects device-process state, which can differ from this tab's
 request. It does not assert that a device is delivering frames; a waiting stream
 is reported separately. Speaker playback does not open the robot's microphone.
@@ -64,11 +68,16 @@ accepted during migration. Binary streams use QoS 0, never
 retain packets. State is retained; commands are not. The manifest advertises
 `video`, `audio`, and `uplink` endpoint kinds and the codec/sample format.
 
-A resource command is `{"enabled":1,"consumer":"my-viewer","ttl_seconds":8}`;
+A short resource command is `{"enabled":1,"consumer":"my-viewer","ttl_seconds":8}`;
 `enabled:0` releases that consumer. Omitted consumer names default to one direct
-consumer per command topic. Callers must renew requests; maximum TTL is 15s.
-The HTTP gateway validates commands and supplies a per-tab consumer ID for
-endpoints with a declared `resource`. Raw local capture requests look like:
+consumer per command topic. Short leases are limited to 15s. Camera and
+microphone stream endpoints may opt into a persistent lease with
+`{"enabled":1,"consumer":"web:...","ttl_seconds":86400,"persistent":true}`;
+only those two resources accept the persistent flag. The web gateway supplies a
+stable browser-profile consumer for persistent requests, so Stop works after
+returning to the interface. Persistent leases are held until `enabled:0` or an
+AV service restart; the TTL field is still required by the endpoint schema.
+Raw local capture requests look like:
 
 ```json
 {"consumer":"my-vision-process","resources":["video"],"ttl_seconds":8}

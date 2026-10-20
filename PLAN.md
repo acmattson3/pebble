@@ -153,6 +153,12 @@ one-way listening or speech intelligibility.
 ### 5. Improve robot services and operator feedback
 
 - Add shared sound cue names and helper utilities for autonomy/control scripts.
+- Expose autonomy scripts through a robot-defined module so robots can publish
+  their available scripts and the interface can start/stop them without a
+  Pebble-wide hard-coded autonomy panel.
+- Add robot-defined light-control, log-viewer, and telemetry modules, using the
+  existing interface behavior as a reference while keeping each module
+  optional and robot-owned.
 - Add safe, bounded audio volume controls for supported ALSA devices.
 - Add soundboard repeat and timed-repeat modes with a clear stop command.
 - Preserve the MCU's flashing startup pattern, then have `serial_mcu_bridge`
