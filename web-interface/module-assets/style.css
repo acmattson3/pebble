@@ -4,3 +4,8 @@
 .media-widget img { width:100%; height:auto; border-radius:.6rem; background:#111; }
 .media-widget p { flex:1; min-width:8rem; font-size:.9rem; color:var(--muted,#b4c5be); }
 .media-widget button.active { background:#ba593a; }
+.soundboard-widget { grid-column:1/-1; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px; padding:14px; border:1px solid var(--line); border-radius:8px; background:#111e27; }
+.soundboard-title { grid-column:1/-1; }
+.soundboard-widget select { width:100%; max-width:none; min-width:0; }
+.soundboard-actions { display:flex; gap:8px; }
+.soundboard-status { grid-column:1/-1; min-height:1em; margin:0; font-size:13px; }

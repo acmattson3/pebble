@@ -47,11 +47,14 @@ class SoundboardHandlerTests(unittest.TestCase):
             handler, _ = self._handler(sounds)
             handler.client = FakeMqttClient()
             handler._refresh_files(force=True)
-            self.assertEqual(len(handler.client.publish_calls), 1)
-            topic, payload, qos, retain = handler.client.publish_calls[0]
-            self.assertEqual(topic, handler.files_topic)
-            self.assertTrue(retain)
-            self.assertIn("a.wav", payload)
+            self.assertEqual([call[0] for call in handler.client.publish_calls], [
+                handler.files_topic,
+                handler.module_files_topic,
+            ])
+            for _topic, payload, qos, retain in handler.client.publish_calls:
+                self.assertEqual(qos, 1)
+                self.assertTrue(retain)
+                self.assertIn("a.wav", payload)
 
     def test_play_and_stop_commands_manage_process(self):
         with tempfile.TemporaryDirectory() as td:
@@ -85,7 +88,9 @@ class SoundboardHandlerTests(unittest.TestCase):
             self.assertGreaterEqual(len(handler.client.publish_calls), 2)
             topics = [call[0] for call in handler.client.publish_calls]
             self.assertIn(handler.files_topic, topics)
+            self.assertIn(handler.module_files_topic, topics)
             self.assertIn(handler.status_topic, topics)
+            self.assertIn(handler.module_status_topic, topics)
 
 
 if __name__ == "__main__":

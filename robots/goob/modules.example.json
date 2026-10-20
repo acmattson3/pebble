@@ -19,6 +19,16 @@
           }
         },
         {
+          "id": "soundboard",
+          "use": "modules/soundboard/module.json",
+          "adapters": {
+            "command": {
+              "kind": "forward",
+              "subtopic": "incoming/soundboard-command"
+            }
+          }
+        },
+        {
           "id": "gripper-demo",
           "use": "robots/goob/modules/gripper-demo/module.json",
           "adapters": {

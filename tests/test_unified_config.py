@@ -48,6 +48,9 @@ class UnifiedConfigTests(unittest.TestCase):
         # deliberately provide a minimal Flask fake with no Blueprint support.
         fake_module_ui = types.ModuleType("module_ui")
         fake_module_ui.ModuleUI = mock.Mock()
+        # MQTT messages should fall through to the legacy handlers unless a
+        # module explicitly claims them. A bare Mock is truthy by default.
+        fake_module_ui.ModuleUI.return_value.handle_message.return_value = False
 
         with mock.patch.dict(
             "os.environ",

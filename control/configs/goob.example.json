@@ -38,6 +38,16 @@
           }
         },
         {
+          "id": "soundboard",
+          "use": "modules/soundboard/module.json",
+          "adapters": {
+            "command": {
+              "kind": "forward",
+              "subtopic": "incoming/soundboard-command"
+            }
+          }
+        },
+        {
           "id": "gripper-demo",
           "use": "robots/goob/modules/gripper-demo/module.json",
           "adapters": {
@@ -285,31 +295,6 @@
         "ignore_retained_drive": true,
         "stop_on_shutdown": true
       },
-      "instances": {
-        "imu": {
-          "enabled": true,
-          "protocol": "imu_mpu6050_v1",
-          "serial": {
-            "port": "/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0",
-            "baud": 115200,
-            "timeout_seconds": 0.1
-          },
-          "publish": {
-            "high_rate_qos": 0,
-            "low_rate_qos": 1,
-            "high_rate_retain": false,
-            "low_rate_retain": false
-          },
-          "health": {
-            "imu_sample_timeout_seconds": 5.0,
-            "exit_on_serial_error": true
-          },
-          "subtopics": {
-            "high_rate": "outgoing/sensors/imu-fast",
-            "low_rate": "outgoing/sensors/imu"
-          }
-        }
-      },
       "subtopics": {
         "drive_values": "incoming/drive-values",
         "lights_solid": "incoming/lights-solid",
@@ -326,7 +311,7 @@
       "enabled": true,
       "log_level": "INFO",
       "playback": {
-        "directory": "/var/lib/pebble/sounds",
+        "directory": "/opt/sounds",
         "player_command": [
           "aplay"
         ],

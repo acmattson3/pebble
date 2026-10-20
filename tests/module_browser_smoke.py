@@ -61,6 +61,10 @@ def main():
             observer.on_connect=lambda c,*_:c.subscribe(base+'/#')
             observer.on_message=lambda c,u,m:local_messages.append((m.topic,json.loads(m.payload)))
             observer.connect('127.0.0.1',18884);observer.loop_start();clients.append(observer)
+            local_publisher=mqtt.Client(client_id='module-test-local-publisher')
+            local_publisher.connect('127.0.0.1',18884);local_publisher.loop_start();clients.append(local_publisher)
+            local_publisher.publish(base+'/o/soundboard/files',json.dumps({'files':['demo.wav'],'controls':True,'timestamp':time.time()}),qos=1,retain=True).wait_for_publish()
+            local_publisher.publish(base+'/o/soundboard/status',json.dumps({'playing':False,'file':None,'error':None,'controls':True,'timestamp':time.time()}),qos=1,retain=True).wait_for_publish()
             app=Flask(__name__)
             gateway=mqtt.Client(client_id='module-test-web')
             clients.append(gateway)
@@ -77,6 +81,7 @@ def main():
             server=make_server('127.0.0.1',18086,app,threaded=True)
             threading.Thread(target=server.serve_forever,daemon=True).start()
             drive=lambda:[p for t,p in local_messages if t==base+'/incoming/drive-values']
+            sound_commands=lambda:[p for t,p in local_messages if t==base+'/incoming/soundboard-command']
             with sync_playwright() as pw:
                 browser=pw.chromium.launch(headless=True)
                 page=browser.new_page(viewport={'width':1200,'height':1000})
@@ -84,7 +89,16 @@ def main():
                 page.add_init_script("Object.defineProperty(navigator,'getGamepads',{value:()=>window.testPads||[]});")
                 page.goto('http://127.0.0.1:18086/modules')
                 page.locator('[data-module="drive"]').wait_for()
+                page.locator('[data-module="soundboard"]').wait_for()
                 page.wait_for_function("document.querySelector('#connection').textContent.startsWith('Online')")
+                soundboard=page.locator('[data-module="soundboard"]')
+                soundboard.locator('select').select_option('demo.wav')
+                soundboard.get_by_role('button',name='Play selected Soundboard sound').click()
+                wait_until(lambda:len(sound_commands())==1)
+                assert sound_commands()[-1]=={'action':'play','file':'demo.wav'}
+                soundboard.get_by_role('button',name='Stop Soundboard').click()
+                wait_until(lambda:len(sound_commands())==2)
+                assert sound_commands()[-1]=={'action':'stop','file':''}
                 assert not drive(), 'Opening controls must not send drive commands'
                 gripper=page.locator('[data-module="gripper-demo"]')
                 gripper.get_by_role('button',name='Open',exact=True).click()
@@ -128,12 +142,12 @@ def main():
             # through the remote broker, rather than wait for a republish interval.
             retained=[]
             late=mqtt.Client(client_id='module-test-late')
-            late.on_connect=lambda c,*_:c.subscribe([(base+'/o/manifest',1),(base+'/o/gripper-demo/state',1)])
+            late.on_connect=lambda c,*_:c.subscribe([(base+'/o/manifest',1),(base+'/o/gripper-demo/state',1),(base+'/o/soundboard/files',1)])
             late.on_message=lambda c,u,m:retained.append((m.topic,m.retain))
             late.connect('127.0.0.1',18885);late.loop_start();clients.append(late)
-            wait_until(lambda:len(retained)>=2)
+            wait_until(lambda:len(retained)>=3)
             assert all(flag for _,flag in retained)
-            print(json.dumps({'result':'passed','checks':['two-broker discovery','generic custom controls','custom keyboard actions','drive forwarding once','keyboard remapping','mapping persistence','focus-loss neutral','controller axis','controller disconnect neutral','pointer stick','retained remote manifest/state','no browser exceptions'],'drive_messages':len(drive())}))
+                print(json.dumps({'result':'passed','checks':['two-broker discovery','generic custom controls','robot-advertised soundboard widget','soundboard file state and play/stop commands','custom keyboard actions','drive forwarding once','keyboard remapping','mapping persistence','focus-loss neutral','controller axis','controller disconnect neutral','pointer stick','retained remote manifest/state','no browser exceptions'],'drive_messages':len(drive())}))
     finally:
         if server:server.shutdown()
         if bridge:bridge.stop()

@@ -97,7 +97,12 @@ class AudioDecoder:
             return None
         body = payload[HEADER.size:]
         fmt = (codec, rate, channels)
-        restart = self.last_seq is not None and seq <= self.last_seq and timestamp > (self.last_timestamp or 0)
+        # A stream can restart within the same millisecond as its previous
+        # packet. A strictly lower sequence with a non-older timestamp is
+        # sufficient to distinguish that restart from stale packets; an
+        # equal sequence remains a duplicate and is discarded below.
+        restart = (self.last_seq is not None and seq < self.last_seq
+                   and timestamp >= (self.last_timestamp or 0))
         changed = self.format != fmt
         if self.last_seq is not None and seq <= self.last_seq and not restart and not changed:
             return None

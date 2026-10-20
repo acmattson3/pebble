@@ -1,0 +1,82 @@
+{
+  "type": "pebble.soundboard",
+  "version": 1,
+  "title": "Soundboard",
+  "description": "Play a sound from this robot's advertised WAV library, or stop playback.",
+  "endpoints": {
+    "command": {
+      "topic": "i/soundboard/command",
+      "kind": "command",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["play", "stop"]
+          },
+          "file": {
+            "type": "string",
+            "maxLength": 512
+          }
+        },
+        "required": ["action", "file"],
+        "additionalProperties": false
+      },
+      "qos": 0,
+      "retain": false
+    },
+    "files": {
+      "topic": "o/soundboard/files",
+      "kind": "state",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "maxItems": 2048
+          },
+          "controls": {"type": "boolean"},
+          "timestamp": {"type": "number"}
+        },
+        "required": ["files", "controls", "timestamp"],
+        "additionalProperties": false
+      },
+      "qos": 1,
+      "retain": true
+    },
+    "status": {
+      "topic": "o/soundboard/status",
+      "kind": "state",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "playing": {"type": "boolean"},
+          "file": {"type": ["string", "null"]},
+          "error": {"type": ["string", "null"]},
+          "controls": {"type": "boolean"},
+          "timestamp": {"type": "number"}
+        },
+        "required": ["playing", "file", "error", "controls", "timestamp"],
+        "additionalProperties": false
+      },
+      "qos": 1,
+      "retain": true
+    }
+  },
+  "actions": {},
+  "commands": [],
+  "bindings": [],
+  "ui": {
+    "columns": 1,
+    "controls": [
+      {
+        "kind": "soundboard",
+        "label": "Soundboard",
+        "command_endpoint": "command",
+        "files_endpoint": "files",
+        "status_endpoint": "status"
+      }
+    ]
+  }
+}

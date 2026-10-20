@@ -293,7 +293,8 @@
                         "reset",
                         "state",
                         "video",
-                        "audio"
+                        "audio",
+                        "soundboard"
                       ]
                     },
                     "label": {
@@ -331,6 +332,18 @@
                     },
                     "talk_action": {
                       "type": "string"
+                    },
+                    "command_endpoint": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                    },
+                    "files_endpoint": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                    },
+                    "status_endpoint": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
                     }
                   },
                   "required": [

@@ -138,6 +138,20 @@ class SerialMcuBridgeTests(unittest.TestCase):
         self.assertTrue(retain)
         self.assertEqual(json.loads(payload), {"value": 3.91, "unit": "v"})
 
+    def test_combined_unknown_charge_and_voltage_line_publishes_voltage(self):
+        bridge = self._bridge()
+        client = FakeMqttClient()
+        bridge.client = client
+
+        bridge._handle_goob_base_line("C chg=-1 v=3.742")
+
+        self.assertEqual([call[0] for call in client.publish_calls], [
+            bridge.charge_topic,
+            bridge.charge_level_topic,
+        ])
+        self.assertEqual(json.loads(client.publish_calls[0][1]), {"value": None})
+        self.assertEqual(json.loads(client.publish_calls[1][1]), {"value": 3.742, "unit": "v"})
+
     def test_unknown_charge_publishes_null_and_keeps_odometry_unknown(self):
         bridge = self._bridge()
         client = FakeMqttClient()

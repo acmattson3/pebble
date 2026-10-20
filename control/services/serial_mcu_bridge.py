@@ -381,10 +381,11 @@ class SerialMcuBridge:
         charge = self._parse_charge_telemetry_line(line)
         if charge is not None:
             self._handle_charge_telemetry(charge)
-            return
         charge_level = self._parse_charge_level_telemetry_line(line)
         if charge_level is not None:
             self._handle_charge_level_telemetry(charge_level)
+            return
+        if charge is not None:
             return
         self._handle_non_telemetry_line(line)
 

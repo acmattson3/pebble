@@ -127,6 +127,26 @@ def validate_manifest(manifest: dict) -> dict:
                     raise ValueError("Media widget requires a matching stream and action")
                 if "uplink" in widget and (widget["uplink"] not in endpoints or endpoints[widget["uplink"]]["kind"] != "uplink" or widget.get("talk_action") not in actions):
                     raise ValueError("Audio talk control requires an uplink and action")
+            if kind == "soundboard":
+                command = endpoints.get(widget.get("command_endpoint"))
+                files = endpoints.get(widget.get("files_endpoint"))
+                status = endpoints.get(widget.get("status_endpoint"))
+                if not command or command["kind"] != "command" or not files or files["kind"] != "state" or not status or status["kind"] != "state":
+                    raise ValueError("Soundboard widget requires command, files, and status endpoints")
+                command_schema = command["schema"]
+                properties = command_schema.get("properties", {})
+                if (command_schema.get("type") != "object"
+                        or properties.get("action", {}).get("enum") != ["play", "stop"]
+                        or properties.get("file", {}).get("type") != "string"
+                        or not {"action", "file"}.issubset(set(command_schema.get("required", [])))):
+                    raise ValueError("Soundboard command needs play/stop action and file fields")
+                files_schema = files["schema"].get("properties", {}).get("files", {})
+                if (files["schema"].get("type") != "object" or files_schema.get("type") != "array"
+                        or files_schema.get("items", {}).get("type") != "string"):
+                    raise ValueError("Soundboard files endpoint must provide a string files array")
+                status_schema = status["schema"].get("properties", {})
+                if status["schema"].get("type") != "object" or status_schema.get("playing", {}).get("type") != "boolean":
+                    raise ValueError("Soundboard status endpoint must provide a playing flag")
             if kind == "button" and "value" not in widget:
                 raise ValueError("Button needs a value")
             if kind == "state" and (widget.get("endpoint") not in endpoints or endpoints[widget["endpoint"]]["kind"] != "state"):

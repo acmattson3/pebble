@@ -28,13 +28,16 @@ A module definition contains:
 - `bindings`: keyboard codes, controller axes and controller buttons mapped to
   actions. Axes support dead zones, scale/inversion and offsets. Reset bindings
   release held actions. Keyboard auto-repeat is ignored.
-- `ui`: a grid of generic joystick, range, button, reset and state widgets.
+- `ui`: a grid of generic joystick, range, button, reset and state widgets,
+  plus reusable media and soundboard widgets.
 
 Module format version 1 supports numeric action bindings and object commands.
-It deliberately has no arbitrary JavaScript, HTML, expressions, remote schema
-references, or robot-specific web routes. Other endpoint shapes, new widgets,
-and future versions can be added as their use cases arise. Schemas support the
-bounded local JSON Schema subset enforced by `control/common/modules.py`.
+The soundboard widget is a reusable typed control that reads the robot's WAV
+list and playback status from declared state endpoints and sends validated
+play/stop commands to a declared command endpoint. Definitions contain no
+arbitrary JavaScript, HTML, expressions, remote schema references, or
+robot-specific web routes. Schemas support the bounded local JSON Schema subset
+enforced by `control/common/modules.py`.
 
 Each configured instance supplies an `id` and `use` (a module JSON path relative
 to the repo, or an absolute path for a local/private module). Optional
@@ -56,14 +59,17 @@ The launcher starts `control.services.module_host` automatically when enabled.
   sliders, WASD, Space to release, and controller axes 0/1. Its compact command
   endpoint `i/drive` forwards once to `incoming/drive-values` locally, so the
   existing MCU/ROS bridge and drive watchdog still apply.
+- Shared `modules/soundboard/module.json`: renders a robot-advertised WAV list,
+  playback state, and play/stop buttons. Goob's module instance forwards the
+  compact command to its existing soundboard handler; the handler keeps the
+  legacy topics available and publishes the declared module state endpoints.
 - Robot-local `robots/goob/modules/gripper-demo/module.json`: a virtual position
   slider, open/close buttons, G/H keys and controller buttons 0/1. Its echo
   adapter updates retained `o/gripper-demo/state` and never touches hardware.
 
 To promote a robot-specific module into the shared library, move its definition
-under `modules/`, choose its public type/version, and update `use`. The renderer
-and input engine need no feature-specific changes. Hardware adaptation belongs
-in the robot runtime, not the shared control definition.
+under `modules/`, choose its public type/version, and update `use`. Hardware
+adaptation belongs in the robot runtime, not the shared control definition.
 
 ## Browser input behavior
 

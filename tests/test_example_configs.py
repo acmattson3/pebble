@@ -6,6 +6,7 @@ from pathlib import Path
 
 from control.common.capabilities import build_capabilities_value, capabilities_topic
 from control.common.config import service_cfg
+from control.common.modules import build_manifest
 from control.common.topics import identity_from_config
 
 
@@ -57,6 +58,18 @@ class ExampleConfigTests(unittest.TestCase):
         self.assertEqual(caps["audio"]["topic"], "pebble/robots/goob/o/audio")
         self.assertEqual(caps["audio"]["uplink_topic"], "pebble/robots/goob/i/audio-stream")
         self.assertEqual(caps["drive"]["topic"], "pebble/robots/goob/incoming/drive-values")
+
+    def test_goob_soundboard_is_robot_advertised_and_uses_opt_sounds(self):
+        runtime = self._load_config(REPO_ROOT / "control" / "configs" / "goob.example.json")
+        soundboard_cfg = service_cfg(runtime, "soundboard_handler")
+        self.assertEqual(soundboard_cfg["playback"]["directory"], "/opt/sounds")
+        modules = self._load_config(REPO_ROOT / "robots" / "goob" / "modules.example.json")
+        modules["local_mqtt"] = {"host": "127.0.0.1", "port": 1883}
+        manifest, adapters = build_manifest(modules, REPO_ROOT / "control" / "configs" / "config.json")
+        soundboard = next(module for module in manifest["modules"] if module["type"] == "pebble.soundboard")
+        self.assertEqual(soundboard["endpoints"]["command"]["topic"], "pebble/robots/goob/i/soundboard/command")
+        self.assertEqual(soundboard["endpoints"]["files"]["topic"], "pebble/robots/goob/o/soundboard/files")
+        self.assertEqual(adapters[soundboard["endpoints"]["command"]["topic"]]["topic"], "pebble/robots/goob/incoming/soundboard-command")
 
     def test_example_configs_reference_existing_runtime_scripts(self):
         for path in EXAMPLE_CONFIGS:

@@ -136,6 +136,26 @@ function syncValues(ctx) {
   for(const input of ctx.controlNodes)input.disabled=!online;
   ctx.card.classList.toggle('offline',!online);
   for(const media of ctx.mediaWidgets??[])media.sync(ctx.engine.values, online && !suspended);
+  for(const widget of ctx.soundboardWidgets??[])syncSoundboardWidget(ctx,widget);
+}
+function syncSoundboardWidget(ctx, item) {
+  const states=ctx.latestState?.states?.[ctx.module.id]??{};
+  const filesState=states[item.widget.files_endpoint]?.value;
+  const statusState=states[item.widget.status_endpoint]?.value;
+  const files=Array.isArray(filesState?.files)?filesState.files.filter(file=>typeof file==='string'):[];
+  const previous=item.select.value;
+  item.select.replaceChildren();
+  if(!files.length) item.select.append(element('option',filesState?'No WAV files available':'Waiting for sound list…'));
+  for(const file of files) {const option=element('option',file);option.value=file;item.select.append(option);}
+  if(files.includes(previous))item.select.value=previous;
+  const canPlay=filesState?.controls!==false&&files.length>0;
+  item.select.disabled=!online||!canPlay;
+  item.play.disabled=!online||!canPlay;
+  item.stop.disabled=!online||filesState?.controls===false;
+  if(statusState?.error) item.status.textContent=String(statusState.error);
+  else if(statusState?.playing) item.status.textContent=`Playing: ${statusState.file||'sound'}`;
+  else if(filesState) item.status.textContent=`Ready · ${files.length} sound${files.length===1?'':'s'}`;
+  else item.status.textContent='Waiting for sound list…';
 }
 function render(manifest) {
   for(const ctx of contexts)for(const media of ctx.mediaWidgets??[])media.destroy();
@@ -143,7 +163,7 @@ function render(manifest) {
   const robot=base;
   for(const module of manifest.modules) {
     const card=element('section',undefined,'module');card.dataset.module=module.id;
-    const ctx={module,card,bindings:loadBindings(module),valueNodes:new Map(),stateNodes:[],controlNodes:[],mediaWidgets:[]};
+    const ctx={module,card,bindings:loadBindings(module),valueNodes:new Map(),stateNodes:[],controlNodes:[],mediaWidgets:[],soundboardWidgets:[],latestState:null};
     ctx.engine=new InputEngine(module,(command,payload)=>queueCommand(robot,module,command,payload,manifest.revision));
     contexts.push(ctx);
     const title=element('h2',module.title);title.append(element('span',`${module.type} · v${module.version}`,'type'));
@@ -195,6 +215,24 @@ function render(manifest) {
       } else if(widget.kind==='state') {
         const node=element('div',widget.label,'state'),value=element('strong','—');node.append(value);controls.append(node);
         ctx.stateNodes.push({widget,value});
+      } else if(widget.kind==='soundboard') {
+        const node=element('div',undefined,'soundboard-widget');
+        const title=element('strong',widget.label,'soundboard-title');
+        const fileSelect=element('select');fileSelect.setAttribute('aria-label',`${widget.label} sound file`);
+        const status=element('p','Waiting for sound list…','soundboard-status');
+        const actions=element('div',undefined,'soundboard-actions');
+        const play=element('button','Play');play.setAttribute('aria-label',`Play selected ${widget.label} sound`);
+        const stop=element('button','Stop');stop.className='stop';stop.setAttribute('aria-label',`Stop ${widget.label}`);
+        actions.append(play,stop);node.append(title,fileSelect,actions,status);controls.append(node);
+        const item={widget,select:fileSelect,play,stop,status};ctx.soundboardWidgets.push(item);ctx.controlNodes.push(fileSelect,play,stop);
+        play.addEventListener('click',()=>{
+          if(!beginInteraction()||!fileSelect.value)return;
+          queueCommand(robot,module,{endpoint:widget.command_endpoint},{action:'play',file:fileSelect.value},manifest.revision);
+        });
+        stop.addEventListener('click',()=>{
+          if(!beginInteraction())return;
+          queueCommand(robot,module,{endpoint:widget.command_endpoint},{action:'stop',file:''},manifest.revision);
+        });
       }
     }
     card.append(controls);
@@ -206,6 +244,7 @@ function applyState(state) {
   online=state.online;
   $('connection').textContent=online?`Online · ${manifest?.modules.length??0} modules`:'Robot offline';
   for(const ctx of contexts) {
+    ctx.latestState=state;
     for(const {widget,value} of ctx.stateNodes) {
       const body=state.states[ctx.module.id]?.[widget.endpoint]?.value;
       const datum=widget.field?body?.[widget.field]:body;

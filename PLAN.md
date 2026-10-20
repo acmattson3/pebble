@@ -46,6 +46,11 @@ outcomes rather than duplicating implementation details from the READMEs.
   web service uses `web-interface/config.json`. Goob's robot-local topic
   settings now use subtopics while resolving to the same MQTT topics. Its
   motor output swap is configured rather than patched into source.
+- Goob's disconnected Nano IMU instance has been removed. Its main serial
+  bridge now publishes battery voltage from the connected MCU; battery samples
+  containing `chg=-1` no longer lose their `v=` voltage field.
+- Goob's soundboard module is defined and exposes the robot's `/opt/sounds`
+  WAV library and playback status through the generic module interface.
 
 ## Roadmap
 
@@ -109,11 +114,11 @@ running Pebble's Linux services, module host, or web interface.
 
 - Continue promoting proven robot-local modules into `modules/` with stable
   type/version contracts and examples.
-- Convert soundboard controls into a robot-owned module. Define the shared
-  command, file-list, status, layout, and input-binding contract; let each
-  robot opt in and adapt it to its playback hardware and sound collection.
-  The web gateway should render it through the generic module UI, without
-  robot-specific soundboard code.
+- Keep promoting robot-owned capabilities into reusable shared modules. The
+  soundboard module now defines its command, file-list, status, and layout
+  contract; each robot opts in and adapts it to its playback service and sound
+  collection. The generic renderer handles the control without Goob-specific
+  web code.
 - Keep input-to-action mapping in the module contract so keyboard, gamepad, and
   future inputs use the same command path.
 - Add module examples for common drive variants and one or more robot-specific
@@ -147,11 +152,7 @@ one-way listening or speech intelligibility.
 
 ### 5. Improve robot services and operator feedback
 
-- Set Goob's soundboard asset directory to `/opt/sounds` and remove the
-  legacy `/var/lib/pebblebot/sounds` assumption. Keep the path configurable for
-  other robots and document the needed filesystem permissions.
-- After the robot-owned soundboard module is established, add shared cue names
-  and helper utilities for autonomy/control scripts.
+- Add shared sound cue names and helper utilities for autonomy/control scripts.
 - Add safe, bounded audio volume controls for supported ALSA devices.
 - Add soundboard repeat and timed-repeat modes with a clear stop command.
 - Improve structured runtime diagnostics with service metadata and optional
@@ -171,18 +172,15 @@ one-way listening or speech intelligibility.
 **Acceptance:** a Jev prototype is removable, cannot bypass local safety
 controls, and has a clear timeout/failure behavior.
 
-### Next implementation slice: robot-owned soundboard
+### Next implementation slice: shared sound cues and helpers
 
-First specify the module manifest and MQTT contract for listing, selecting,
-playing, stopping, and reporting sounds. Then add the reusable module and a
-Goob adapter, set Goob's sound root to `/opt/sounds`, and remove legacy
-`pebblebot` path assumptions. Verify that the gateway discovers and renders
-the module from robot-published metadata and that playback stays inside the
-configured sound directory.
-
-**Acceptance:** a robot can expose soundboard controls by publishing its
-module definition and implementing the declared MQTT endpoints; adding or
-changing its sounds does not require web-interface code changes.
+- Build on the robot-owned soundboard module with stable cue names and helper
+  utilities that autonomy and control scripts can use without hard-coded file
+  paths.
+- Keep the cue layer optional and robot-defined so robots can map semantic cues
+  to their own recordings or playback hardware.
+- Continue with bounded volume controls and repeat/timed-repeat modes when the
+  soundboard contract and target hardware behavior are clear.
 
 ## Deferred by choice
 
@@ -212,6 +210,6 @@ been exercised on Goob and the web host.
 preserves left/right order; Goob's example enables the swap for its current
 motor wiring, and Goob's live robot config enables it.
 
-**Remaining verification:** resolve four full-suite web test failures in topic
-discovery and audio sequence rewind, then continue with the robot-owned
-soundboard slice above.
+**Completed verification:** the former web-test failures are resolved; the
+complete 168-test suite passes. The Goob battery and soundboard paths have
+also been verified on the live robot.

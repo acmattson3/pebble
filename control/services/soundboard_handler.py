@@ -45,6 +45,10 @@ class SoundboardHandler:
         self.command_topic = resolve_mapped_topic(self.identity, self.service_cfg, "command", "incoming/soundboard-command")
         self.files_topic = resolve_mapped_topic(self.identity, self.service_cfg, "files", "outgoing/soundboard-files")
         self.status_topic = resolve_mapped_topic(self.identity, self.service_cfg, "status", "outgoing/soundboard-status")
+        # Public module endpoints are always emitted alongside the legacy
+        # soundboard topics. Robots opt into exposing them via module_host.
+        self.module_files_topic = f"{self.identity.base}/o/soundboard/files"
+        self.module_status_topic = f"{self.identity.base}/o/soundboard/status"
 
         playback = self.service_cfg.get("playback") if isinstance(self.service_cfg.get("playback"), dict) else {}
         directory_raw = str(playback.get("directory") or "~/sounds")
@@ -203,12 +207,9 @@ class SoundboardHandler:
                 should_publish = True
             current_files = list(self.last_files)
         if should_publish:
-            self._publish_json(
-                self.files_topic,
-                {"files": current_files, "controls": True, "timestamp": now},
-                qos=1,
-                retain=True,
-            )
+            payload = {"files": current_files, "controls": True, "timestamp": now}
+            self._publish_json(self.files_topic, payload, qos=1, retain=True)
+            self._publish_json(self.module_files_topic, payload, qos=1, retain=True)
 
     def _status_payload(self) -> dict[str, Any]:
         with self.soundboard_lock:
@@ -225,7 +226,9 @@ class SoundboardHandler:
         }
 
     def _publish_status(self) -> None:
-        self._publish_json(self.status_topic, self._status_payload(), qos=1, retain=True)
+        payload = self._status_payload()
+        self._publish_json(self.status_topic, payload, qos=1, retain=True)
+        self._publish_json(self.module_status_topic, payload, qos=1, retain=True)
 
     def _republish_retained_if_due(self) -> None:
         now = time.time()

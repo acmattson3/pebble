@@ -36,6 +36,8 @@
   - Publishes charging state as retained MQTT status with periodic re-announce.
 - `services/soundboard_handler.py`
   - Handles soundboard playback plus retained files/status topics.
+  - Publishes the reusable `pebble.soundboard` module's compact files/status
+    endpoints alongside legacy soundboard topics.
   - Periodically re-announces retained soundboard topics to recover from retained-state loss.
 - `services/autonomy_manager.py`
   - Scans `autonomy/` for runnable script directories (`run.py`).
