@@ -1,73 +1,58 @@
-# Web Interface
+# Pebble web interface
 
-This directory contains the Pebble web UI service.
+The Flask service provides two pages:
 
-## Files
+- `/modules` is the robot-advertised interface. The web gateway reads each
+  robot's retained `o/manifest`, validates its module definitions, and renders
+  shared controls without robot-specific page code.
+- `/` is the compatibility interface for existing deployments and services
+  that have not moved to module contracts yet.
 
-- `web-control.py` - Flask server + MQTT client.
-- `requirements.txt` - Python packages for this UI.
-- Root `Dockerfile` - container build for launcher-based deployment.
+A robot needs only the Pebble MQTT contract for basic interoperability. The
+module host and module manifest are optional; they add discovered controls and
+robot-defined views.
 
-## Run
+## Run and configure
 
-```bash
-python3 -m pip install -r requirements.txt
-python3 web-control.py
-```
-
-By default the UI reads `web-interface/config.json`. Copy and edit the sample:
-
-```bash
-cp web-interface/config.json.example web-interface/config.json
-```
-
-Override the path with:
+Install dependencies and start the service from the repository root:
 
 ```bash
-PEBBLE_CONFIG=/path/to/config.json python3 web-control.py
+python3 -m pip install -r web-interface/requirements.txt
+python3 web-interface/web-control.py
 ```
 
-MQTT topic overrides for a configured robot can use `video.subtopic`,
-`audio.subtopic`, and `audio.uplink_subtopic`; the web interface resolves each
-under that robot's configured identity. Full `topic` and `uplink_topic` values
-remain available for compatibility or deliberate external routes.
+The service reads `web-interface/config.json` by default. Copy
+`web-interface/config.json.example` for a new deployment, and set `PEBBLE_CONFIG`
+to select another file. Robot identity and runtime services belong in
+`control/configs/robot.json`; web bind, broker, robot-list, and history settings
+belong in the web config. The older unified config is still accepted by the
+runtime compatibility loader.
 
-For Docker usage, provide the robot and web config files. The launcher wrapper
-uses `services.web_handler.web_config` to select the separate web file. Existing
-deployments can continue to use a unified config.
+For Docker, mount both config files and expose the configured web port. The
+root `Dockerfile` runs the launcher-based service; see the root README for an
+example invocation.
 
-Example:
+## Robot modules
 
-```bash
-docker build -t pebble-web .
-docker run --rm -p 8080:8080 \
-  -v \"$PWD/control/configs/robot.json:/app/control/configs/robot.json:ro\" \
-  -v \"$PWD/web-interface/config.json:/app/web-interface/config.json:ro\" \
-  pebble-web
-```
+Shared module contracts and widgets are in [`../modules/README.md`](../modules/README.md).
+The gateway serves module assets from `/modules/assets/` and module data through
+its API. State endpoints expose the latest validated payload. Event endpoints
+are kept in bounded in-memory history; the shared log viewer retains at most
+100 events per endpoint and is not a durable log archive.
 
-Compose example:
+The launcher publishes structured records at compact `o/logs`. It also mirrors
+those records to its configured compatibility topic so existing log consumers
+continue to work. Robots that use another runtime can publish the same declared
+event contract directly.
 
-```yaml
-services:
-  pebble:
-    build:
-      context: .
-    restart: unless-stopped
-    volumes:
-      - ./control/configs/robot.json:/app/control/configs/robot.json:ro
-      - ./web-interface/config.json:/app/web-interface/config.json:ro
-    ports:
-      - "8060:8080"
-```
+Camera and audio modules use demand-controlled capture, H.264 video, and Opus
+audio over MQTT. See [`../modules/MEDIA.md`](../modules/MEDIA.md) and
+[`../modules/H264.md`](../modules/H264.md).
 
-Default URL:
+## Long-term MQTT capture
 
-- `http://localhost:8080`
-
-## Server-Side Broker Logger
-
-For long-running telemetry capture directly from the server broker, use:
+The module log viewer is for recent operator diagnostics. For durable broker
+capture and offline analysis, use `tools/mqtt-broker-logger.py`:
 
 ```bash
 python3 web-interface/tools/mqtt-broker-logger.py \
@@ -77,101 +62,9 @@ python3 web-interface/tools/mqtt-broker-logger.py \
   --parse-json
 ```
 
-By default it writes JSONL files to `web-interface/logs/`.
-You can subscribe to multiple topic filters by repeating `--topic`.
+By default, JSONL files are written to `web-interface/logs/`. Repeat `--topic`
+to subscribe to multiple topic filters.
 
-See [FUTURE_GOALS.md](./FUTURE_GOALS.md) for planned expansion of this logger.
-
-## MongoDB MQTT History
-
-`web-control.py` can persist MQTT history to MongoDB with a fixed storage cap.
-When enabled, it subscribes to `#` and records all broker traffic. The preferred
-storage mode is a MongoDB capped collection (oldest records overwritten automatically).
-Startup uses the configured `mqtt` broker settings automatically when
-history logging is enabled.
-
-Example `web-interface/config.json` block:
-
-```json
-"mqtt_history": {
-    "enabled": true,
-    "uri": "mongodb://127.0.0.1:27017",
-    "database": "pebble",
-    "collection": "mqtt_history",
-    "max_bytes": 53687091200
-}
-```
-
-If the target capped collection already exists with a different cap, startup
-resizes it to `max_bytes`; if the new cap is smaller than current usage, MongoDB
-removes the oldest excess documents on the next insert. If the target collection
-already exists and is not capped, the web interface falls back to periodic
-chunked pruning of oldest documents to keep usage under `max_bytes`.
-`max_bytes` applies to the configured MongoDB history collection, not total database size.
-
-Payload notes:
-- Messages are stored as raw bytes (`payload` field) plus metadata (`topic`, `ts`, `qos`, `retain`, `payload_size`).
-- Very large payloads are truncated to 15 MB before insert (`payload_truncated=true`).
-
-## Topic Format
-
-The UI expects the repository topic format:
-
-- `{system}/{type}/{id}/{incoming|outgoing}/{metric}`
-
-No `/components/` segment.
-
-For dynamic capability discovery, robots may publish retained
-`{system}/{type}/{id}/outgoing/capabilities` payloads.
-When capabilities + heartbeat telemetry are present, static
-`web_interface.robots` entries are optional (they can still be used for friendly names/overrides).
-Setting `web_interface.robots` to `[]` is supported.
-If a robot is discovered without a capabilities payload, the UI defaults to
-enabling video/audio/soundboard/autonomy controls (best-effort behavior).
-
-When capability payloads include media `command_topic` / `flag_topic`, the UI
-uses those for start/stop controls. Media start actions also set
-`incoming/flags/mqtt-video` / `incoming/flags/mqtt-audio` to `true` (retained)
-before sending start commands.
-Manual control payloads on media command topics should be boolean (`true`/`false`)
-or JSON objects with boolean `value`/`enabled` keys.
-
-Reboot integration:
-- publishes to:
-  - `{system}/{type}/{id}/incoming/flags/reboot`
-- payload:
-  - `{ "value": true }` with `retain=false` (one-shot request).
-- UI behavior:
-  - `Reboot Robot` button appears for `type=robots` components.
-  - if capabilities advertise `system.reboot.controls=false`, the button is disabled.
-
-Service-restart integration:
-- publishes to:
-  - `{system}/{type}/{id}/incoming/flags/service-restart`
-- payload:
-  - `{ "value": true }` with `retain=false` (one-shot request).
-- UI behavior:
-  - `Restart Service` button appears for `type=robots` components.
-  - if capabilities advertise `system.service_restart.controls=false`, the button is disabled.
-
-Autonomy integration:
-- subscribes to:
-  - `{system}/{type}/{id}/outgoing/autonomy-files` (retained)
-  - `{system}/{type}/{id}/outgoing/autonomy-status` (retained)
-- publishes to:
-  - `{system}/{type}/{id}/incoming/autonomy-command`
-- UI behavior:
-  - script list is rendered from `autonomy-files`.
-  - per-script runtime config fields are rendered dynamically from each script's `configs` schema.
-  - one `Start/Stop` control toggles selected script execution.
-
-Video overlay integration (Phase 2):
-- subscribes to:
-  - `{system}/{type}/{id}/outgoing/video-overlays`
-- web route:
-  - `GET /robots/<id>/video/overlays`
-- payload shape:
-  - `{"shapes": [[[x_norm,y_norm], ...], ...], "frame_width": <int>, "frame_height": <int>, "source": <string>}`
-- UI behavior:
-  - `Overlays` checkbox in the camera card toggles drawing.
-  - points are normalized (`0.0..1.0`) and rendered as green polygon outlines over the video stream.
+The web service can also persist broker traffic to MongoDB when
+`mqtt_history.enabled` is configured. This is separate from the robot module
+viewer and its in-memory event history.

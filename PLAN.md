@@ -51,6 +51,10 @@ outcomes rather than duplicating implementation details from the READMEs.
   containing `chg=-1` no longer lose their `v=` voltage field.
 - Goob's soundboard module is defined and exposes the robot's `/opt/sounds`
   WAV library and playback status through the generic module interface.
+- Shared telemetry and log-viewer modules are enabled for Goob. The log module
+  uses a non-retained event endpoint and bounded gateway history.
+- The module UI remains at `/modules`; the existing compatibility interface
+  remains at `/` until the replacement passes the migration criteria.
 
 ## Roadmap
 
@@ -131,6 +135,10 @@ running Pebble's Linux services, module host, or web interface.
   mechanisms such as a gripper.
 - Improve authoring with a simple layout designer or reusable widget library
   when real module needs show where hand-authored JSON is cumbersome.
+- After robot modules, media controls, reconnect behavior, and multi-robot use
+  are working reliably, make the module UI the root page and move the current
+  compatibility interface under a subpath. Keep this as a later migration, not
+  a prerequisite for module development.
 - Keep browser execution generic and bounded; robot modules should not need to
   send arbitrary HTML or JavaScript to the web gateway.
 - Extend browser, gateway, reconnect, invalid-manifest, and multi-robot tests.
@@ -162,9 +170,12 @@ one-way listening or speech intelligibility.
 - Expose autonomy scripts through a robot-defined module so robots can publish
   their available scripts and the interface can start/stop them without a
   Pebble-wide hard-coded autonomy panel.
-- Add robot-defined log-viewer and autonomy modules, using the existing
-  interface behavior as a reference while keeping each module optional and
-  robot-owned.
+- The shared log-viewer module is implemented and enabled for Goob. Add a
+  robot-defined autonomy module so available scripts and their controls are
+  advertised by each robot.
+- Add a shared administrative module for reboot, repository update, and service
+  restart. It should use explicit confirmation for disruptive actions and
+  adapt to the robot's configured administrative handlers.
 - Add safe, bounded audio volume controls for supported ALSA devices.
 - Add soundboard repeat and timed-repeat modes with a clear stop command.
 - Goob's serial bridge preserves the MCU's flashing startup pattern, then sends
@@ -187,15 +198,14 @@ one-way listening or speech intelligibility.
 **Acceptance:** a Jev prototype is removable, cannot bypass local safety
 controls, and has a clear timeout/failure behavior.
 
-### Next implementation slice: shared sound cues and helpers
+### Next implementation slice: autonomy module
 
-- Build on the robot-owned soundboard module with stable cue names and helper
-  utilities that autonomy and control scripts can use without hard-coded file
-  paths.
-- Keep the cue layer optional and robot-defined so robots can map semantic cues
-  to their own recordings or playback hardware.
-- Continue with bounded volume controls and repeat/timed-repeat modes when the
-  soundboard contract and target hardware behavior are clear.
+- Adapt the current autonomy script list and start/stop behavior into a
+  robot-owned module with declared state and command endpoints.
+- Keep per-script options bounded and schema-described; publish available
+  scripts from the robot and render them through generic module controls.
+- Keep the existing autonomy manager and its safety behavior behind an
+  explicit adapter until the new module is verified on Goob.
 
 ## Deferred by choice
 

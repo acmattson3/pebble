@@ -191,13 +191,34 @@ function syncTelemetryWidget(ctx, item) {
     else metric.value.textContent=String(datum);
   }
 }
+function syncLogsWidget(ctx, item) {
+  const state=ctx.latestState?.states?.[ctx.module.id]?.[item.widget.endpoint]?.value;
+  const limit=Number.isInteger(item.widget.limit)?item.widget.limit:200;
+  const entries=Array.isArray(state)?state.slice(-limit):[];
+  const bottom=item.list.scrollHeight-item.list.scrollTop-item.list.clientHeight<28;
+  item.list.replaceChildren();
+  if(!entries.length) item.list.append(element('p','Waiting for robot logs…','logs-empty'));
+  let shown=0;
+  for(const record of entries) {
+    if(item.level.value!=='ALL'&&record.level!==item.level.value)continue;
+    const row=element('article',undefined,`log-entry log-${String(record.level).toLowerCase()}`);
+    const meta=element('div',undefined,'log-meta');
+    const date=Number.isFinite(record.t)?new Date(record.t).toLocaleTimeString():'—';
+    meta.append(element('time',date),element('span',record.level,'log-level'),element('span',record.service));
+    row.append(meta,element('p',record.message,'log-message'));
+    if(record.logger)row.title=`${record.logger}${record.pid!==undefined?` · PID ${record.pid}`:''}`;
+    item.list.append(row);shown++;
+  }
+  if(entries.length&&!shown)item.list.append(element('p','No messages at this level.','logs-empty'));
+  if(bottom)item.list.scrollTop=item.list.scrollHeight;
+}
 function render(manifest) {
   for(const ctx of contexts)for(const media of ctx.mediaWidgets??[])media.destroy();
   container.replaceChildren(); contexts=[];
   const robot=base;
   for(const module of manifest.modules) {
     const card=element('section',undefined,'module');card.dataset.module=module.id;
-    const ctx={module,card,bindings:loadBindings(module),valueNodes:new Map(),stateNodes:[],controlNodes:[],mediaWidgets:[],soundboardWidgets:[],lightsWidgets:[],telemetryWidgets:[],latestState:null};
+    const ctx={module,card,bindings:loadBindings(module),valueNodes:new Map(),stateNodes:[],controlNodes:[],mediaWidgets:[],soundboardWidgets:[],lightsWidgets:[],telemetryWidgets:[],logsWidgets:[],latestState:null};
     ctx.engine=new InputEngine(module,(command,payload)=>{
       const endpoint=module.endpoints?.[command.endpoint];
       if(['audio-stream','video-stream'].includes(endpoint?.resource)) {
@@ -291,6 +312,13 @@ function render(manifest) {
           row.append(label,value);node.append(row);metrics.push({spec,value});
         }
         controls.append(node);ctx.telemetryWidgets.push({metrics});
+      } else if(widget.kind==='logs') {
+        const node=element('div',undefined,'logs-widget');
+        const toolbar=element('div',undefined,'logs-toolbar');
+        const level=select([['ALL','All levels'],['DEBUG','Debug'],['INFO','Info'],['WARNING','Warning'],['ERROR','Error'],['CRITICAL','Critical']], 'ALL',()=>syncLogsWidget(ctx,item));
+        const list=element('div',undefined,'logs-list');list.setAttribute('role','log');list.setAttribute('aria-live','off');
+        toolbar.append(element('strong',widget.label),labeled('Level',level));node.append(toolbar,list);controls.append(node);
+        const item={widget,level,list};ctx.logsWidgets.push(item);
       }
     }
     card.append(controls);
@@ -321,6 +349,7 @@ function applyState(state) {
       value.textContent=datum===undefined?'—':(typeof datum==='object'?JSON.stringify(datum):String(datum));
     }
     for(const item of ctx.telemetryWidgets)syncTelemetryWidget(ctx,item);
+    for(const item of ctx.logsWidgets)syncLogsWidget(ctx,item);
     syncValues(ctx);
   }
 }

@@ -39,6 +39,7 @@ class LauncherLogsPublisher:
         self.identity = identity_from_config(config)
         self.enabled = bool(logs_cfg.get("enabled", True))
         self.topic = resolve_topic(self.identity, logs_cfg, "outgoing/logs")
+        self.module_topic = self.identity.topic("o", "logs")
         self.qos = int(logs_cfg.get("qos") or 0)
         self.retain = bool(logs_cfg.get("retain", False))
         self.max_message_chars = max(64, int(logs_cfg.get("max_message_chars") or 2048))
@@ -106,7 +107,19 @@ class LauncherLogsPublisher:
             pid = os.getpid()
         payload["pid"] = pid
 
-        client.publish(self.topic, json.dumps(payload), qos=self.qos, retain=self.retain)
+        if self.module_topic == self.topic:
+            module_payload = dict(payload)
+            module_payload["message"] = str(module_payload["message"])[:2048]
+            module_payload["service"] = str(module_payload["service"])[:128]
+            module_payload["logger"] = str(module_payload["logger"])[:128]
+            client.publish(self.module_topic, json.dumps(module_payload), qos=self.qos, retain=False)
+        else:
+            client.publish(self.topic, json.dumps(payload), qos=self.qos, retain=self.retain)
+            module_payload = dict(payload)
+            module_payload["message"] = str(module_payload["message"])[:2048]
+            module_payload["service"] = str(module_payload["service"])[:128]
+            module_payload["logger"] = str(module_payload["logger"])[:128]
+            client.publish(self.module_topic, json.dumps(module_payload), qos=self.qos, retain=False)
 
 
 class LauncherLogMqttHandler(logging.Handler):

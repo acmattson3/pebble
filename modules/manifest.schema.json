@@ -82,6 +82,7 @@
                   "enum": [
                     "command",
                     "state",
+                    "event",
                     "video",
                     "audio",
                     "uplink"
@@ -296,7 +297,8 @@
                         "audio",
                         "soundboard",
                         "lights",
-                        "telemetry"
+                        "telemetry",
+                        "logs"
                       ]
                     },
                     "label": {
@@ -345,6 +347,11 @@
                         "required": ["label", "endpoint", "field"],
                         "additionalProperties": false
                       }
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
                     },
                     "uplink": {
                       "type": "string"

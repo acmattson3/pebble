@@ -1,0 +1,36 @@
+{
+  "type": "pebble.logs",
+  "version": 1,
+  "title": "Logs",
+  "description": "Recent structured runtime messages published by the robot.",
+  "endpoints": {
+    "entries": {
+      "topic": "o/logs",
+      "kind": "event",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "t": {"type": "integer", "minimum": 0},
+          "level": {"type": "string", "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]},
+          "service": {"type": "string", "minLength": 1, "maxLength": 128},
+          "message": {"type": "string", "maxLength": 2048},
+          "logger": {"type": "string", "maxLength": 128},
+          "pid": {"type": "integer", "minimum": 0}
+        },
+        "required": ["t", "level", "service", "message", "logger", "pid"],
+        "additionalProperties": false
+      },
+      "qos": 0,
+      "retain": false
+    }
+  },
+  "actions": {},
+  "commands": [],
+  "bindings": [],
+  "ui": {
+    "columns": 1,
+    "controls": [
+      {"kind": "logs", "label": "Robot logs", "endpoint": "entries", "limit": 100}
+    ]
+  }
+}

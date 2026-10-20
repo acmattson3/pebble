@@ -19,7 +19,7 @@ These platform directories are preserved as repository examples:
 - `control/` - local runtime services (`launcher`, `av_daemon`, `mqtt_bridge`, `ros1_bridge`, `serial_mcu_bridge`, `soundboard_handler`, `autonomy_manager`) plus service-specific support files such as `control/services/serial_standard.md`
 - `modules/` - versioned robot-owned control contracts and reusable UI/input modules; see [module controls](modules/README.md)
 - `robots/` - robot-local module definitions and composition examples
-- `web-interface/` - web UI service and Docker runtime files
+- `web-interface/` - module gateway, compatibility UI, and web runtime files
 - `autonomy/apriltag-follow/` - AprilTag/autonomy utilities
 - `audio/` - MQTT audio publisher/receiver scripts
 - `video/` - MQTT video publisher scripts
@@ -55,7 +55,8 @@ Infrastructure discovery remains reserved at:
 This section is an example bring-up path for a Linux-hosted robot with:
 - Raspberry Pi (or similar Linux host)
 - serial-connected MCU
-- camera/microphone (optional but expected for MQTT media)
+- camera/microphone (optional; captured only when the corresponding media
+  control is enabled)
 
 ### 1. Install OS packages
 
@@ -277,13 +278,13 @@ python3 web-interface/web-control.py
 The web interface reads `web-interface/config.json` by default. Set
 `PEBBLE_CONFIG` to use another web config path. A robot runtime config can
 still provide single-robot defaults when no web config exists.
-Robots can publish a retained module manifest at `.../o/manifest`. The web UI
-uses it to discover each robot's controls and available media modules. Shared
-modules live in `modules/`; robot-specific modules and compositions live in
-`robots/`. The earlier capabilities system remains available for the classic UI
-and migration compatibility. Autonomy start/stop publishes to
-`.../incoming/autonomy-command` using scripts/config fields reported on
-`.../outgoing/autonomy-files`.
+The `/modules` page discovers robot-advertised controls and media from the
+retained `.../o/manifest`. Shared modules live in `modules/`; robot-specific
+modules and compositions live in `robots/`. The `/` page remains available for
+deployments still using the compatibility controls. Goob's module set includes
+shared drive, soundboard, lights, telemetry, and log viewer modules. The log
+viewer reads structured `o/logs` events and keeps a bounded recent history in
+gateway memory; use the broker logger or MQTT history for durable capture.
 If `mqtt_history.enabled=true`, the UI can also persist all MQTT
 message history to MongoDB (`pymongo` dependency).
 
@@ -311,47 +312,13 @@ this machine. Remote robots can connect to the public broker through secure
 WebSockets using `mqtt.sssn.us:443`, transport `websockets`, path `/`, and TLS
 verification; keep their local broker endpoint separate.
 
-## Future Work
+## Roadmap
 
-- Finish migrating legacy `incoming/` and `outgoing/` service topics to compact
-  `i/` and `o/` module endpoints, retaining adapters where needed for older
-  robots and tools.
-- Expand first-pass unit and browser coverage with more failure/reconnect cases
-  and on-robot integration coverage. Existing coverage is listed in
-  [`tests/README.md`](tests/README.md).
-- Improve structured runtime diagnostics with richer service metadata and
-  explicit media-source-unavailable state.
-- Improve module authoring with a simple layout designer or reusable widget
-  library as real robot interfaces emerge. Current modules declare a bounded
-  JSON layout and use shared widgets/input mappings; they do not send arbitrary
-  robot HTML or JavaScript to the gateway.
-- Consider browser-native video and audio transports to reduce the remaining
-  gateway JPEG and browser PCM conversion work.
-- Evaluate audio echo cancellation for full-duplex conversation. Goob currently
-  uses separate capture, MQTT, and playback paths; practical acoustic echo
-  cancellation will likely require a coordinated full-duplex audio pipeline at
-  both the operator and robot ends.
-- Consider a Jev layer as an optional, high-level autonomy decision component.
-  Jev (TypeSafe System One) answers typed, bounded questions from supplied state;
-  it is not an LLM chat interface and is not integrated into Pebble. A future
-  adapter could turn robot observations into discrete intents (for example,
-  follow, stop, or request operator help). Any such decisions should pass local
-  safety checks and never replace the robot's fast control loop or stop/watchdog
-  behavior. See [Jev's quickstart](https://docs.typesafe.ai/introduction/quickstart).
-- Standardize robot-wide soundboard event cues for scripts:
-  - Define stable cue names (for example `error`, `warning`, `info`, `success`) mapped to consistent sounds.
-  - Add helper utilities so autonomy/control scripts can publish soundboard commands with a shared contract.
-- Add audio volume control integration:
-  - Extend the system audio script(s) so the web interface can adjust playback/capture volume via ALSA mixer commands (for example `amixer`).
-  - Expose bounded volume controls in the web UI and publish/apply updates safely on-robot.
-- Add soundboard repeat playback modes:
-  - Support a repeat toggle that loops a selected sound until a manual stop command is received.
-  - Support timed repeat (for example "repeat for X seconds") for alert and status cues.
-
-These are candidates, not a committed roadmap. H.264 video transport, Opus
-robot-to-gateway audio, demand-controlled media capture, robot-advertised
-controls, and editable input mappings are already implemented in the current
-worktree. See [media modules](modules/MEDIA.md) and [H.264 observations](modules/H264.md).
+The current implementation status and planned work—including autonomy
+modules, media quality, and an optional Jev layer—are tracked in
+[`PLAN.md`](PLAN.md). The plan is the single roadmap source, so setup guidance
+and future-work lists do not drift apart. See [media modules](modules/MEDIA.md)
+and [H.264 observations](modules/H264.md) for implemented media behavior.
 
 ## Troubleshooting
 

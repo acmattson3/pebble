@@ -1,14 +1,16 @@
-# Robot-owned control modules
+# Robot-owned modules
 
-This is the first module milestone. The generic page is `/modules`; the classic
-page links to it. A robot advertises its own modules through its local broker.
+The generic page is `/modules`. A robot advertises its optional controls and
+telemetry through its local broker. A robot that only implements the core MQTT
+contract does not need a module host or the web interface.
 `mqtt_bridge` carries compact module outputs to the remote broker and compact
 commands back to the local broker. Existing topics remain available through
 explicit adapters.
 
 For a dedicated web host, set `web_interface.mqtt.auto_connect` to `true` in its
 private runtime config so discovery works immediately after service restart.
-The default is `false`; classic manual broker connection remains available.
+The default is `false`; manual broker connection is available from the
+compatibility page at `/`.
 
 ## Contracts
 
@@ -20,16 +22,17 @@ is `pebble/robots/goob`.
 A module definition contains:
 
 - `type`, `version`, `title`, `description`: reusable module metadata.
-- `endpoints`: relative `i/...` command and `o/...` state topics with JSON payload
-  schemas and explicit QoS/retention. Commands are never retained.
+- `endpoints`: relative `i/...` command and `o/...` state/event topics with JSON
+  payload schemas and explicit QoS/retention. Commands and events are never
+  retained.
 - `actions`: named numeric values with ranges, neutral values and release behavior.
 - `commands`: object fields bound to named actions, with an optional hold-repeat
   interval. All fields are published together in one command.
 - `bindings`: keyboard codes, controller axes and controller buttons mapped to
   actions. Axes support dead zones, scale/inversion and offsets. Reset bindings
   release held actions. Keyboard auto-repeat is ignored.
-- `ui`: a grid of generic joystick, range, button, reset, state and telemetry
-  widgets, plus reusable media, soundboard, and lights widgets.
+- `ui`: a grid of generic joystick, range, button, reset, state, telemetry and
+  log widgets, plus reusable media, soundboard, and lights widgets.
 
 Module format version 1 supports numeric action bindings and object commands.
 The soundboard widget is a reusable typed control that reads the robot's WAV
@@ -50,6 +53,12 @@ and touch sensor metrics. Goob maps those endpoints to its existing retained
 telemetry topics, so the module host validates and exposes the values without
 special robot-specific UI code.
 
+The logs widget reads structured records from a declared event endpoint. The
+gateway keeps the most recent 100 events in memory per endpoint; logs are
+non-retained and are not a durable archive. The shared `modules/logs/module.json`
+declares the record fields and level filter. The launcher publishes records to
+compact `o/logs` and also mirrors them to its configured compatibility topic.
+
 Each configured instance supplies an `id` and `use` (a module JSON path relative
 to the repo, or an absolute path for a local/private module). Optional
 `subtopics`, `bindings`, `ui`, `title`, and `description` override that
@@ -59,7 +68,7 @@ destination. Legacy `topics`/`topic` adapter fields remain accepted during
 migration. Adapters remain private robot configuration and are not sent to the
 browser.
 
-## Goob's first modules
+## Goob's configured modules
 
 Merge `robots/goob/modules.example.json`'s `services.module_host` section into
 the robot's private runtime config. Install `jsonschema>=4,<5` in the runtime
@@ -80,6 +89,9 @@ The launcher starts `control.services.module_host` automatically when enabled.
 - Shared `modules/telemetry/module.json`: battery voltage, charging state, and
   optional touch sensor readings. Goob maps its existing outgoing topics into
   the module's typed state endpoints.
+- Shared `modules/logs/module.json`: recent structured runtime messages with
+  level filtering. The launcher publishes compact events while retaining the
+  configured compatibility feed for existing log consumers.
 - Robot-local `robots/goob/modules/gripper-demo/module.json`: a virtual position
   slider, open/close buttons, G/H keys and controller buttons 0/1. Its echo
   adapter updates retained `o/gripper-demo/state` and never touches hardware.

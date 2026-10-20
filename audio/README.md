@@ -18,9 +18,9 @@ Audio MQTT payloads are binary with the big-endian header `!4sBBBBHHIQ`:
 
 The header is followed by PCM16LE bytes for codec 1 or one Opus packet for
 codec 2. The receiver accepts both. Current Goob settings use 16 kHz mono,
-20 ms frames, and a 24 kbit/s Opus target. Browser-to-gateway audio currently
-uses PCM16LE over HTTP before the gateway encodes Opus for MQTT; native browser
-Opus transport remains future work.
+20 ms frames, and a 24 kbit/s Opus target. Robot-to-gateway and gateway-to-robot
+MQTT streams use Opus. Browser capture reaches the gateway as PCM16LE over HTTP;
+the gateway encodes it to Opus before publishing to MQTT.
 
 ## Configuration and manual use
 

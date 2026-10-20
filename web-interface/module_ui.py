@@ -15,6 +15,9 @@ from jsonschema import ValidationError, SchemaError
 
 from control.common.modules import MAX_MESSAGE, validate_manifest, validate_payload
 
+MAX_EVENT_HISTORY = 100
+MAX_EVENT_MESSAGE = 4096
+
 
 class ModuleUI:
     def __init__(self, app, publish, connected):
@@ -152,6 +155,8 @@ class ModuleUI:
                 base, mid, eid = route
                 module = next(m for m in self.robots[base]["manifest"]["modules"] if m["id"] == mid)
                 endpoint = module["endpoints"][eid]
+                if endpoint["kind"] == "event" and len(payload) > MAX_EVENT_MESSAGE:
+                    return [], []
                 if endpoint["kind"] in {"audio", "video"}:
                     self.media.consume(endpoint, payload)
                     return [], []
@@ -185,7 +190,7 @@ class ModuleUI:
                     self.routes[f"{base}/o/online"] = (base, "__presence__", None)
                     for module in manifest["modules"]:
                         for eid, endpoint in module["endpoints"].items():
-                            if endpoint["kind"] in {"state", "video", "audio"}:
+                            if endpoint["kind"] in {"state", "event", "video", "audio"}:
                                 self.routes[endpoint["topic"]] = (base, module["id"], eid)
                     added = [t for t, route in self.routes.items() if route[0] == base]
                     return added, [t for t in removed if t not in added]
@@ -211,8 +216,15 @@ class ModuleUI:
                     robot["online"], robot["status_seen"] = body["online"], time.monotonic()
                 else:
                     module = next(m for m in robot["manifest"]["modules"] if m["id"] == mid)
-                    validate_payload(module["endpoints"][eid], body)
-                    robot["states"].setdefault(mid, {})[eid] = {"value": body, "received_ms": int(time.time()*1000)}
+                    endpoint = module["endpoints"][eid]
+                    validate_payload(endpoint, body)
+                    if endpoint["kind"] == "event":
+                        entry = robot["states"].setdefault(mid, {}).setdefault(eid, {"value": [], "received_ms": 0})
+                        entry["value"].append(body)
+                        del entry["value"][:-MAX_EVENT_HISTORY]
+                        entry["received_ms"] = int(time.time()*1000)
+                    else:
+                        robot["states"].setdefault(mid, {})[eid] = {"value": body, "received_ms": int(time.time()*1000)}
             except (ValueError, TypeError, ValidationError):
                 logging.warning("Rejected invalid module state on %s", topic)
             return [], []

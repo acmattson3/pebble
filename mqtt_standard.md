@@ -314,7 +314,7 @@ RECOMMENDED characteristics:
 
 Future users MAY define any schema identifier and any discovery structure that
 fits their system. Pebble's current robot-module discovery is `o/manifest`; the
-older capabilities format remains for compatibility with the classic interface.
+older capabilities format remains for compatibility with the `/` interface.
 
 If a system publishes a current-state discovery or capability topic intended for
 late subscribers, that topic MUST be retained.
@@ -328,6 +328,11 @@ does not replace robot-wide online status. Consumers SHOULD treat a retained
 manifest as the latest discovery snapshot and replace their cached snapshot
 when a newer manifest arrives. Publishing an empty retained manifest payload
 removes that snapshot under MQTT retained-message semantics.
+
+A module endpoint of kind `event` carries independent, schema-validated JSON
+records on an output topic. Event records MUST NOT be retained. A consumer may
+keep a bounded recent in-memory view, but this is not durable logging; use a
+broker recorder when logs must survive consumer restarts.
 
 ## 8. Example Implementation In This Repository
 
@@ -349,6 +354,7 @@ compact paths; legacy service examples are explicitly labeled.
 | --- | --- |
 | `{base}/o/manifest` | Retained robot-advertised module definitions |
 | `{base}/o/modules/status` | Module host availability |
+| `{base}/o/logs` | Structured, non-retained runtime log events |
 | `{base}/i/drive` | Drive command, adapted locally to the existing drive bridge |
 | `{base}/i/lights/solid`, `{base}/i/lights/flash` | Solid/flash RGB commands from the shared lights module |
 | `{base}/i/camera`, `{base}/i/audio`, `{base}/i/speaker` | Media requests |
@@ -364,6 +370,13 @@ released by a later `enabled: 0` request from the same consumer or when the AV
 service restarts. The TTL field remains required by those endpoint schemas, but
 the persistent flag holds the lease independently of expiry. Other media
 resources, including speaker playback, remain short leases.
+
+The shared `pebble.logs` module uses `{base}/o/logs` with one JSON object per
+event: `t` is the Unix timestamp in milliseconds; `level` is `DEBUG`, `INFO`,
+`WARNING`, `ERROR`, or `CRITICAL`; `service`, `message`, `logger`, and `pid`
+identify the source and record. Events are non-retained. A gateway may keep a
+bounded recent buffer for display; use the broker logger or MQTT history for
+durable storage.
 
 #### Legacy incoming topics still implemented here
 
@@ -390,7 +403,7 @@ resources, including speaker playback, remain short leases.
 | --- | --- | --- | --- |
 | `{base}/outgoing/online` | MQTT bridge, ROS 1 bridge; some firmware components may publish directly | classic web UI, replay, analysis | Legacy timestamp heartbeat, kept for compatibility; robot-wide lifecycle topic is `{base}/o/online`. |
 | `{base}/outgoing/capabilities` | launcher | web UI, replay, tooling | Retained capability advertisement. |
-| `{base}/outgoing/logs` | launcher | web UI, replay, analysis | Structured runtime diagnostics. |
+| `{base}/outgoing/logs` | launcher | compatibility UI, replay, analysis | Compatibility mirror of the structured runtime events at `{base}/o/logs`. |
 | `{base}/outgoing/touch-sensors` | serial MCU bridge when enabled | web UI, analysis | Optional ADC touch telemetry. |
 | `{base}/outgoing/charging-status` | serial MCU bridge; some MCU firmware | web UI, replay | Optional charging boolean. |
 | `{base}/outgoing/charging-level` | some MCU firmware; ROS 1 bridge | web UI, replay | Optional battery/voltage metric. |
@@ -844,7 +857,7 @@ are implementation details, not part of the general standard itself.
 | Config location | Affects |
 | --- | --- |
 | `services.launcher.capabilities.subtopic` | `outgoing/capabilities` |
-| `services.launcher.logs.subtopic` | `outgoing/logs` |
+| `services.launcher.logs.subtopic` | compatibility topic `outgoing/logs`; launcher also publishes compact `{base}/o/logs` |
 | `services.mqtt_bridge.subtopics.remote_mirror` | `incoming/flags/remote-mirror` |
 | `services.mqtt_bridge.subtopics.mqtt_audio` | `incoming/flags/mqtt-audio` |
 | `services.mqtt_bridge.subtopics.mqtt_video` | `incoming/flags/mqtt-video` |

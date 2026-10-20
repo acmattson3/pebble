@@ -188,7 +188,7 @@ class LauncherTests(unittest.TestCase):
         )
         handler.emit(record)
 
-        self.assertEqual(1, len(publisher.client.publish_calls))  # type: ignore[union-attr]
+        self.assertEqual(2, len(publisher.client.publish_calls))  # type: ignore[union-attr]
         topic, payload_raw, qos, retain = publisher.client.publish_calls[0]  # type: ignore[index,union-attr]
         self.assertEqual("pebble/robots/launchbot/outgoing/logs", topic)
         self.assertEqual(0, qos)
@@ -198,6 +198,11 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual("mqtt_bridge", payload["service"])
         self.assertEqual(4321, payload["pid"])
         self.assertEqual("service failure: boom", payload["message"])
+        module_topic, module_payload_raw, module_qos, module_retain = publisher.client.publish_calls[1]  # type: ignore[index,union-attr]
+        self.assertEqual("pebble/robots/launchbot/o/logs", module_topic)
+        self.assertEqual(0, module_qos)
+        self.assertFalse(module_retain)
+        self.assertEqual(payload, json.loads(module_payload_raw))
 
     def test_logs_handler_respects_min_level(self):
         config = make_base_config("launchbot")

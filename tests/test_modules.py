@@ -38,7 +38,7 @@ class ModuleTests(unittest.TestCase):
     def test_shared_and_robot_local_modules_are_data_only(self):
         built = make_built()
         manifest, adapters = built
-        assert [m['type'] for m in manifest['modules']] == ['pebble.drive', 'pebble.soundboard', 'pebble.lights', 'goob.gripper-demo']
+        assert [m['type'] for m in manifest['modules']] == ['pebble.drive', 'pebble.soundboard', 'pebble.lights', 'pebble.telemetry', 'pebble.logs', 'goob.gripper-demo']
         assert 'adapters' not in json.dumps(manifest)
         assert adapters[manifest['base'] + '/i/drive']['topic'].endswith('/incoming/drive-values')
         assert adapters[manifest['base'] + '/i/soundboard/command']['topic'].endswith('/incoming/soundboard-command')
@@ -137,6 +137,12 @@ class ModuleTests(unittest.TestCase):
             'files': ['beep.wav'], 'controls': True, 'timestamp': 1.0,
         }).encode())
         ui.consume(manifest['base'] + '/o/gripper-demo/state', b'{"position":0.7}')
+        log_topic = manifest['base'] + '/o/logs'
+        for index in range(105):
+            ui.consume(log_topic, json.dumps({
+                't': index, 'level': 'INFO', 'service': 'test',
+                'message': f'entry {index}', 'logger': 'test.logger', 'pid': 1,
+            }).encode())
         client = app.test_client()
         with client.get('/modules') as response:
             assert response.status_code == 200
@@ -145,6 +151,10 @@ class ModuleTests(unittest.TestCase):
         state = client.get('/modules/api/state', query_string={'robot': manifest['base']}).json
         assert state['states']['soundboard']['files']['value']['files'] == ['beep.wav']
         assert state['states']['gripper-demo']['state']['value'] == {'position': 0.7}
+        log_entries = state['states']['logs']['entries']['value']
+        assert len(log_entries) == 100
+        assert log_entries[0]['message'] == 'entry 5'
+        assert log_entries[-1]['message'] == 'entry 104'
         assert state['online']
         body = {'robot': manifest['base'], 'revision': manifest['revision'], 'module': 'drive', 'endpoint': 'command', 'payload': {'x': 0, 'z': 0}}
         assert client.post('/modules/api/command', json=body).status_code == 200

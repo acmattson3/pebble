@@ -15,6 +15,7 @@ from control.common.topics import RobotIdentity, endpoint_topic, identity_from_c
 SCHEMA = "pebble-manifest/v2"
 ROOT = Path(__file__).resolve().parents[2]
 MAX_MESSAGE = 262144
+MAX_EVENT_ENDPOINTS = 8
 CONTRACT = json.loads((ROOT / "modules" / "manifest.schema.json").read_text())
 VALIDATOR = Draft202012Validator(CONTRACT)
 
@@ -63,6 +64,7 @@ def validate_manifest(manifest: dict) -> dict:
     if manifest["availability_topic"] != endpoint_topic(identity, "o/modules/status"):
         raise ValueError("Invalid availability topic")
     ids, topics = set(), set()
+    event_endpoint_count = 0
     for module in manifest["modules"]:
         if module["id"] in ids:
             raise ValueError("Duplicate module instance")
@@ -72,6 +74,10 @@ def validate_manifest(manifest: dict) -> dict:
             if not action["min"] <= action["neutral"] <= action["max"] or action["min"] >= action["max"]:
                 raise ValueError("Invalid action range or neutral")
         for endpoint in endpoints.values():
+            if endpoint["kind"] == "event":
+                event_endpoint_count += 1
+                if event_endpoint_count > MAX_EVENT_ENDPOINTS:
+                    raise ValueError("Manifest has too many event endpoints")
             topic = endpoint["topic"]
             relative = topic.removeprefix(identity.base + "/")
             if topic != endpoint_topic(identity, relative) or topic in topics:
@@ -83,6 +89,8 @@ def validate_manifest(manifest: dict) -> dict:
                 raise ValueError("Endpoint direction disagrees with its kind")
             if endpoint["kind"] == "command" and endpoint["retain"]:
                 raise ValueError("Commands must not be retained")
+            if endpoint["kind"] == "event" and endpoint["retain"]:
+                raise ValueError("Event endpoints must not be retained")
             if endpoint["kind"] in {"video", "audio", "uplink"}:
                 expected = {"pbvd", "h264"} if endpoint["kind"] == "video" else {"opus"}
                 if endpoint.get("codec") not in expected or endpoint["retain"] or endpoint["qos"] != 0:
@@ -165,6 +173,10 @@ def validate_manifest(manifest: dict) -> dict:
                     properties = endpoint["schema"].get("properties", {})
                     if metric["field"] not in properties:
                         raise ValueError("Telemetry metric field is not declared by its endpoint schema")
+            if kind == "logs":
+                endpoint = endpoints.get(widget.get("endpoint"))
+                if not endpoint or endpoint["kind"] != "event":
+                    raise ValueError("Logs widget needs an event endpoint")
             if kind == "button" and "value" not in widget:
                 raise ValueError("Button needs a value")
             if kind == "state" and (widget.get("endpoint") not in endpoints or endpoints[widget["endpoint"]]["kind"] != "state"):
