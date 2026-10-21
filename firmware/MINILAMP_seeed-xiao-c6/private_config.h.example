@@ -24,6 +24,7 @@ YOUR_CA_CERT_HERE
 
 // --------- Robot identity ---------
 static const char *SYSTEM_NAME = "pebble";
+static const char *COMPONENT_TYPE = "robots";
 static const char *ROBOT_ID = "minilamp";
 
 // Set to 1 for verbose serial logs; 0 to disable.

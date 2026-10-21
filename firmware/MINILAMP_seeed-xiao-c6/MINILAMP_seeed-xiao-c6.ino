@@ -3,7 +3,6 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <string.h>
-#include <time.h>
 #include <math.h>
 
 // Local credentials live in private_config.h.
@@ -84,8 +83,9 @@ WiFiClient wifiClient;
 PubSubClient mqtt(wifiClient);
 
 String topicDrive;
-String topicHeartbeat;
+String topicOnline;
 String topicChargingLevel;
+String topicBase;
 
 unsigned long lastDriveLogMs = 0;
 unsigned long lastDriveCmdMs = 0;
@@ -95,10 +95,8 @@ float targetRight = 0.0f;
 float targetGrouser = 0.0f;
 unsigned long lastChargingMs = 0;
 const unsigned long CHARGING_PERIOD_MS = 5000;
-unsigned long lastHeartbeatMs = 0;
-const unsigned long HEARTBEAT_PERIOD_MS = 60000;
-unsigned long lastTimeSyncAttemptMs = 0;
-const unsigned long TIME_SYNC_RETRY_MS = 10000;
+unsigned long lastOnlineMs = 0;
+const unsigned long ONLINE_REFRESH_PERIOD_MS = 5000;
 
 void stopMotors() {
   digitalWrite(MOTOR_FRONT_LEFT.in1, LOW);
@@ -172,56 +170,16 @@ void driveMotors(float left, float right, float grouser) {
   driveOneMotor(MOTOR_BACK_RIGHT, right + grouser);
 }
 
-bool timeSynced = false;
-
-static bool ensureTimeSync() {
-  if (timeSynced) return true;
-  configTime(0, 0, "pool.ntp.org", "time.nist.gov", "time.google.com");
-  for (int i = 0; i < 20; i++) {
-    time_t now = time(nullptr);
-    if (now > 1600000000) {
-      timeSynced = true;
-      return true;
-    }
-    delay(250);
-  }
-  return false;
-}
-
-static uint64_t currentUnixMillis() {
-  time_t now = time(nullptr);
-  if (now <= 1600000000) {
-    return 0;
-  }
-  return (uint64_t)now * 1000ULL;
-}
-
-bool publishHeartbeat() {
-  uint64_t unixMs = currentUnixMillis();
-  if (unixMs == 0) {
-    timeSynced = false;
-    if (!ensureTimeSync()) {
-      dbgPrintln("Heartbeat skipped: time sync unavailable");
-      return false;
-    }
-    unixMs = currentUnixMillis();
-    if (unixMs == 0) {
-      dbgPrintln("Heartbeat skipped: invalid unix time");
-      return false;
-    }
-  } else {
-    timeSynced = true;
-  }
-
-  StaticJsonDocument<96> doc;
-  doc["t"] = unixMs;
-  char payload[96];
+bool publishOnline() {
+  StaticJsonDocument<32> doc;
+  doc["online"] = true;
+  char payload[32];
   size_t len = serializeJson(doc, payload, sizeof(payload));
-  mqtt.publish(topicHeartbeat.c_str(), reinterpret_cast<const uint8_t*>(payload), len, true);
+  bool published = mqtt.publish(topicOnline.c_str(), reinterpret_cast<const uint8_t*>(payload), len, true);
   if (DEBUG_LOGS) {
-    Serial.println("MQTT heartbeat publish");
+    Serial.println("MQTT online publish");
   }
-  return true;
+  return published;
 }
 
 float readBatteryVoltage() {
@@ -247,7 +205,7 @@ void publishBatteryVoltage() {
   doc["unit"] = "v";
   char payload[96];
   size_t len = serializeJson(doc, payload, sizeof(payload));
-  mqtt.publish(topicChargingLevel.c_str(), reinterpret_cast<const uint8_t*>(payload), len, false);
+  mqtt.publish(topicChargingLevel.c_str(), reinterpret_cast<const uint8_t*>(payload), len, true);
 }
 
 void handleDriveCommand(const JsonVariant &payload) {
@@ -360,14 +318,15 @@ void connectMqtt() {
       Serial.print("MQTT connecting as ");
       Serial.println(clientId);
     }
-    if (mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS)) {
+    if (mqtt.connect(clientId.c_str(), MQTT_USER, MQTT_PASS,
+                     topicOnline.c_str(), 1, true, "{\"online\":false}")) {
       mqtt.subscribe(topicDrive.c_str(), 1);
       if (DEBUG_LOGS) {
         Serial.print("MQTT subscribed: ");
         Serial.println(topicDrive);
       }
-      publishHeartbeat();
-      lastHeartbeatMs = millis();
+      publishOnline();
+      lastOnlineMs = millis();
     } else {
       if (DEBUG_LOGS) {
         Serial.print("MQTT connect failed, rc=");
@@ -421,15 +380,15 @@ void setup() {
   analogSetPinAttenuation(PIN_BATT, ADC_11db);
 #endif
 
-  topicDrive = String(SYSTEM_NAME) + "/robots/" + ROBOT_ID + "/incoming/drive-values";
-  topicHeartbeat = String(SYSTEM_NAME) + "/robots/" + ROBOT_ID + "/outgoing/online";
-  topicChargingLevel = String(SYSTEM_NAME) + "/robots/" + ROBOT_ID + "/outgoing/charging-level";
+  topicBase = String(SYSTEM_NAME) + "/" + COMPONENT_TYPE + "/" + ROBOT_ID;
+  topicDrive = topicBase + "/i/drive";
+  topicOnline = topicBase + "/o/online";
+  topicChargingLevel = topicBase + "/o/telemetry/battery";
 
   connectWifi();
-  ensureTimeSync();
-  lastTimeSyncAttemptMs = millis();
   configureMqttTls();
   mqtt.setServer(MQTT_HOST, MQTT_PORT);
+  mqtt.setKeepAlive(10);
   mqtt.setCallback(onMqttMessage);
   connectMqtt();
 }
@@ -450,13 +409,9 @@ void loop() {
     targetGrouser = 0.0f;
   }
   driveMotors(targetLeft, targetRight, targetGrouser);
-  if (mqtt.connected() && (now - lastHeartbeatMs >= HEARTBEAT_PERIOD_MS)) {
-    lastHeartbeatMs = now;
-    publishHeartbeat();
-  }
-  if (!timeSynced && (now - lastTimeSyncAttemptMs >= TIME_SYNC_RETRY_MS)) {
-    lastTimeSyncAttemptMs = now;
-    ensureTimeSync();
+  if (mqtt.connected() && (now - lastOnlineMs >= ONLINE_REFRESH_PERIOD_MS)) {
+    lastOnlineMs = now;
+    publishOnline();
   }
   if (mqtt.connected() && (now - lastChargingMs >= CHARGING_PERIOD_MS)) {
     lastChargingMs = now;

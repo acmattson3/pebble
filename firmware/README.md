@@ -61,6 +61,19 @@ cp firmware/MINILAMP_seeed-xiao-c6/private_config.h.example \
 Then edit `private_config.h` with local Wi-Fi/MQTT credentials and any TLS settings.
 `private_config.h` is gitignored so secrets are not committed.
 
+The MiniLAMP firmware uses compact MQTT topics under
+`{SYSTEM_NAME}/{COMPONENT_TYPE}/{ROBOT_ID}`:
+
+- `i/drive` accepts non-retained JSON drive commands.
+- `o/online` publishes retained `{"online":true}` every 5 seconds and sets a
+  retained QoS 1 Last Will of `{"online":false}`. Its periodic publication is
+  QoS 0 because PubSubClient only publishes at QoS 0. It does not require NTP.
+- `o/telemetry/battery` publishes the existing `{value, unit}` JSON shape as
+  retained current state.
+
+The example uses a 10-second MQTT keepalive. Consumers should choose their own
+stale timeout; 15 seconds is suitable for this interactive MiniLAMP profile.
+
 For the HS105 XIAO ESP32-C3 bridge firmware, create a private config header:
 
 ```bash

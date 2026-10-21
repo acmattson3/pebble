@@ -36,6 +36,11 @@ outcomes rather than duplicating implementation details from the READMEs.
   lifecycle availability, retained discovery snapshots, boot IDs, and clear
   distinctions between robot and module-host health without requiring the
   Sparkplug payload and topic model.
+- The minimal MQTT component profile is documented: a unique identity, agreed
+  identity-scoped topics and payloads, and MQTT 3.1.1 semantics are enough to
+  participate. Capabilities and presence remain optional. The MiniLAMP example
+  uses compact drive, online, and battery topics, with retained state and an
+  MQTT Last Will; presence no longer depends on NTP.
 - Full-duplex acoustic echo cancellation, native browser media transport, and
   Jev integration are not implemented.
 - Robot-local MQTT topic settings now use identity-relative `subtopic` and
@@ -102,21 +107,23 @@ still address robots outside the local runtime identity; invalid local
 subtopics cannot escape the robot namespace; legacy configs have a documented
 migration path.
 
-### 2. Make the minimal MQTT contract easy to implement
+### 2. Make the minimal MQTT contract easy to implement — profile landed
 
 - Finish migrating robot-owned services toward compact `i/` and `o/` topics;
   keep adapters for deployed legacy consumers.
-- Document a minimal robot profile that needs only identity, MQTT topics,
-  payloads, and availability.
-- Add a small conformance checklist and simulated client tests for both a
-  Linux robot and an MCU/ESP32-style client.
+- Document a minimal component profile that needs only identity, MQTT topics,
+  and payload contracts. Availability is recommended, but not required.
+- Keep a conformance checklist and broker-backed simulated MCU/ESP32 client
+  test. Linux stack checks remain covered by the existing on-robot smoke test.
 - Continue evaluating Sparkplug-inspired lifecycle, discovery, sequence, and
   stale-data practices individually. Adopt only pieces that improve recovery
   or interoperability while keeping the Pebble standard easy to read and
   implement; do not require Sparkplug's full protocol model.
 
-**Acceptance:** a basic robot can publish state and consume commands without
-running Pebble's Linux services, module host, or web interface.
+**Acceptance:** met for the protocol contract and simulator: a basic component
+can publish retained state and consume commands without Pebble's Linux
+services, module host, or web interface. Hardware compile/flash validation is
+still required when the Arduino toolchain and MiniLAMP board are available.
 
 ### 3. Grow robot-owned controls and the shared module library
 

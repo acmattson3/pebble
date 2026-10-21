@@ -71,6 +71,43 @@ The current repository uses MQTT 3.1.1. Shared helpers explicitly create clients
 with `MQTTv311`, the web interface also explicitly uses `MQTTv311`, and the
 current codebase does not depend on MQTT 5-specific properties.
 
+## 2.1 Minimal Pebble Component Profile
+
+A Pebble component can participate without running the Linux runtime, module
+host, web interface, or any capability system. A conforming minimal component
+needs only:
+
+1. a unique `{system}/{type}/{id}` identity;
+2. one or more agreed MQTT topics under that identity, using `i/` for inputs
+   and/or `o/` for outputs;
+3. the payload contract agreed for each topic; and
+4. an MQTT 3.1.1 client.
+
+Capabilities, module manifests, availability, timestamps, TLS, broker
+authentication, and service discovery are optional. The deployment must
+provide broker access and communicate topic/payload expectations between
+participants. New components SHOULD use compact topics. Existing deployments
+MAY keep `incoming/` and `outgoing/` while migrating.
+
+Non-media payloads use JSON as described below, but the standard does not
+impose a universal wrapper or schema. Each topic's contract defines its own
+shape. Commands that represent one-shot actions MUST NOT be retained. The
+profile does not require a particular QoS; clients choose QoS supported by
+their MQTT library and the delivery needs of each topic.
+
+### Minimal component conformance checklist
+
+- [ ] Use a unique three-segment identity `{system}/{type}/{id}`.
+- [ ] Publish and/or subscribe to at least one documented topic under that
+  identity.
+- [ ] Use `i/` and `o/` direction segments for new topics.
+- [ ] Document the payload shape and retention behavior for each topic.
+- [ ] Do not retain one-shot commands.
+- [ ] Connect with MQTT 3.1.1 semantics.
+
+Availability is recommended separately in section 3.5; a component can meet
+this minimal profile without it.
+
 ## 3. Topic Model
 
 ### 3.1 Component Identity
@@ -118,9 +155,9 @@ Examples:
 Legacy deployments may use equivalent `incoming/...` and `outgoing/...`
 filters.
 
-### 3.5 Robot availability
+### 3.5 Component availability
 
-An MQTT client that represents a complete robot SHOULD publish robot-wide
+An MQTT client that represents a complete robot SHOULD publish component-wide
 availability at `{base}/o/online`. The minimal payload is:
 
 ```json
@@ -133,12 +170,15 @@ payload that sets `online` to `false`. After a successful connection it
 publishes `online: true`; before a clean disconnect it SHOULD publish
 `online: false`. The Will covers ungraceful loss of the MQTT session.
 
-An online publisher SHOULD refresh its retained `online: true` periodically,
-no slower than every 60 seconds. Pebble's Linux bridge currently refreshes it
-every 30 seconds, independently of the compatibility heartbeat. Consumers can
-use this refresh as a freshness signal; MQTT clients that only publish on
-connect SHOULD still use a local timeout and rely on broker connection state
-and LWT for prompt disconnect detection.
+Refresh intervals and stale timeouts are application-specific. A component
+that refreshes presence SHOULD publish often enough for its consumers' chosen
+stale timeout. Consumers SHOULD use local receive time and a locally chosen
+timeout so a retained `online: true` does not imply indefinite availability.
+MQTT keepalive and timeout values should suit the application's detection
+needs and network conditions. For example, Pebble's interactive MiniLAMP
+profile refreshes every 5 seconds, considers presence stale after 15 seconds,
+and uses a 10-second MQTT keepalive. These are example settings, not universal
+requirements.
 
 Publishers MAY add `boot_id` (unique for each process/device boot) and `t`
 (UNIX epoch milliseconds) to help consumers recognize restarts and order live
@@ -319,9 +359,10 @@ older capabilities format remains for compatibility with the `/` interface.
 If a system publishes a current-state discovery or capability topic intended for
 late subscribers, that topic MUST be retained.
 
-Pebble's minimal robot contract does not require a Linux module host or a rich
-capability document. `{base}/o/online` is the small lifecycle signal. The
-optional robot-owned module system uses retained `{base}/o/manifest` to
+Pebble's minimal component profile in section 2.1 does not require a Linux
+module host or a rich capability document. `{base}/o/online` is the recommended
+small lifecycle signal. The optional robot-owned module system uses retained
+`{base}/o/manifest` to
 describe controls, endpoint schemas, and media formats for generic interfaces.
 The module host's `{base}/o/modules/status` is service-level availability; it
 does not replace robot-wide online status. Consumers SHOULD treat a retained
@@ -524,8 +565,8 @@ Current heartbeat payload:
 ```
 
 The compact lifecycle signal is published on `o/online` as described in
-[Robot availability](#35-robot-availability). The classic heartbeat remains on
-`outgoing/online`, typically retained with QoS 1.
+[Component availability](#35-component-availability). The classic heartbeat
+remains on `outgoing/online`, typically retained with QoS 1.
 
 ### 8.6 Legacy Capabilities Payload
 

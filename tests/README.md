@@ -32,11 +32,24 @@ Options:
 If remote checks fail from transient network/broker issues, rerun with
 `--skip-remote` to isolate local stack health.
 
+## Minimal MQTT Component Profile
+
+The profile simulator exercises an MQTT 3.1.1 embedded-style participant,
+compact identity-scoped topics, retained state, a non-retained command, and
+offline Last Will behavior against an isolated Mosquitto broker:
+
+```bash
+python3 tests/minimal_profile_smoke.py
+```
+
+It requires Docker, the `eclipse-mosquitto:2.0.22` image, and `paho-mqtt`.
+
 ## Current coverage
 
 - `test_modules.py`: versioned manifests, command validation, compatibility adapters, compact bridge routing/retention, generic web discovery and offline handling.
 - `test_module_inputs.mjs`: shared input action semantics; run with `node --test tests/test_module_inputs.mjs`.
 - `module_browser_smoke.py`: optional two-broker browser integration checks; see [module validation](../modules/README.md#validation).
+- `minimal_profile_smoke.py`: isolated broker test of the minimal MQTT component profile and retained LWT lifecycle.
 - `test_common.py`: config loading, service config helpers, topic identity helpers.
 - `test_capabilities.py`: capability topic/payload derivation from unified config.
 - `test_mqtt_bridge.py`: local/remote forwarding behavior, mirror-flag rules, media flag handling, heartbeat scope.
