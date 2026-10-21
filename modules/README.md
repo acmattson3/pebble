@@ -58,8 +58,9 @@ The telemetry widget renders robot-defined metrics from declared state
 endpoints. `modules/telemetry/module.json` provides battery voltage, charging,
 and touch sensor endpoints for robots that use them. Goob selects only battery
 voltage and enables the widget's built-in presence rows, which show online
-state and the local time Goob was last seen online. Presence comes from the
-standard `o/online` topic; it is not duplicated as a telemetry endpoint.
+state and the web gateway's local receive time for Goob's last online update.
+Presence comes from the standard `o/online` topic; it is not duplicated as a
+telemetry endpoint and does not depend on Goob having a synchronized clock.
 
 The logs widget reads structured records from a declared event endpoint. The
 gateway keeps the most recent 100 events in memory per endpoint; logs are
