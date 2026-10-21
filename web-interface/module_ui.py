@@ -52,7 +52,7 @@ class ModuleUI:
                 if not robot:
                     return jsonify(error="Robot has not advertised a module manifest"), 404
                 body = {"online": self.online(robot), "revision": robot["manifest"]["revision"],
-                        "states": deepcopy(robot["states"])}
+                        "states": deepcopy(robot["states"]), "presence": self.presence(robot)}
                 if request.args.get("revision") != body["revision"]:
                     body["manifest"] = deepcopy(robot["manifest"])
                 return jsonify(body)
@@ -118,6 +118,17 @@ class ModuleUI:
             or (robot.get("presence_online", False) and now - presence_seen < 120)
         )
         return bool(self.connected() and module_host_online and presence_online)
+
+    @staticmethod
+    def presence(robot):
+        seen = robot.get("presence_seen")
+        if seen is None:
+            return {"online": None, "last_seen_ms": None}
+        fresh = time.monotonic() - seen < 120
+        return {
+            "online": bool(robot.get("presence_online") and fresh),
+            "last_seen_ms": robot.get("presence_last_seen_ms"),
+        }
 
     def state_topics(self):
         with self.lock:
@@ -185,7 +196,10 @@ class ModuleUI:
                     self.media.forget(removed + ([e["topic"] for m in old["manifest"]["modules"] for e in m["endpoints"].values()] if old else []))
                     for t in removed:
                         del self.routes[t]
-                    self.robots[base] = {"manifest": manifest, "states": {}, "online": False, "status_seen": 0.}
+                    self.robots[base] = {
+                        "manifest": manifest, "states": {}, "online": False, "status_seen": 0.,
+                        "presence_online": None, "presence_seen": None, "presence_last_seen_ms": None,
+                    }
                     self.routes[manifest["availability_topic"]] = (base, None, None)
                     self.routes[f"{base}/o/online"] = (base, "__presence__", None)
                     for module in manifest["modules"]:
@@ -209,6 +223,8 @@ class ModuleUI:
                         return [], []
                     robot["presence_online"] = body["online"]
                     robot["presence_seen"] = time.monotonic()
+                    if body["online"]:
+                        robot["presence_last_seen_ms"] = int(time.time() * 1000)
                     return [], []
                 if mid is None:
                     if not isinstance(body, dict) or not isinstance(body.get("online"), bool):

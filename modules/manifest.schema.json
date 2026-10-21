@@ -350,6 +350,9 @@
                         "additionalProperties": false
                       }
                     },
+                    "presence": {
+                      "type": "boolean"
+                    },
                     "limit": {
                       "type": "integer",
                       "minimum": 1,

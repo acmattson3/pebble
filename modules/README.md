@@ -56,9 +56,10 @@ serial bridge topics.
 
 The telemetry widget renders robot-defined metrics from declared state
 endpoints. `modules/telemetry/module.json` provides battery voltage, charging,
-and touch sensor metrics. Goob maps those endpoints to its existing retained
-telemetry topics, so the module host validates and exposes the values without
-special robot-specific UI code.
+and touch sensor endpoints for robots that use them. Goob selects only battery
+voltage and enables the widget's built-in presence rows, which show online
+state and the local time Goob was last seen online. Presence comes from the
+standard `o/online` topic; it is not duplicated as a telemetry endpoint.
 
 The logs widget reads structured records from a declared event endpoint. The
 gateway keeps the most recent 100 events in memory per endpoint; logs are
@@ -105,8 +106,8 @@ The launcher starts `control.services.module_host` automatically when enabled.
   and bounded flash period. Goob forwards its compact command endpoints to the
   serial bridge's existing light topics.
 - Shared `modules/telemetry/module.json`: battery voltage, charging state, and
-  optional touch sensor readings. Goob maps its existing outgoing topics into
-  the module's typed state endpoints.
+  optional touch sensor readings. Goob advertises battery voltage plus online
+  and last-seen status; its manifest omits charging and touch endpoints.
 - Shared `modules/logs/module.json`: recent structured runtime messages with
   level filtering. The launcher publishes compact events while retaining the
   configured compatibility feed for existing log consumers.

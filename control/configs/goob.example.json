@@ -63,7 +63,19 @@
         },
         {
           "id": "telemetry",
-          "use": "modules/telemetry/module.json"
+          "use": "modules/telemetry/module.json",
+          "endpoints": ["battery"],
+          "ui": {
+            "columns": 1,
+            "controls": [{
+              "kind": "telemetry",
+              "label": "Robot telemetry",
+              "presence": true,
+              "metrics": [
+                {"label": "Battery", "endpoint": "battery", "field": "value", "unit": "V", "precision": 2}
+              ]
+            }]
+          }
         },
         {
           "id": "logs",

@@ -50,6 +50,11 @@ class ModuleTests(unittest.TestCase):
         for payload in ({'enabled': False}, {'enabled': True, 'command': 'arbitrary'}):
             with self.assertRaises(ValidationError):
                 validate_payload(admin['endpoints']['reboot'], payload)
+        telemetry = manifest['modules'][3]
+        assert set(telemetry['endpoints']) == {'battery'}
+        telemetry_widget = telemetry['ui']['controls'][0]
+        assert telemetry_widget['presence'] is True
+        assert [metric['endpoint'] for metric in telemetry_widget['metrics']] == ['battery']
         drive = manifest['modules'][0]
         validate_payload(drive['endpoints']['command'], {'x': 0.5, 'z': -0.2})
         for payload in ({'x': 2, 'z': 0}, {'x': 0}, {'x': 0, 'z': 0, 'extra': 1}, {'x': float('nan'), 'z': 0}):
@@ -141,6 +146,7 @@ class ModuleTests(unittest.TestCase):
         presence_topic = manifest['base'] + '/o/online'
         assert presence_topic in topics
         ui.consume(manifest['availability_topic'], b'{"online":true}')
+        ui.consume(presence_topic, b'{"online":true}')
         ui.consume(manifest['base'] + '/o/soundboard/files', json.dumps({
             'files': ['beep.wav'], 'controls': True, 'timestamp': 1.0,
         }).encode())
@@ -164,10 +170,15 @@ class ModuleTests(unittest.TestCase):
         assert log_entries[0]['message'] == 'entry 5'
         assert log_entries[-1]['message'] == 'entry 104'
         assert state['online']
+        assert state['presence']['online'] is True
+        last_seen = state['presence']['last_seen_ms']
+        assert isinstance(last_seen, int)
         body = {'robot': manifest['base'], 'revision': manifest['revision'], 'module': 'drive', 'endpoint': 'command', 'payload': {'x': 0, 'z': 0}}
         assert client.post('/modules/api/command', json=body).status_code == 200
         assert len(calls) == 1
         ui.consume(presence_topic, b'{"online":false}')
+        offline_state = client.get('/modules/api/state', query_string={'robot': manifest['base']}).json
+        assert offline_state['presence'] == {'online': False, 'last_seen_ms': last_seen}
         assert client.post('/modules/api/command', json=body).status_code == 503
         ui.consume(presence_topic, b'{"online":true}')
         assert client.post('/modules/api/command', json=body).status_code == 200

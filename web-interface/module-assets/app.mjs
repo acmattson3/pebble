@@ -190,6 +190,12 @@ function syncTelemetryWidget(ctx, item) {
     else if(typeof datum==='object') metric.value.textContent=Object.entries(datum).map(([key,value])=>`${key}: ${value}`).join(' · ');
     else metric.value.textContent=String(datum);
   }
+  if(item.presence) {
+    const presence=ctx.latestState?.presence;
+    item.presence.online.textContent=presence?.online==null?'Unknown':(presence.online?'Yes':'No');
+    item.presence.lastSeen.textContent=presence?.last_seen_ms
+      ?new Date(presence.last_seen_ms).toLocaleString():'—';
+  }
 }
 function renderAutonomyFields(ctx,item,descriptors) {
   item.fields.replaceChildren();item.inputs=[];
@@ -396,7 +402,16 @@ function render(manifest) {
           const label=element('span',spec.label),value=element('strong','—');
           row.append(label,value);node.append(row);metrics.push({spec,value});
         }
-        controls.append(node);ctx.telemetryWidgets.push({metrics});
+        let presence=null;
+        if(widget.presence) {
+          const onlineValue=element('strong','Unknown'),lastSeenValue=element('strong','—');
+          for(const [label,value] of [['Online',onlineValue],['Last seen',lastSeenValue]]) {
+            const row=element('div',undefined,'telemetry-metric');
+            row.append(element('span',label),value);node.append(row);
+          }
+          presence={online:onlineValue,lastSeen:lastSeenValue};
+        }
+        controls.append(node);ctx.telemetryWidgets.push({metrics,presence});
       } else if(widget.kind==='logs') {
         const node=element('div',undefined,'logs-widget');
         const toolbar=element('div',undefined,'logs-toolbar');
