@@ -87,16 +87,6 @@
             "git_pull": {"kind": "forward", "subtopic": "incoming/flags/git-pull"},
             "service_restart": {"kind": "forward", "subtopic": "incoming/flags/service-restart"}
           }
-        },
-        {
-          "id": "gripper-demo",
-          "use": "robots/goob/modules/gripper-demo/module.json",
-          "adapters": {
-            "command": {
-              "kind": "echo",
-              "state_endpoint": "state"
-            }
-          }
         }
       ]
     }

@@ -115,9 +115,11 @@ The launcher starts `control.services.module_host` automatically when enabled.
 - Shared `modules/autonomy/module.json`: robot-advertised autonomy scripts,
   configurable arguments, and start/stop controls. Goob's autonomy manager
   publishes compact module state while keeping its legacy topics available.
-- Robot-local `robots/goob/modules/gripper-demo/module.json`: a virtual position
-  slider, open/close buttons, G/H keys and controller buttons 0/1. Its echo
-  adapter updates retained `o/gripper-demo/state` and never touches hardware.
+- Example robot-local `robots/goob/modules/gripper-demo/module.json`: a virtual
+  position slider, open/close buttons, G/H keys and controller buttons 0/1. It
+  demonstrates defining a custom layout and can be enabled by a robot that
+  needs it; its echo adapter updates retained `o/gripper-demo/state` and never
+  touches hardware. Goob does not currently enable this example module.
 
 To promote a robot-specific module into the shared library, move its definition
 under `modules/`, choose its public type/version, and update `use`. Hardware

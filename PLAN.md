@@ -25,8 +25,9 @@ outcomes rather than duplicating implementation details from the READMEs.
   use behind adapters and compatibility paths.
 - The robot-owned module system supports versioned manifests, reusable module
   definitions, validated command/state endpoints, generic layouts, and editable
-  keyboard/controller mappings. Shared drive controls and a Goob-local gripper
-  example demonstrate reusable and robot-specific modules.
+  keyboard/controller mappings. Shared drive controls and a robot-local
+  gripper example in the repository demonstrate reusable and robot-specific
+  modules.
 - The web gateway discovers modules and gates commands on robot and module-host
   availability. ARL's live interface has been verified with Goob; the telemetry
   widget now shows robot presence and the gateway's last-seen receive time.
@@ -143,8 +144,9 @@ topics.
 
 - [x] Promote shared drive, soundboard, lights, telemetry, logs, autonomy, and
   administrative modules into `modules/` with versioned contracts and examples.
-- [x] Keep robot-specific mechanisms such as Goob's gripper in robot-owned
-  modules, while rendering them through the generic interface.
+- [x] Keep robot-specific mechanisms in robot-owned modules, while rendering
+  them through the generic interface. The gripper module is a repository
+  example and is not enabled on Goob.
 - [x] Keep input-to-action mapping in module contracts so keyboard and gamepad
   inputs use the same command path.
 - [x] Keep telemetry data and presence generic. Goob advertises battery only;
