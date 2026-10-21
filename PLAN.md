@@ -136,7 +136,8 @@ topics.
 - [x] The profile and embedded-style simulator demonstrate a component
   publishing state and consuming commands without Pebble's Linux services,
   module host, or web interface.
-- [ ] Compile and exercise the MiniLAMP firmware against hardware.
+- [x] Compile the MiniLAMP firmware for the Seeed XIAO ESP32-C6.
+- [ ] Flash and exercise the MiniLAMP firmware against hardware.
 
 ### 3. Grow robot-owned controls and the shared module library
 
@@ -160,8 +161,10 @@ topics.
   arbitrary HTML or JavaScript to the gateway.
 - [x] Add unit coverage for invalid manifests, command validation, and offline
   handling.
-- [ ] Run the Playwright browser smoke test, plus broader reconnect and
-  multi-robot integration checks, before the root-page migration.
+- [x] Run the Playwright browser smoke test for module rendering, controls,
+  telemetry presence, soundboard behavior, and browser errors.
+- [ ] Run broader reconnect and multi-robot integration checks before the
+  root-page migration.
 
 **Acceptance:**
 
@@ -236,12 +239,16 @@ topics.
 - [x] Live Goob retained manifest advertises only the battery telemetry
   endpoint and sets `presence: true`; ARL's live API reports Goob online, its
   last-seen receive time, and battery voltage.
-- [ ] Run `tests/module_browser_smoke.py` with Playwright/Chromium. The browser
-  assertion for online and last-seen rows is added, but Playwright is not
-  installed in the current environment.
-- [ ] Compile and bench-test the MiniLAMP firmware. `arduino-cli` and an attached
-  `/dev/ttyACM*` or `/dev/ttyUSB*` board are not available here; do not claim a
-  hardware build or flash until both are available.
+- [x] `tests/module_browser_smoke.py` passed with Playwright/Chromium, covering
+  two-broker discovery, custom controls, soundboard behavior, online/last-seen
+  telemetry display, input handling, retained state, and no browser exceptions.
+- [x] MiniLAMP compiled for `esp32:esp32:XIAO_ESP32C6` with the example
+  placeholder configuration, PubSubClient 2.8.0, and ArduinoJson 7.4.3. The
+  resulting sketch uses 76% of program storage and 13% of dynamic memory.
+- [ ] Flash and bench-test MiniLAMP; no target board is attached to this host.
+- [ ] Run broader reconnect and multi-robot browser integration coverage; the
+  current browser smoke covers discovery across two brokers but not the full
+  reconnect/load matrix.
 - [ ] Run Goob's on-robot smoke suite for broader end-to-end validation. This
   telemetry-only rollout was checked through the retained manifest and ARL
   live API, without running the full robot smoke suite.
