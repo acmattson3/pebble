@@ -28,7 +28,8 @@ outcomes rather than duplicating implementation details from the READMEs.
   keyboard/controller mappings. Shared drive controls and a Goob-local gripper
   example demonstrate reusable and robot-specific modules.
 - The web gateway discovers modules and gates commands on robot and module-host
-  availability. ARL's live interface has been verified with Goob.
+  availability. ARL's live interface has been verified with Goob; the telemetry
+  widget now shows robot presence and the gateway's last-seen receive time.
 - Camera and audio capture are demand-controlled. Robot-to-gateway and
   gateway-to-robot audio use Opus over MQTT. Goob uses H.264 over MQTT; the
   benchmark and live recovery results are documented in `modules/H264.md`.
@@ -56,9 +57,12 @@ outcomes rather than duplicating implementation details from the READMEs.
   containing `chg=-1` no longer lose their `v=` voltage field.
 - Goob's soundboard module is defined and exposes the robot's `/opt/sounds`
   WAV library and playback status through the generic module interface.
-- Shared telemetry is enabled for Goob; its example module configuration now
-  includes the log viewer. The log module uses non-retained events and bounded
-  gateway history.
+- Goob advertises battery voltage through telemetry and omits charging and
+  touch endpoints from its module manifest. The widget also shows online state
+  and last seen from the standard `o/online` presence signal. Shared telemetry
+  still offers charging and touch endpoints for robots that use them.
+- The log module uses non-retained events and bounded gateway history; Goob's
+  example configuration includes it.
 - The shared autonomy module is deployed on Goob and ARL. Goob advertises its
   four configured scripts and idle status; their payloads validate against the
   module contract. No autonomy script was started during verification.
@@ -67,159 +71,180 @@ outcomes rather than duplicating implementation details from the READMEs.
 
 ## Roadmap
 
-### 1. Simplify and separate configuration — underway
+### 1. Simplify and separate configuration — boundary complete; profiles remain
 
 Reduce repeated identity, topic, broker, and media settings while making the
 robot runtime and web deployment independently understandable.
 
-- Make robot-local topic overrides relative to the configured identity, using
+- [x] Make robot-local topic overrides relative to the configured identity, using
   `subtopic`; retain a clearly explicit route for fully qualified external
   topics and a compatibility path for existing configs.
-- Establish ownership boundaries: robot identity, hardware, and enabled
+- [x] Establish ownership boundaries: robot identity, hardware, and enabled
   services belong to robot configuration; web bind/history settings and its
   list of controlled robots belong to web configuration.
-- Split the current unified config into robot and web configs without making
-  one file per process. Keep optional audio/video profiles only where they
-  improve reuse or isolate real device-specific settings.
-- Resolve settings centrally with documented defaults and precedence. Services
-  should receive validated, resolved settings rather than each interpreting
-  partial files independently.
-- Reduce duplicated media values by distinguishing capture formats/devices
+- [x] Split the current unified config into robot and web configs, without
+  creating a separate file for every process.
+- [x] Resolve robot-local topic settings centrally with documented defaults
+  and precedence.
+- [ ] Extend central validation/resolution to all service settings so every
+  service receives fully resolved settings.
+- [ ] Reduce duplicated media values by distinguishing capture formats/devices
   from published stream profiles. Derive equal values by default and allow
   explicit overrides when capture and network output differ.
-- Consider named MQTT connection profiles where several services share broker
-  settings. Keep local, remote, and web broker roles distinct when their
+- [ ] Consider named MQTT connection profiles where several services share
+  broker settings. Keep local, remote, and web broker roles distinct when their
   endpoints or credentials differ.
-- Keep secrets out of shareable example configs, using protected files or
+- [x] Keep secrets out of shareable example configs, using protected files or
   environment references.
-- Migrate example configs first; preserve existing deployments through a
-  compatibility loader or clear migration tool. Add schema validation and
-  tests for resolved topics, cross-robot references, and precedence.
+- [x] Migrate example configs first and preserve existing deployments through
+  a compatibility loader. Tests cover topic resolution, identity boundaries,
+  and split-config behavior.
+- [ ] Expand cross-robot reference and general precedence coverage as
+  configuration resolution grows.
 
 **Completed slice:** centralized robot-local topic resolution and migrated
 robot, module-adapter, and web-target examples to `subtopic` fields while
-keeping legacy full topics supported. Focused tests verify namespace safety
-and unchanged effective media/capability topics.
+keeping legacy full topics supported. The robot/web config split is deployed
+on Goob and ARL. Focused tests verify namespace safety and unchanged effective
+topics.
 
-**Acceptance:** Goob and the primary Pebble/web deployment resolve to the same
-effective topics and service behavior as before; a multi-robot web config can
-still address robots outside the local runtime identity; invalid local
-subtopics cannot escape the robot namespace; legacy configs have a documented
-migration path.
+**Acceptance:**
 
-### 2. Make the minimal MQTT contract easy to implement — profile landed
+- [x] Goob and the primary Pebble/web deployment resolve to the expected
+  topics and settings; web configs can address robots outside the local
+  runtime identity; unsafe local subtopics are rejected; legacy configs have a
+  migration path.
 
-- Finish migrating robot-owned services toward compact `i/` and `o/` topics;
+### 2. Make the minimal MQTT contract easy to implement — profile documented
+
+- [ ] Finish migrating robot-owned services toward compact `i/` and `o/` topics;
   keep adapters for deployed legacy consumers.
-- Document a minimal component profile that needs only identity, MQTT topics,
-  and payload contracts. Availability is recommended, but not required.
-- Keep a conformance checklist and broker-backed simulated MCU/ESP32 client
-  test. Linux stack checks remain covered by the existing on-robot smoke test.
-- Continue evaluating Sparkplug-inspired lifecycle, discovery, sequence, and
-  stale-data practices individually. Adopt only pieces that improve recovery
-  or interoperability while keeping the Pebble standard easy to read and
-  implement; do not require Sparkplug's full protocol model.
+- [x] Document a minimal component profile that needs only identity, MQTT
+  topics, and payload contracts. Availability is recommended, but not required.
+- [x] Add a conformance checklist and broker-backed simulated MCU/ESP32 client
+  test. The simulator verifies command delivery, retained state, and retained
+  offline Last Will behavior.
+- [ ] Add an explicit Linux minimal-profile conformance/simulator test. The
+  existing Linux unit and on-robot smoke tests cover runtime behavior, but do
+  not yet run this profile checklist as a separate client.
+- [x] Review Sparkplug-inspired lifecycle, discovery, sequence, and stale-data
+  practices individually; adopt only lightweight practices that improve
+  recovery or interoperability.
 
-**Acceptance:** met for the protocol contract and simulator: a basic component
-can publish retained state and consume commands without Pebble's Linux
-services, module host, or web interface. Hardware compile/flash validation is
-still required when the Arduino toolchain and MiniLAMP board are available.
+**Acceptance:**
+
+- [x] The profile and embedded-style simulator demonstrate a component
+  publishing state and consuming commands without Pebble's Linux services,
+  module host, or web interface.
+- [ ] Compile and exercise the MiniLAMP firmware against hardware.
 
 ### 3. Grow robot-owned controls and the shared module library
 
-- Continue promoting proven robot-local modules into `modules/` with stable
-  type/version contracts and examples.
-- Commit and push each reusable module with its schema, generic interface
-  support, and at least one robot configuration/example as part of that feature
-  slice; do not leave shared modules only in a robot's private configuration.
-- Keep promoting robot-owned capabilities into reusable shared modules. The
-  soundboard module now defines its command, file-list, status, and layout
-  contract; each robot opts in and adapts it to its playback service and sound
-  collection. The generic renderer handles the control without Goob-specific
-  web code.
-- The shared lights and telemetry modules are implemented and enabled for Goob.
-  Telemetry displays battery voltage, charging state, and optional touch sensor
-  readings through validated state endpoints.
-- Keep input-to-action mapping in the module contract so keyboard, gamepad, and
-  future inputs use the same command path.
-- Add module examples for common drive variants and one or more robot-specific
-  mechanisms such as a gripper.
-- Improve authoring with a simple layout designer or reusable widget library
-  when real module needs show where hand-authored JSON is cumbersome.
-- After robot modules, media controls, reconnect behavior, and multi-robot use
-  are working reliably, make the module UI the root page and move the current
-  compatibility interface under a subpath. Keep this as a later migration, not
-  a prerequisite for module development.
-- Keep browser execution generic and bounded; robot modules should not need to
-  send arbitrary HTML or JavaScript to the web gateway.
-- Extend browser, gateway, reconnect, invalid-manifest, and multi-robot tests.
+- [x] Promote shared drive, soundboard, lights, telemetry, logs, autonomy, and
+  administrative modules into `modules/` with versioned contracts and examples.
+- [x] Keep robot-specific mechanisms such as Goob's gripper in robot-owned
+  modules, while rendering them through the generic interface.
+- [x] Keep input-to-action mapping in module contracts so keyboard and gamepad
+  inputs use the same command path.
+- [x] Keep telemetry data and presence generic. Goob advertises battery only;
+  its widget shows online and last seen from `o/online`, while charging and
+  touch remain optional shared endpoints for other robots.
+- [ ] Add examples for more common drive variants and robot-specific controls
+  as they are adopted by additional robots.
+- [ ] Improve authoring with a simple layout designer or reusable widget
+  library when real module needs show that hand-authored JSON is cumbersome.
+- [ ] After robot modules, media controls, reconnect behavior, and multi-robot
+  use are working reliably, make the module UI the root page and move the
+  compatibility interface under a subpath.
+- [x] Keep browser execution generic and bounded; robot modules cannot send
+  arbitrary HTML or JavaScript to the gateway.
+- [x] Add unit coverage for invalid manifests, command validation, and offline
+  handling.
+- [ ] Run the Playwright browser smoke test, plus broader reconnect and
+  multi-robot integration checks, before the root-page migration.
 
-**Acceptance:** adding a shared or robot-specific control does not require a
-robot-specific web page or gateway code, and commands remain schema-validated.
+**Acceptance:**
+
+- [x] Adding the current shared or robot-specific controls does not require a
+  robot-specific web page or gateway code, and commands remain
+  schema-validated.
 
 ### 4. Improve media quality and two-way conversation
 
-- Keep H.264 and Opus as current robot-to-broker formats; measure on target
-  hardware before adding encoder or decoder dependencies.
-- Evaluate browser-native H.264/WebCodecs and native Opus paths to reduce the
+- [x] Keep H.264 and Opus as the current robot-to-broker formats; benchmark and
+  live Goob recovery findings are documented.
+- [x] Keep media capture demand-controlled and test the main enable/disable
+  lifecycle.
+- [ ] Evaluate browser-native H.264/WebCodecs and native Opus paths to reduce
   gateway JPEG and browser PCM conversion work.
-- Design acoustic echo cancellation for both ends of a two-way call: the
+- [ ] Design acoustic echo cancellation for both ends of a two-way call: the
   operator client and the robot playback/capture path. Prototype against
   realistic speaker/microphone setups and measure echo reduction, speech
-  quality, delay, CPU use, and behavior during push-to-talk transitions.
-- Keep media demand controls and resource lifecycle behavior robust under
-  reconnects, competing requests, and unavailable devices.
-- Report explicit media-source-unavailable and stream-health diagnostics.
+  quality, delay, CPU use, and push-to-talk behavior.
+- [ ] Expand reconnect, competing-request, and unavailable-device testing and
+  report explicit media-source-unavailable and stream-health diagnostics.
 
-**Acceptance:** media recovers cleanly after network and device interruptions;
-any echo-cancellation change is evaluated at both ends and does not impair
-one-way listening or speech intelligibility.
+**Acceptance:**
+
+- [ ] Media recovers cleanly after network and device interruptions; any
+  echo-cancellation change is evaluated at both ends and does not impair
+  one-way listening or speech intelligibility.
 
 ### 5. Improve robot services and operator feedback
 
-- Add shared sound cue names and helper utilities for autonomy/control scripts.
-- The shared log-viewer module is implemented; Goob's example configuration
+- [ ] Add shared sound cue names and helper utilities for autonomy/control
+  scripts.
+- [x] Implement the shared log-viewer module; Goob's example configuration
   includes it.
-- The shared autonomy module advertises configured scripts and bounded
-  argument descriptors through the generic module UI. The existing manager
-  retains process, dependency, and compatibility-topic behavior.
-- The shared administrative module provides fixed reboot, repository update,
-  and service-restart actions. Robots select supported actions, and the generic
-  UI confirms them before calling existing local handlers. Handler execution
-  status is not yet published.
-- Add safe, bounded audio volume controls for supported ALSA devices.
-- Add soundboard repeat and timed-repeat modes with a clear stop command.
-- Goob's serial bridge preserves the MCU's flashing startup pattern, then sends
-  lights-off after opening the serial link. This gives a visible startup check
-  for MCU power, bridge connectivity, and successful command delivery.
-- Improve structured runtime diagnostics with service metadata and optional
-  health states while keeping robot-wide availability separate from individual
-  service health.
+- [x] Implement the shared autonomy module with bounded argument descriptors
+  and preserve the existing manager's process/dependency behavior.
+- [x] Implement the shared administrative module with fixed reboot, Git pull,
+  and service-restart actions and browser confirmation.
+- [ ] Publish administrative action execution status; handlers currently
+  acknowledge only that a request was queued.
+- [ ] Add safe, bounded audio volume controls for supported ALSA devices.
+- [ ] Add soundboard repeat and timed-repeat modes with a clear stop command.
+- [x] Preserve Goob's MCU flashing startup pattern, then send lights-off after
+  serial connection so MCU and bridge startup can be distinguished.
+- [ ] Improve structured runtime diagnostics with service metadata and
+  optional health states while keeping robot-wide availability separate from
+  individual service health.
 
 ### 6. Explore an optional Jev decision layer
 
-- Treat Jev (TypeSafe System One) as an optional typed, single-step decision
-  component, not an LLM chat interface and not part of the robot's fast control
-  loop.
-- If pursued, prototype an adapter that supplies bounded observations and
+- [ ] Treat Jev (TypeSafe System One) as an optional typed, single-step decision
+  component, not an LLM chat interface and not part of the fast control loop.
+- [ ] If pursued, prototype an adapter that supplies bounded observations and
   receives discrete intents such as follow, stop, or request operator help.
-- Keep all outputs behind local validation, safety limits, and existing
+- [ ] Keep outputs behind local validation, safety limits, and existing
   watchdog/stop behavior. Do not make Jev a dependency of basic Pebble robots.
 
-**Acceptance:** a Jev prototype is removable, cannot bypass local safety
-controls, and has a clear timeout/failure behavior.
+**Acceptance:**
 
-### Administrative module implementation
+- [ ] A Jev prototype is removable, cannot bypass local safety controls, and
+  has clear timeout/failure behavior.
 
-- The shared `modules/admin/module.json` defines separate fixed command endpoints
-  for reboot, Git pull, and service restart. Robot configuration selects the
-  endpoints it supports, so unsupported actions are absent from discovery.
-- Goob's actions forward only to its existing local flag handlers. The browser
-  cannot provide commands, service names, or topics, and each action requires
-  confirmation. The UI reports when a request is queued; execution results are
-  not available from the existing handlers yet.
-- Validate discovery and adapter destinations without issuing any admin
-  command. Add robot-published execution status if a later use case needs it.
+## Verification status and remaining tests
+
+- [x] Full Python unit suite: 168 tests passed. The runner needed `pyserial`
+  installed into a temporary dependency target; no repository dependency files
+  were changed for the local environment.
+- [x] Focused module tests, Python syntax checks, and JavaScript syntax check
+  passed for the telemetry presence change.
+- [x] Broker-backed `tests/minimal_profile_smoke.py` passed for compact topics,
+  commands, retained state, and offline Last Will behavior.
+- [x] Live Goob retained manifest advertises only the battery telemetry
+  endpoint and sets `presence: true`; ARL's live API reports Goob online, its
+  last-seen receive time, and battery voltage.
+- [ ] Run `tests/module_browser_smoke.py` with Playwright/Chromium. The browser
+  assertion for online and last-seen rows is added, but Playwright is not
+  installed in the current environment.
+- [ ] Compile and bench-test the MiniLAMP firmware. `arduino-cli` and an attached
+  `/dev/ttyACM*` or `/dev/ttyUSB*` board are not available here; do not claim a
+  hardware build or flash until both are available.
+- [ ] Run Goob's on-robot smoke suite for broader end-to-end validation. This
+  telemetry-only rollout was checked through the retained manifest and ARL
+  live API, without running the full robot smoke suite.
 
 ## Deferred by choice
 
@@ -227,28 +252,3 @@ controls, and has a clear timeout/failure behavior.
 - Requiring ROS or ROS 2 for core Pebble operation.
 - Requiring every robot to publish a rich module manifest.
 - Arbitrary robot-provided executable UI code in the web gateway.
-
-## Config boundary implementation
-
-Split robot runtime settings from web deployment settings in a reviewable
-slice. Keep the existing unified config working through a compatibility
-adapter, and verify that Goob's runtime and the multi-robot web interface still
-resolve the same effective settings. Extract audio/video profiles only after
-that boundary is clear.
-
-The robot/web boundary is represented by separate examples and runtime paths.
-The loader prefers `robot.json`, the web UI prefers its own
-`web-interface/config.json`, and the old unified file remains a fallback.
-Goob and the ARL web service are running with the split files. Goob's local
-topics resolve through subtopics with unchanged effective MQTT endpoints.
-Audio/video profile extraction remains a later step after this boundary has
-been exercised on Goob and the web host.
-
-**Completed slice:** the serial MCU bridge accepts
-`services.serial_mcu_bridge.drive.swap_motor_outputs` as a boolean. The default
-preserves left/right order; Goob's example enables the swap for its current
-motor wiring, and Goob's live robot config enables it.
-
-**Completed verification:** the former web-test failures are resolved; the
-complete 168-test suite passes. The Goob battery and soundboard paths have
-also been verified on the live robot.

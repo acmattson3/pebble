@@ -53,6 +53,8 @@ audio over MQTT. See [`../modules/MEDIA.md`](../modules/MEDIA.md) and
 
 ## Long-term MQTT capture
 
+For longer-term interface and platform plans, see [FUTURE_GOALS.md](FUTURE_GOALS.md).
+
 The module log viewer is for recent operator diagnostics. For durable broker
 capture and offline analysis, use `tools/mqtt-broker-logger.py`:
 
