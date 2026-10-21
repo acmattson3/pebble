@@ -66,16 +66,28 @@
   },
   "actions": {},
   "commands": [],
-  "bindings": [],
+  "bindings": [
+    {
+      "id": "play-selected-sound",
+      "input": "keyboard",
+      "code": "KeyP",
+      "widget": "soundboard",
+      "widget_action": "play-selected"
+    }
+  ],
   "ui": {
     "columns": 1,
     "controls": [
       {
         "kind": "soundboard",
+        "id": "soundboard",
         "label": "Soundboard",
         "command_endpoint": "command",
         "files_endpoint": "files",
-        "status_endpoint": "status"
+        "status_endpoint": "status",
+        "key_actions": [
+          {"id": "play-selected", "label": "Play selected sound", "behavior": "play-selected"}
+        ]
       }
     ]
   }

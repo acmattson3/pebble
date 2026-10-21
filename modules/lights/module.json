@@ -40,15 +40,27 @@
   },
   "actions": {},
   "commands": [],
-  "bindings": [],
+  "bindings": [
+    {
+      "id": "toggle-lights",
+      "input": "keyboard",
+      "code": "KeyF",
+      "widget": "lights",
+      "widget_action": "toggle"
+    }
+  ],
   "ui": {
     "columns": 1,
     "controls": [
       {
         "kind": "lights",
+        "id": "lights",
         "label": "Light color",
         "solid_endpoint": "solid",
-        "flash_endpoint": "flash"
+        "flash_endpoint": "flash",
+        "key_actions": [
+          {"id": "toggle", "label": "Toggle lights", "behavior": "toggle-last-mode"}
+        ]
       }
     ]
   }

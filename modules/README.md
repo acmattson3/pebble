@@ -30,17 +30,21 @@ A module definition contains:
   interval. All fields are published together in one command.
 - `bindings`: keyboard codes, controller axes and controller buttons mapped to
   actions. Axes support dead zones, scale/inversion and offsets. Reset bindings
-  release held actions. Keyboard auto-repeat is ignored.
+  release held actions. Keyboard auto-repeat is ignored. Specialized widgets
+  can also publish a small set of named key actions; these use the same mapping
+  editor without representing one-shot controls as numeric actions.
 - `ui`: a grid of generic joystick, range, button, reset, state, telemetry and
   log widgets, plus reusable media, soundboard, autonomy, and lights widgets.
 
-Module format version 1 supports numeric action bindings and object commands.
+Module format version 1 supports numeric and named widget-action bindings and
+object commands.
 The soundboard widget is a reusable typed control that reads the robot's WAV
 list and playback status from declared state endpoints and sends validated
-play/stop commands to a declared command endpoint. Definitions contain no
-arbitrary JavaScript, HTML, expressions, remote schema references, or
-robot-specific web routes. Schemas support the bounded local JSON Schema subset
-enforced by `control/common/modules.py`.
+play/stop commands to a declared command endpoint. Its default P key plays the
+currently selected sound, and can be remapped in **Input mappings**.
+Definitions contain no arbitrary JavaScript, HTML, expressions, remote schema
+references, or robot-specific web routes. Schemas support the bounded local
+JSON Schema subset enforced by `control/common/modules.py`.
 
 The autonomy widget reads script names and bounded argument descriptors from
 the robot, then builds typed inputs for string, integer, float, boolean, and
@@ -52,7 +56,9 @@ current process before starting another.
 The lights widget uses declared solid and flash command endpoints. The shared
 `modules/lights/module.json` defines color and flash-period payloads; robots
 adapt those endpoints to their own actuators. Goob forwards them to its existing
-serial bridge topics.
+serial bridge topics. Its default F key toggles lights off and restores the
+last selected solid or flash mode; this key can be remapped in **Input
+mappings**.
 
 The telemetry widget renders robot-defined metrics from declared state
 endpoints. `modules/telemetry/module.json` provides battery voltage, charging,

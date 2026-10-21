@@ -238,6 +238,14 @@
                   "type": "string",
                   "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
                 },
+                "widget": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                },
+                "widget_action": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+                },
                 "code": {
                   "type": "string",
                   "maxLength": 160
@@ -268,6 +276,11 @@
               "required": [
                 "id",
                 "input"
+              ],
+              "anyOf": [
+                {"required": ["action"]},
+                {"required": ["widget", "widget_action"]},
+                {"properties": {"reset": {"const": true}}}
               ],
               "additionalProperties": false
             },
@@ -302,6 +315,24 @@
                         "logs",
                         "admin"
                       ]
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$"
+                    },
+                    "key_actions": {
+                      "type": "array",
+                      "maxItems": 8,
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}$"},
+                          "label": {"type": "string", "maxLength": 80},
+                          "behavior": {"enum": ["play-selected", "toggle-last-mode"]}
+                        },
+                        "required": ["id", "label", "behavior"],
+                        "additionalProperties": false
+                      }
                     },
                     "label": {
                       "type": "string",

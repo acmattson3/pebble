@@ -1,6 +1,6 @@
 export class LightsWidget {
   constructor({widget,send}) {
-    this.widget=widget;this.send=send;this.online=false;
+    this.widget=widget;this.send=send;this.online=false;this.lastMode='solid';this.isOn=false;this.busy=false;
     this.node=document.createElement('div');this.node.className='lights-widget';
     this.color=document.createElement('input');this.color.type='color';this.color.value='#ff0000';
     this.color.setAttribute('aria-label','Light color');
@@ -9,9 +9,9 @@ export class LightsWidget {
     this.period.setAttribute('aria-label','Flash period in seconds');
     const periodLabel=document.createElement('label');periodLabel.textContent='Flash period (s)';periodLabel.append(this.period);
     const controls=document.createElement('div');controls.className='lights-actions';
-    this.solid=this.button('Solid',()=>this.command(widget.solid_endpoint,this.colorPayload(),'Solid color sent.'));
-    this.flash=this.button('Flash',()=>this.command(widget.flash_endpoint,{...this.colorPayload(),period:this.periodValue()},'Flashing color sent.'));
-    this.off=this.button('Off',()=>this.command(widget.solid_endpoint,{b:0,g:0,r:0},'Lights off.'));
+    this.solid=this.button('Solid',()=>this.setMode('solid'));
+    this.flash=this.button('Flash',()=>this.setMode('flash'));
+    this.off=this.button('Off',()=>this.turnOff());
     this.off.classList.add('stop');controls.append(this.solid,this.flash,this.off);
     this.status=document.createElement('p');this.status.className='lights-status';this.status.textContent='Ready';
     this.node.append(colorLabel,periodLabel,controls,this.status);
@@ -28,14 +28,32 @@ export class LightsWidget {
     const value=Number(this.period.value);
     return Number.isFinite(value)?Math.min(30,Math.max(.05,value)):2;
   }
+  async setMode(mode) {
+    const endpoint=mode==='flash'?this.widget.flash_endpoint:this.widget.solid_endpoint;
+    const payload=mode==='flash'?{...this.colorPayload(),period:this.periodValue()}:this.colorPayload();
+    if(await this.command(endpoint,payload,mode==='flash'?'Flashing color sent.':'Solid color sent.')) {
+      this.lastMode=mode;this.isOn=true;
+    }
+  }
+  async turnOff() {
+    if(await this.command(this.widget.solid_endpoint,{b:0,g:0,r:0},'Lights off.'))this.isOn=false;
+  }
+  async toggle() {
+    if(this.isOn)await this.turnOff();else await this.setMode(this.lastMode);
+  }
   async command(endpoint,payload,status) {
-    if(!this.online)return;
+    if(!this.online||this.busy)return false;
+    this.busy=true;this.updateDisabled();
     this.status.textContent='Sending light command…';
-    try { await this.send(endpoint,payload);this.status.textContent=status; }
-    catch(error) { this.status.textContent=`Command failed: ${error.message||error}`; }
+    try { await this.send(endpoint,payload);this.status.textContent=status;return true; }
+    catch(error) { this.status.textContent=`Command failed: ${error.message||error}`;return false; }
+    finally {this.busy=false;this.updateDisabled();}
+  }
+  updateDisabled() {
+    for(const control of [this.color,this.period,this.solid,this.flash,this.off])control.disabled=!this.online||this.busy;
   }
   setOnline(online) {
     this.online=Boolean(online);
-    for(const control of [this.color,this.period,this.solid,this.flash,this.off])control.disabled=!this.online;
+    this.updateDisabled();
   }
 }

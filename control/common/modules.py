@@ -114,12 +114,43 @@ def validate_manifest(manifest: dict) -> dict:
             for field, action_id in command["fields"].items():
                 for value in (actions[action_id]["min"], actions[action_id]["max"]):
                     validate_payload(endpoint, {**neutral, field: value})
+        control_ids = set()
+        control_actions = {}
+        for widget in module["ui"]["controls"]:
+            if widget.get("id"):
+                if widget["id"] in control_ids:
+                    raise ValueError("Duplicate widget ID")
+                control_ids.add(widget["id"])
+            action_ids = set()
+            for key_action in widget.get("key_actions", []):
+                if key_action["id"] in action_ids:
+                    raise ValueError("Duplicate widget key action")
+                action_ids.add(key_action["id"])
+                allowed = {
+                    "soundboard": {"play-selected"},
+                    "lights": {"toggle-last-mode"},
+                }.get(widget["kind"], set())
+                if key_action["behavior"] not in allowed or not widget.get("id"):
+                    raise ValueError("Unsupported or unaddressable widget key action")
+            if widget.get("id"):
+                control_actions[widget["id"]] = {a["id"]: a for a in widget.get("key_actions", [])}
+
         binding_ids = set()
         for binding in module["bindings"]:
             if binding["id"] in binding_ids:
                 raise ValueError("Duplicate binding ID")
             binding_ids.add(binding["id"])
-            if not binding.get("reset") and binding.get("action") not in actions:
+            regular = "action" in binding
+            special = "widget" in binding or "widget_action" in binding
+            if binding.get("reset"):
+                if regular or special:
+                    raise ValueError("Reset binding cannot also target an action")
+            elif special:
+                if regular or binding["input"] != "keyboard":
+                    raise ValueError("Widget actions require a keyboard binding and no numeric action")
+                if binding.get("widget_action") not in control_actions.get(binding.get("widget"), {}):
+                    raise ValueError("Input references an unknown widget action")
+            elif not regular or binding["action"] not in actions:
                 raise ValueError("Input references an unknown action")
             if binding["input"] == "keyboard" and not binding.get("code"):
                 raise ValueError("Keyboard binding needs a code")

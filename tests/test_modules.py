@@ -38,7 +38,7 @@ class ModuleTests(unittest.TestCase):
     def test_shared_and_robot_local_modules_are_data_only(self):
         built = make_built()
         manifest, adapters = built
-        assert [m['type'] for m in manifest['modules']] == ['pebble.drive', 'pebble.soundboard', 'pebble.lights', 'pebble.telemetry', 'pebble.logs', 'pebble.autonomy', 'pebble.admin', 'goob.gripper-demo']
+        assert [m['type'] for m in manifest['modules']] == ['pebble.drive', 'pebble.soundboard', 'pebble.lights', 'pebble.telemetry', 'pebble.logs', 'pebble.autonomy', 'pebble.admin']
         assert 'adapters' not in json.dumps(manifest)
         assert adapters[manifest['base'] + '/i/drive']['topic'].endswith('/incoming/drive-values')
         assert adapters[manifest['base'] + '/i/soundboard/command']['topic'].endswith('/incoming/soundboard-command')
@@ -77,6 +77,11 @@ class ModuleTests(unittest.TestCase):
 
     def test_adapters_forward_once_and_echo_without_actuator(self):
         configured = make_configured()
+        configured['services']['module_host']['modules'].append({
+            'id': 'gripper-demo',
+            'use': 'robots/goob/modules/gripper-demo/module.json',
+            'adapters': {'command': {'kind': 'echo', 'state_endpoint': 'state'}},
+        })
         host = ModuleHost(configured, ROOT / 'control/configs/config.json')
         client = FakeMqttClient()
         soundboard = host.manifest['base'] + '/i/soundboard/command'

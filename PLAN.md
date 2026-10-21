@@ -149,6 +149,9 @@ topics.
   example and is not enabled on Goob.
 - [x] Keep input-to-action mapping in module contracts so keyboard and gamepad
   inputs use the same command path.
+- [x] Support named keyboard actions for specialized shared widgets: P plays
+  the selected sound, while F toggles lights between off and the last selected
+  solid or flash mode. Both defaults remain remappable in the shared editor.
 - [x] Keep telemetry data and presence generic. Goob advertises battery only;
   its widget shows online and last seen from `o/online`, while charging and
   touch remain optional shared endpoints for other robots.

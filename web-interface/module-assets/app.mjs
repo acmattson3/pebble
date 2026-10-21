@@ -80,13 +80,25 @@ function beginInteraction() {
   return true;
 }
 function profileKey(module,device) { return `pebble.modules.bindings.v1:${base}:${module.id}:${module.type}@${module.version}:${device}`; }
+function mappingOptions(module, keyboard=true) {
+  const options=Object.entries(module.actions).map(([id,a])=>[id,a.label]);
+  if(keyboard) for(const widget of module.ui.controls) for(const action of widget.key_actions??[])
+    options.push([`$widget:${widget.id}:${action.id}`,`${action.label} · ${widget.label}`]);
+  return options;
+}
+function bindingMapping(binding) {
+  return binding.widget_action?`$widget:${binding.widget}:${binding.widget_action}`:binding.action;
+}
 function loadBindings(module) {
   function load(device,keyboard) {
     try {
       const saved=JSON.parse(localStorage.getItem(profileKey(module,device)) || 'null');
-      if (Array.isArray(saved) && saved.length<=128 && saved.every(b=>
-        ['keyboard','gamepad-axis','gamepad-button'].includes(b.input) && (b.input==='keyboard')===keyboard &&
-        (b.reset || Object.hasOwn(module.actions,b.action)))) return saved;
+      if (Array.isArray(saved) && saved.length<=128 && saved.every(b=>{
+        if(!b||typeof b!=='object'||!['keyboard','gamepad-axis','gamepad-button'].includes(b.input)||(b.input==='keyboard')!==keyboard)return false;
+        if(b.reset)return !b.action&&!b.widget&&!b.widget_action;
+        if(b.widget||b.widget_action)return !b.action&&keyboard&&mappingOptions(module,true).some(([id])=>id===bindingMapping(b));
+        return Object.hasOwn(module.actions,b.action);
+      })) return saved;
     } catch(_) { /* Corrupt or unavailable storage uses robot defaults. */ }
     return structuredClone(module.bindings.filter(b=>(b.input==='keyboard')===keyboard));
   }
@@ -115,9 +127,14 @@ function renderMappings(ctx,target) {
   ctx.bindings.forEach((binding,index)=>{
     const row=element('div',undefined,'mapping');
     const update=(key,value,rebuild=false)=>{binding[key]=value;persist(ctx);if(rebuild)renderMappings(ctx,target);};
-    const source=select([['keyboard','Keyboard'],['gamepad-axis','Controller axis'],['gamepad-button','Controller button']],binding.input,value=>{
+    const sources=[['keyboard','Keyboard']];
+    if(Object.keys(ctx.module.actions).length)sources.push(['gamepad-axis','Controller axis'],['gamepad-button','Controller button']);
+    const source=select(sources,binding.input,value=>{
       binding.input=value;
-      if(value==='keyboard')binding.code=binding.code || 'KeyN';else binding.index=binding.index ?? 0;
+      if(value==='keyboard')binding.code=binding.code || 'KeyN';else {
+        binding.index=binding.index ?? 0;
+        if(binding.widget_action){const first=Object.keys(ctx.module.actions)[0];delete binding.widget;delete binding.widget_action;binding.action=first;binding.value=ctx.module.actions[first]?.neutral??0;}
+      }
       persist(ctx);renderMappings(ctx,target);
     });
     let control;
@@ -126,10 +143,13 @@ function renderMappings(ctx,target) {
       control.setAttribute('aria-label','Keyboard key');
       control.addEventListener('keydown',event=>{event.preventDefault();event.stopPropagation();control.value=event.code;update('code',event.code);});
     } else control=numberInput(binding.index??0,0,63,n=>update('index',Math.round(n)),1);
-    const actions=Object.entries(ctx.module.actions).map(([id,a])=>[id,a.label]);
+    const actions=mappingOptions(ctx.module,binding.input==='keyboard');
     actions.push(['$reset','Release inputs']);
-    const action=select(actions,binding.reset?'$reset':binding.action,value=>{
-      binding.reset=value==='$reset';if(!binding.reset)binding.action=value;
+    const action=select(actions,binding.reset?'$reset':bindingMapping(binding),value=>{
+      delete binding.action;delete binding.widget;delete binding.widget_action;delete binding.reset;delete binding.value;
+      if(value==='$reset')binding.reset=true;
+      else if(value.startsWith('$widget:')){const [,widget,widgetAction]=value.split(':');binding.widget=widget;binding.widget_action=widgetAction;}
+      else {binding.action=value;binding.value=ctx.module.actions[value].neutral;}
       persist(ctx);renderMappings(ctx,target);
     });
     row.append(labeled('Source',source),labeled(binding.input==='keyboard'?'Press a key':'Index',control),labeled('Action',action));
@@ -137,16 +157,23 @@ function renderMappings(ctx,target) {
       row.append(labeled('Scale',numberInput(binding.scale??1,-4,4,n=>update('scale',n))),
                  labeled('Dead zone',numberInput(binding.deadzone??.12,0,.95,n=>update('deadzone',n))),
                  labeled('Offset',numberInput(binding.offset??0,-2,2,n=>update('offset',n))));
-    } else if(!binding.reset) row.append(labeled('Value',numberInput(binding.value??1,-4,4,n=>update('value',n))));
+    } else if(!binding.reset&&!binding.widget_action) row.append(labeled('Value',numberInput(binding.value??1,-4,4,n=>update('value',n))));
     const remove=element('button','Remove');remove.addEventListener('click',()=>{ctx.bindings.splice(index,1);persist(ctx);renderMappings(ctx,target);});row.append(remove);target.append(row);
   });
   const actions=element('div',undefined,'mapping-actions');
-  const add=element('button','Add mapping');add.addEventListener('click',()=>{
-    ctx.bindings.push({id:`custom-${Date.now()}`,input:'keyboard',code:'KeyN',action:Object.keys(ctx.module.actions)[0],value:1});
-    persist(ctx);renderMappings(ctx,target);
-  });
+  const available=mappingOptions(ctx.module,true);
+  let add=null;
+  if(available.length) {
+    add=element('button','Add mapping');add.addEventListener('click',()=>{
+      const first=available[0][0],binding={id:`custom-${Date.now()}`,input:'keyboard',code:'KeyN'};
+      if(first.startsWith('$widget:')){const [,widget,widgetAction]=first.split(':');binding.widget=widget;binding.widget_action=widgetAction;}
+      else {binding.action=first;binding.value=ctx.module.actions[first].neutral;}
+      ctx.bindings.push(binding);persist(ctx);renderMappings(ctx,target);
+    });
+  }
   const reset=element('button','Robot defaults');reset.addEventListener('click',()=>{ctx.bindings=structuredClone(ctx.module.bindings);persist(ctx);renderMappings(ctx,target);});
-  actions.append(add,reset);target.append(actions);
+  if(add)actions.append(add);
+  actions.append(reset);target.append(actions);
 }
 function syncValues(ctx, syncMedia=true) {
   for(const [action,nodes] of ctx.valueNodes) for(const node of nodes) {
@@ -178,6 +205,13 @@ function syncSoundboardWidget(ctx, item) {
   else if(statusState?.playing) item.status.textContent=`Playing: ${statusState.file||'sound'}`;
   else if(filesState) item.status.textContent=`Ready · ${files.length} sound${files.length===1?'':'s'}`;
   else item.status.textContent='Waiting for sound list…';
+}
+function runWidgetAction(ctx,binding) {
+  const spec=ctx.module.ui.controls.find(widget=>widget.id===binding.widget)
+    ?.key_actions?.find(action=>action.id===binding.widget_action);
+  if(!spec)return;
+  if(spec.behavior==='play-selected')ctx.soundboardWidgets.find(item=>item.widget.id===binding.widget)?.playSelected?.();
+  else if(spec.behavior==='toggle-last-mode')ctx.lightsWidgets.find(item=>item.widget.id===binding.widget)?.toggle?.();
 }
 function syncTelemetryWidget(ctx, item) {
   const states=ctx.latestState?.states?.[ctx.module.id]??{};
@@ -363,10 +397,11 @@ function render(manifest) {
         const stop=element('button','Stop');stop.className='stop';stop.setAttribute('aria-label',`Stop ${widget.label}`);
         actions.append(play,stop);node.append(title,fileSelect,actions,status);controls.append(node);
         const item={widget,select:fileSelect,play,stop,status};ctx.soundboardWidgets.push(item);ctx.controlNodes.push(fileSelect,play,stop);
-        play.addEventListener('click',()=>{
-          if(!beginInteraction()||!fileSelect.value)return;
+        item.playSelected=()=>{
+          if(!beginInteraction()||!fileSelect.value||play.disabled)return;
           queueCommand(robot,module,{endpoint:widget.command_endpoint},{action:'play',file:fileSelect.value},manifest.revision);
-        });
+        };
+        play.addEventListener('click',item.playSelected);
         stop.addEventListener('click',()=>{
           if(!beginInteraction())return;
           queueCommand(robot,module,{endpoint:widget.command_endpoint},{action:'stop',file:''},manifest.revision);
@@ -512,6 +547,7 @@ for(const down of [true,false]) window.addEventListener(down?'keydown':'keyup',e
     for(const b of ctx.bindings)if(b.input==='keyboard'&&b.code===event.code){
       matched=true;
       if(b.reset){if(down)releaseAll();continue;}
+      if(b.widget_action){if(down)runWidgetAction(ctx,b);continue;}
       if(!down) {
         const media=ctx.mediaWidgets?.find(item=>item.widget.talk_action===b.action);
         const sources=ctx.engine.sources.get(b.action);
