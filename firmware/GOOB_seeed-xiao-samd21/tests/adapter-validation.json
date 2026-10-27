@@ -1,0 +1,10 @@
+{
+  "pass": true,
+  "actual_seconds": 0.15699999999196734,
+  "checks_passed": 8,
+  "details": [
+    "ADAPTER who=68",
+    "ADAPTER nack_us=120",
+    "ADAPTER timeout_us=10014 error=5"
+  ]
+}

@@ -8,7 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsm6 \
     libxext6 \
     libgl1 \
-    libgomp1 && \
+    libgomp1 \
+    libopus0 && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

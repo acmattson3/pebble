@@ -22,8 +22,14 @@ def make_configured():
     config['local_mqtt'] = {'host': 'localhost', 'port': 1883}
     return config
 
-def make_built():
+def make_built(include_gripper=False):
     configured = make_configured()
+    if include_gripper:
+        configured['services']['module_host']['modules'].append({
+            'id': 'gripper-demo',
+            'use': 'robots/goob/modules/gripper-demo/module.json',
+            'adapters': {'command': {'kind': 'echo', 'state_endpoint': 'state'}},
+        })
     return build_manifest(configured, ROOT / 'control/configs/config.json')
 
 class ModuleTests(unittest.TestCase):
@@ -51,7 +57,7 @@ class ModuleTests(unittest.TestCase):
             with self.assertRaises(ValidationError):
                 validate_payload(admin['endpoints']['reboot'], payload)
         telemetry = manifest['modules'][3]
-        assert set(telemetry['endpoints']) == {'battery'}
+        assert set(telemetry['endpoints']) == {'battery', 'imu', 'imu_calibrate'}
         telemetry_widget = telemetry['ui']['controls'][0]
         assert telemetry_widget['presence'] is True
         assert [metric['endpoint'] for metric in telemetry_widget['metrics']] == ['battery']
@@ -66,6 +72,17 @@ class ModuleTests(unittest.TestCase):
             with self.assertRaises((ValueError, ValidationError)):
                 validate_payload(soundboard['endpoints']['command'], payload)
 
+    def test_minilamp_embedded_manifest_matches_shared_definitions(self):
+        path = ROOT / 'robots/minilamp/modules.example.json'
+        manifest, adapters = build_manifest(json.loads(path.read_text()), path)
+        assert not adapters  # The C6 consumes its declared command topics directly.
+        assert [module['id'] for module in manifest['modules']] == ['drive', 'grouser', 'telemetry']
+        assert set(manifest['modules'][2]['endpoints']) == {'battery'}
+        assert [control['kind'] for control in manifest['modules'][0]['ui']['controls']] == ['joystick', 'reset']
+        generated = (ROOT / 'firmware/MINILAMP_seeed-xiao-c6/GeneratedManifest.h').read_text()
+        encoded = generated.split('R"PBMANIFEST(', 1)[1].split(')PBMANIFEST"', 1)[0]
+        assert json.loads(encoded) == manifest
+
     def test_invalid_contract_is_rejected(self):
         built = make_built()
         for index, change in enumerate([lambda m: m['modules'][0]['endpoints']['command'].update(topic='other/robots/goob/i/drive'), lambda m: m['modules'][0]['endpoints']['command'].update(retain=True), lambda m: m['modules'][0]['endpoints']['command'].update(schema={'$ref': 'http://localhost/private'}), lambda m: m['modules'][0]['commands'][0]['fields'].update(x='missing-action'), lambda m: m['modules'][0]['actions']['forward'].update(max=3), lambda m: m['modules'][0]['bindings'][0].update(action='missing-action'), lambda m: m['modules'][0]['ui']['controls'][0].update(kind='html', html='<script>')]):
@@ -74,6 +91,50 @@ class ModuleTests(unittest.TestCase):
                 change(manifest)
                 with self.assertRaises((ValueError, ValidationError)):
                     validate_manifest(manifest)
+
+    def test_orientation_3d_widget_requires_imu_state_and_safe_glb_url(self):
+        config = make_configured()
+        # Goob now already advertises IMU state. Isolate this fixture so its
+        # additional widget does not declare a duplicate topic.
+        config['services']['module_host']['modules'] = [
+            module for module in config['services']['module_host']['modules']
+            if module['id'] != 'telemetry'
+        ]
+        config['services']['module_host']['modules'].append({
+            'id': 'orientation-preview',
+            'use': 'modules/telemetry/module.json',
+            'endpoints': ['imu'],
+            'ui': {'columns': 1, 'controls': [{
+                'kind': 'orientation-3d', 'label': 'Robot orientation',
+                'endpoint': 'imu', 'model_url': '/models/goob.glb',
+                'model_rotation_deg': {'x': 90, 'y': 0, 'z': -90},
+            }]},
+        })
+        manifest, _ = build_manifest(config, ROOT / 'control/configs/config.json')
+        widget = manifest['modules'][-1]['ui']['controls'][0]
+        assert widget['kind'] == 'orientation-3d'
+        assert widget['model_rotation_deg'] == {'x': 90, 'y': 0, 'z': -90}
+
+        for model_url in ('http://models.example/goob.glb', '//models.example/goob.glb', 'javascript:alert(1)', '/models/goob.obj'):
+            invalid = deepcopy(manifest)
+            invalid['modules'][-1]['ui']['controls'][0]['model_url'] = model_url
+            with self.subTest(model_url=model_url), self.assertRaises((ValueError, ValidationError)):
+                validate_manifest(invalid)
+
+        invalid = deepcopy(manifest)
+        invalid['modules'][-1]['ui']['controls'][0]['model_rotation_deg'] = {'x': float('nan')}
+        with self.assertRaises((ValueError, ValidationError)):
+            validate_manifest(invalid)
+
+        invalid = deepcopy(manifest)
+        invalid['modules'][-1]['ui']['controls'][0]['endpoint'] = 'battery'
+        with self.assertRaises(ValueError):
+            validate_manifest(invalid)
+
+        invalid = deepcopy(manifest)
+        invalid['modules'][-1]['ui']['controls'][0]['command_endpoint'] = 'missing-calibration-command'
+        with self.assertRaises(ValueError):
+            validate_manifest(invalid)
 
     def test_adapters_forward_once_and_echo_without_actuator(self):
         configured = make_configured()
@@ -120,7 +181,7 @@ class ModuleTests(unittest.TestCase):
             build_manifest(configured, ROOT / "control/configs/config.json")
 
     def test_bridge_preserves_live_retained_module_states(self):
-        built = make_built()
+        built = make_built(include_gripper=True)
         manifest, _ = built
         cfg = make_base_config('goob')
         bridge = MqttBridge(cfg, ROOT / 'control/configs/config.json')
@@ -140,7 +201,7 @@ class ModuleTests(unittest.TestCase):
         assert len(bridge.remote_client.publish_calls) == before
 
     def test_generic_gateway_validation_discovery_state_and_offline(self):
-        built = make_built()
+        built = make_built(include_gripper=True)
         manifest, _ = built
         calls = []
         connected = [True]

@@ -1,0 +1,130 @@
+
+bool harnessDone = false;
+unsigned int harnessFailures = 0;
+void testCheck(bool ok, const char *name) {
+  Serial.print(ok ? "TEST PASS " : "TEST FAIL "); Serial.println(name);
+  if (!ok) ++harnessFailures;
+}
+void testCommand(const char *text) {
+  char line[129];
+  strncpy(line, text, sizeof(line)); line[128] = 0;
+  handleCommand(line);
+}
+bool testRunInitialization(uint32_t &passes, uint32_t &maxStepUs) {
+  const uint32_t start = millis();
+  passes = 0; maxStepUs = 0;
+  while (imuStage != IMU_RUNNING && millis() - start < 3000) {
+    const unsigned int before = imuBus.calls;
+    const uint32_t beforeUs = micros();
+    serviceMotorTimeout();
+    serviceSerialInput();
+    serviceImuInitialization();
+    serviceMotorTimeout();
+    maxStepUs = max(maxStepUs, uint32_t(micros() - beforeUs));
+    if (imuBus.calls - before > 1) return false;
+    ++passes;
+    feedWatchdog();
+  }
+  return imuStage == IMU_RUNNING;
+}
+void setup() { firmwareSetup(); }
+void loop() {
+  if (harnessDone || !Serial) { firmwareLoop(); return; }
+  harnessDone = true;
+  if (bootResetCause & PM_RCAUSE_WDT) {
+    testCheck(imuStage == IMU_WATCHDOG_LOCKOUT && !imuCalibrating && !imuReady,
+              "watchdog reboot locks out sensor probing");
+    const unsigned int calls = imuBus.calls;
+    for (int n = 0; n < 10; ++n) firmwareLoop();
+    testCheck(imuBus.calls == calls, "watchdog lockout never probes sensor");
+    Serial.println("TEST WATCHDOG COMPLETE");
+    return;
+  }
+  Serial.println("TEST HARNESS BEGIN (simulated I2C; bare board only)");
+  imuBus.broken = false; imuBus.gyroZ = 0;
+  // Test admission control before any initialization step.
+  lastMotorCmdMs = 123;
+  motorsTimeoutApplied = false;
+  startImuInitialization();
+  testCheck(motorsTimeoutApplied && imuCalibrating, "initialization forces motors off");
+  testCommand("M 0.00001 0");
+  testCheck(lastMotorCmdMs == 123 && motorsTimeoutApplied,
+            "any nonzero motor command rejected during automatic calibration");
+  uint32_t passes, maxStepUs;
+  testCheck(testRunInitialization(passes, maxStepUs), "incremental initialization completes; <=1 bus operation per pass");
+  testCheck(imuCalibrationSamples == 100 && !imuCalibrating && imuReady,
+            "automatic calibration collects 100 samples and releases lock");
+  testCheck(passes > 100 && maxStepUs < 30000, "scheduler yields throughout calibration");
+  Serial.print("TEST initialization_passes="); Serial.print(passes);
+  Serial.print(" max_step_us="); Serial.println(maxStepUs);
+  lastMotorCmdMs = millis() - 1000;
+  motorsTimeoutApplied = false;
+  serviceMotorTimeout();
+  testCheck(motorsTimeoutApplied, "motor timeout fires at one second");
+  const unsigned long timestamp = lastMotorCmdMs;
+  testCommand("M nan 0"); testCommand("M inf 0"); testCommand("M bad 0");
+  testCheck(lastMotorCmdMs == timestamp && motorsTimeoutApplied, "invalid motor values cannot refresh command age");
+
+  imuBus.gyroZ = 1310; // 10 deg/s after zero-bias calibration
+  yawDeg = 42; orientationReady = imuFilterReady = true;
+  lastImuSampleUs = micros() - 2000000UL;
+  emitImuSample();
+  testCheck(fabsf(yawDeg) < 0.001f, "sampling gap is not integrated");
+  delay(10); emitImuSample(); feedWatchdog();
+  testCheck(yawDeg > 0.05f && yawDeg < 0.5f, "fresh samples resume bounded integration");
+
+  imuBus.gyroZ = 0;
+  testCommand("C");
+  testCheck(imuCalibrating && motorsTimeoutApplied && lastImuSampleUs == 0,
+            "manual calibration resets estimator and stops motors");
+  const unsigned long manualTimestamp = lastMotorCmdMs;
+  testCommand("M 0.1 0");
+  testCheck(lastMotorCmdMs == manualTimestamp && imuCalibrating,
+            "manual calibration rejects nonzero motor command");
+  const uint32_t manualStart = millis();
+  uint32_t serialPasses = 0;
+  while (imuCalibrating && millis() - manualStart < 6000) {
+    firmwareLoop(); ++serialPasses;
+  }
+  testCheck(!imuCalibrating && imuCalibrationSamples == 400 && lastImuSampleUs == 0,
+            "manual calibration completes 400 samples with fresh time origin");
+  testCheck(serialPasses > 400, "main loop services serial during manual calibration");
+
+  imuBus.broken = true;
+  emitImuSample();
+  testCheck(!imuReady && !imuCalibrating && motorsTimeoutApplied && imuStage == IMU_UNAVAILABLE,
+            "sample fault aborts calibration, stops motors, marks unavailable");
+  testCommand("M 0 0");
+  testCheck(lastMotorCmdMs != manualTimestamp, "unavailable IMU permits valid zero drive command");
+  const unsigned int callsBefore = imuBus.calls;
+  serviceImuInitialization();
+  testCheck(imuBus.calls == callsBefore, "fault backoff prevents immediate reprobe");
+  imuRetryAtMs = millis(); serviceImuInitialization(); serviceImuInitialization();
+  testCheck(imuStage == IMU_UNAVAILABLE && !imuCalibrating, "failed recovery releases calibration lock");
+  imuBus.broken = false; imuRetryAtMs = millis();
+  serviceImuInitialization();
+  testCheck(testRunInitialization(passes, maxStepUs), "sensor recovery completes incrementally");
+  testCheck(lastImuSampleUs == 0 && !orientationReady, "recovery does not integrate outage");
+  startCalibration(400); imuBus.broken = true; emitImuSample();
+  testCheck(!imuCalibrating && motorsTimeoutApplied && !imuReady,
+            "manual calibration fault releases lock and shuts motors off");
+
+  imuBus.broken = false;
+  startImuInitialization();
+  imuCalibrationStartedMs = millis() - IMU_CALIBRATION_DEADLINE_MS;
+  serviceImuInitialization();
+  testCheck(imuStage == IMU_UNAVAILABLE && !imuCalibrating && motorsTimeoutApplied,
+            "overall initialization deadline aborts and releases lock");
+  imuReady = true; imuStage = IMU_RUNNING;
+  startCalibration(400);
+  imuCalibrationStartedMs = millis() - IMU_CALIBRATION_DEADLINE_MS;
+  emitImuSample();
+  testCheck(!imuReady && !imuCalibrating && motorsTimeoutApplied,
+            "overall manual calibration deadline aborts safely");
+
+  Serial.print("TEST HARNESS failures="); Serial.println(harnessFailures);
+  Serial.println("TEST TRIGGERING WATCHDOG (intentional, test firmware only)");
+  Serial.flush();
+  // Deliberately omit feeding. Hardware reboot must enter production lockout.
+  while (true) {}
+}

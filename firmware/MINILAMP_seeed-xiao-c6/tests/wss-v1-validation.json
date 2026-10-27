@@ -1,0 +1,61 @@
+{
+  "pass": true,
+  "host": "mqtt.sssn.us",
+  "transport": "wss",
+  "tls_verified": true,
+  "elapsed_seconds": 71.246,
+  "status_messages": 16,
+  "battery_messages": 19,
+  "battery_min_v": 0.348,
+  "battery_max_v": 0.364,
+  "manifest_revision": "d042a29d2d15b853",
+  "commands": "zero valid drive/grouser/legacy-wrapper and six invalid drive payloads",
+  "first_status": {
+    "firmware": "minilamp-c6-wss-v1",
+    "boot_id": "f55de1094f0bb74c",
+    "uptime_ms": 55113,
+    "mqtt_connected": true,
+    "wifi_connected": true,
+    "time_ready": true,
+    "motors_ready": true,
+    "drive_active": false,
+    "grouser_active": false,
+    "drive_at_ms": 0,
+    "grouser_at_ms": 0,
+    "accepted_commands": 0,
+    "rejected_commands": 0,
+    "retained_ignored": 0,
+    "motor_values": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "free_heap": 257732,
+    "battery_v": 0.348
+  },
+  "last_status": {
+    "firmware": "minilamp-c6-wss-v1",
+    "boot_id": "f55de1094f0bb74c",
+    "uptime_ms": 130113,
+    "mqtt_connected": true,
+    "wifi_connected": true,
+    "time_ready": true,
+    "motors_ready": true,
+    "drive_active": false,
+    "grouser_active": false,
+    "drive_at_ms": 61297,
+    "grouser_at_ms": 61297,
+    "accepted_commands": 3,
+    "rejected_commands": 6,
+    "retained_ignored": 0,
+    "motor_values": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "free_heap": 257764,
+    "battery_v": 0.352
+  }
+}

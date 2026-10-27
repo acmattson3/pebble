@@ -1,0 +1,118 @@
+{
+  "actual_seconds": 60.0,
+  "commands": "V only",
+  "sample_count": 5999,
+  "summary_count": 461,
+  "sample_rate_hz": 100.00166725020424,
+  "max_sample_gap_ms": 23,
+  "first_status": {
+    "firmware": "goob-samd21-bounded-recovery-v2",
+    "uptime_ms": "57790",
+    "reset_cause": "0x1",
+    "watchdog_ms": "1000",
+    "imu_ready": "1",
+    "imu_calibrating": "0",
+    "imu_state": "8",
+    "imu_error": "0",
+    "imu_stage": "none",
+    "motor_cmd_ms": "3",
+    "motor_timeout": "1"
+  },
+  "last_status": {
+    "firmware": "goob-samd21-bounded-recovery-v2",
+    "uptime_ms": "112795",
+    "reset_cause": "0x1",
+    "watchdog_ms": "1000",
+    "imu_ready": "1",
+    "imu_calibrating": "0",
+    "imu_state": "8",
+    "imu_error": "0",
+    "imu_stage": "none",
+    "motor_cmd_ms": "3",
+    "motor_timeout": "1"
+  },
+  "first_summary": {
+    "n": "5661",
+    "ms": "57847",
+    "r": "105.38",
+    "p": "-14.46",
+    "yaw": "0.30",
+    "t": "24.29",
+    "an": "1.011",
+    "gbx": "1.907",
+    "gby": "1.138",
+    "gbz": "-2.881",
+    "ok": "5661",
+    "err": "0",
+    "cal": "100",
+    "gen": "1"
+  },
+  "last_summary": {
+    "n": "11641",
+    "ms": "117649",
+    "r": "105.49",
+    "p": "-14.38",
+    "yaw": "1.12",
+    "t": "24.63",
+    "an": "1.013",
+    "gbx": "1.907",
+    "gby": "1.138",
+    "gbz": "-2.881",
+    "ok": "11641",
+    "err": "0",
+    "cal": "100",
+    "gen": "1"
+  },
+  "battery": [
+    {
+      "chg": "-1",
+      "v": "4.080"
+    },
+    {
+      "chg": "-1",
+      "v": "4.081"
+    },
+    {
+      "chg": "-1",
+      "v": "4.082"
+    },
+    {
+      "chg": "-1",
+      "v": "4.079"
+    },
+    {
+      "chg": "-1",
+      "v": "4.081"
+    },
+    {
+      "chg": "-1",
+      "v": "4.074"
+    },
+    {
+      "chg": "-1",
+      "v": "4.084"
+    },
+    {
+      "chg": "-1",
+      "v": "4.075"
+    },
+    {
+      "chg": "-1",
+      "v": "4.077"
+    },
+    {
+      "chg": "-1",
+      "v": "4.079"
+    },
+    {
+      "chg": "-1",
+      "v": "4.079"
+    },
+    {
+      "chg": "-1",
+      "v": "4.077"
+    }
+  ],
+  "warnings": [],
+  "pass": true
+}

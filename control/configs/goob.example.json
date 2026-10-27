@@ -64,7 +64,13 @@
         {
           "id": "telemetry",
           "use": "modules/telemetry/module.json",
-          "endpoints": ["battery"],
+          "endpoints": ["battery", "imu", "imu_calibrate"],
+          "adapters": {
+            "imu_calibrate": {
+              "kind": "forward",
+              "subtopic": "incoming/imu/calibrate"
+            }
+          },
           "ui": {
             "columns": 1,
             "controls": [{
@@ -72,8 +78,18 @@
               "label": "Robot telemetry",
               "presence": true,
               "metrics": [
-                {"label": "Battery", "endpoint": "battery", "field": "value", "unit": "V", "precision": 2}
+                {"label": "Battery", "endpoint": "battery", "field": "value", "unit": "V", "precision": 2},
+                {"label": "IMU orientation", "endpoint": "imu", "field": "orientation_deg", "unit": "deg", "precision": 1},
+                {"label": "IMU acceleration magnitude", "endpoint": "imu", "field": "accel_norm_g", "unit": "g", "precision": 3},
+                {"label": "IMU temperature", "endpoint": "imu", "field": "temperature_c", "unit": "°C", "precision": 1}
               ]
+            }, {
+              "kind": "orientation-3d",
+              "label": "Robot orientation",
+              "endpoint": "imu",
+              "command_endpoint": "imu_calibrate",
+              "model_url": "https://sssn.us/files/blockoutModel.glb",
+              "model_rotation_deg": {"x": -90, "y": -4.5, "z": 0}
             }]
           }
         },
@@ -368,16 +384,23 @@
       "protocol": "goob_base_v1",
       "retained_publish_interval_seconds": 3600,
       "serial": {
-        "port": "/dev/serial/by-id/usb-Seeed_Seeed_XIAO_M0_86F6799D50543653302E3120FF11351D-if00",
+        "port": "/dev/serial/by-id/usb-Seeed_Seeed_XIAO_M0_9C410FF4503058414E2E3120FF17211E-if00",
+        "fallback_ports": [
+          "/dev/ttyACM0",
+          "/dev/ttyACM1"
+        ],
         "baud": 460800,
         "timeout_seconds": 0.1
+      },
+      "health": {
+        "exit_on_serial_error": true
       },
       "telemetry": {
         "publish_touch_sensors": false,
         "publish_module_telemetry": true
       },
       "odometry_shm": {
-        "enabled": true,
+        "enabled": false,
         "name": "pebble_robots_goob_odometry_raw",
         "slots": 2048
       },
@@ -392,7 +415,16 @@
         "lights_flash": "incoming/lights-flash",
         "touch_sensors": "outgoing/touch-sensors",
         "charging_status": "outgoing/charging-status",
-        "charging_level": "outgoing/charging-level"
+        "charging_level": "outgoing/charging-level",
+        "imu_high_rate": "outgoing/sensors/imu-fast",
+        "imu_low_rate": "outgoing/sensors/imu",
+        "imu_calibrate": "incoming/imu/calibrate"
+      },
+      "publish": {
+        "imu_high_rate_qos": 0,
+        "imu_high_rate_retain": false,
+        "imu_low_rate_qos": 1,
+        "imu_low_rate_retain": true
       },
       "drive": {
         "swap_motor_outputs": true

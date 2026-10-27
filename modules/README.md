@@ -35,6 +35,8 @@ A module definition contains:
   editor without representing one-shot controls as numeric actions.
 - `ui`: a grid of generic joystick, range, button, reset, state, telemetry and
   log widgets, plus reusable media, soundboard, autonomy, and lights widgets.
+  The `orientation-3d` widget renders a robot-supplied self-contained GLB model
+  using roll/pitch(/yaw) from a declared state endpoint.
 
 Module format version 1 supports numeric and named widget-action bindings and
 object commands.
@@ -67,6 +69,55 @@ voltage and enables the widget's built-in presence rows, which show online
 state and the web gateway's local receive time for Goob's last online update.
 Presence comes from the standard `o/online` topic; it is not duplicated as a
 telemetry endpoint and does not depend on Goob having a synchronized clock.
+
+The 3D orientation widget is also robot-configured and reusable: select a state
+endpoint that contains numeric `orientation_deg.roll` and `.pitch`, then provide
+`model_url` as an HTTPS URL or same-origin absolute path to a self-contained
+`.glb` file. The model is fetched directly by the browser, not placed in MQTT;
+cross-origin hosts must allow the web interface origin with CORS headers. The
+browser caps model size at 16 MiB and rejects GLB files that refer to external
+buffers or images. The view normalizes model scale, applies roll/pitch and
+optional yaw, and allows camera orbit/zoom without changing robot orientation.
+The “Reset orientation” button captures the current pose as a viewer-only zero,
+so gyro drift can be cleared visually without resetting the robot's IMU.
+An orientation widget may also declare a `command_endpoint` for a robot's
+manual gyro recalibration command. The page asks the operator to keep the robot
+stationary, then reports completion when the robot publishes a new calibration
+generation and bias.
+When the endpoint includes an `accel_mps2` x/y/z vector, the widget also shows
+body axes and a spring-damped motion cue after subtracting a slow gravity estimate.
+Goob's bridge publishes this module endpoint at 8 Hz from the existing faster
+IMU stream; the 3D model and motion cue animate smoothly between updates.
+Set optional `model_rotation_deg` x/y/z angles to align the GLB's axes with the
+IMU axes. The widget uses that alignment for both the model and the live
+orientation basis, so a different model up-axis does not exchange the apparent
+pitch and yaw directions. Current Goob IMU telemetry has roll and
+pitch plus a gyro-integrated yaw estimate. Goob's yaw is relative to the most
+recent IMU initialization and drifts over time because the MPU-6050 has no
+magnetometer; it is not an absolute compass heading.
+For example, a robot module can configure it alongside the telemetry endpoint:
+
+```json
+{
+  "id": "orientation-preview",
+  "use": "modules/telemetry/module.json",
+  "endpoints": ["imu"],
+  "ui": {
+    "columns": 1,
+    "controls": [{
+      "kind": "orientation-3d",
+      "label": "Robot orientation",
+      "endpoint": "imu",
+      "model_url": "https://sssn.us/files/goob.glb",
+      "model_rotation_deg": {"x": 0, "y": 0, "z": 0}
+    }]
+  }
+}
+```
+
+Pebble vendors Three.js r186.1 and its GLTF loader under
+`web-interface/module-assets/vendor/three-r186/` (MIT license). Those larger
+files load only when a manifest actually uses the 3D widget.
 
 The logs widget reads structured records from a declared event endpoint. The
 gateway keeps the most recent 100 events in memory per endpoint; logs are
@@ -194,8 +245,9 @@ PYTHONPATH=. python3 tests/module_browser_smoke.py
 
 It creates two temporary loopback-only brokers on ports 18884/18885 and a local
 web gateway on 18086. It exercises real MQTT forwarding, generic custom controls,
-keyboard remapping and persistence, controller and pointer input, neutral release,
-and retained discovery/state. Its drive commands stay inside isolated brokers.
+the 3D orientation widget with a generated local GLB fixture, keyboard remapping
+and persistence, controller and pointer input, neutral release, and retained
+discovery/state. Its drive commands stay inside isolated brokers.
 
 ## Media modules
 

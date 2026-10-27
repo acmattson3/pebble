@@ -1,0 +1,15 @@
+{
+  "robot": {"system": "pebble", "type": "robots", "id": "minilamp"},
+  "services": {"module_host": {"enabled": true, "modules": [
+    {"id": "drive", "use": "modules/drive/module.json",
+      "description": "On/off drivetrain: full forward/reverse, with a 25% control deadband. No variable speed.",
+      "ui": {"columns": 1, "controls": [
+        {"kind": "joystick", "label": "Direction (on/off)", "x": "turn", "y": "forward", "invert_y": true},
+        {"kind": "reset", "label": "Stop"}
+      ]}},
+    {"id": "grouser", "use": "robots/minilamp/grouser.module.json"},
+    {"id": "telemetry", "use": "modules/telemetry/module.json", "endpoints": ["battery"],
+      "ui": {"columns": 1, "controls": [{"kind": "telemetry", "label": "Robot telemetry", "presence": true,
+        "metrics": [{"label": "Battery", "endpoint": "battery", "field": "value", "unit": "V", "precision": 2}]}]}}
+  ]}}
+}

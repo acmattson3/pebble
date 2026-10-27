@@ -8,12 +8,14 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import struct
 import subprocess
+import sys
 import tempfile
 import threading
 import time
 
-from flask import Flask
+from flask import Flask, Response
 import paho.mqtt.client as mqtt
 from playwright.sync_api import sync_playwright
 from werkzeug.serving import make_server
@@ -22,8 +24,65 @@ from control.services.module_host import ModuleHost
 from control.services.mqtt_bridge import MqttBridge
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'web-interface'))
 spec = importlib.util.spec_from_file_location("module_ui", ROOT/"web-interface/module_ui.py")
 web = importlib.util.module_from_spec(spec); spec.loader.exec_module(web)
+
+
+def orientation_test_glb():
+    """Build a tiny self-contained rectangular robot-block GLB fixture."""
+    faces = [
+        ((1, 0, 0), ((1, -0.5, -0.35), (1, 0.5, -0.35), (1, 0.5, 0.35), (1, -0.5, 0.35))),
+        ((-1, 0, 0), ((-1, -0.5, 0.35), (-1, 0.5, 0.35), (-1, 0.5, -0.35), (-1, -0.5, -0.35))),
+        ((0, 1, 0), ((-1, 0.5, -0.35), (-1, 0.5, 0.35), (1, 0.5, 0.35), (1, 0.5, -0.35))),
+        ((0, -1, 0), ((-1, -0.5, 0.35), (-1, -0.5, -0.35), (1, -0.5, -0.35), (1, -0.5, 0.35))),
+        ((0, 0, 1), ((-1, -0.5, 0.35), (1, -0.5, 0.35), (1, 0.5, 0.35), (-1, 0.5, 0.35))),
+        ((0, 0, -1), ((1, -0.5, -0.35), (-1, -0.5, -0.35), (-1, 0.5, -0.35), (1, 0.5, -0.35))),
+    ]
+    positions, normals, indices = [], [], []
+    for normal, vertices in faces:
+        start = len(positions) // 3
+        for vertex in vertices:
+            positions.extend(vertex)
+            normals.extend(normal)
+        indices.extend((start, start + 1, start + 2, start, start + 2, start + 3))
+    chunks = []
+    offsets = []
+    for values, fmt in ((positions, '<f'), (normals, '<f'), (indices, '<H')):
+        raw = struct.pack('<' + fmt[-1] * len(values), *values)
+        while sum(map(len, chunks)) % 4:
+            chunks.append(b'\0')
+        offset = sum(map(len, chunks))
+        chunks.append(raw)
+        offsets.append((offset, len(raw)))
+    binary = b''.join(chunks)
+    min_pos = [min(positions[i::3]) for i in range(3)]
+    max_pos = [max(positions[i::3]) for i in range(3)]
+    doc = {
+        'asset': {'version': '2.0', 'generator': 'Pebble browser smoke fixture'},
+        'scene': 0, 'scenes': [{'nodes': [0]}],
+        'nodes': [{'mesh': 0}],
+        'meshes': [{'primitives': [{'attributes': {'POSITION': 0, 'NORMAL': 1}, 'indices': 2, 'material': 0}]}],
+        'materials': [{'pbrMetallicRoughness': {'baseColorFactor': [0.24, 0.72, 0.58, 1], 'metallicFactor': 0, 'roughnessFactor': 0.8}}],
+        'buffers': [{'byteLength': len(binary)}],
+        'bufferViews': [
+            {'buffer': 0, 'byteOffset': offsets[0][0], 'byteLength': offsets[0][1], 'target': 34962},
+            {'buffer': 0, 'byteOffset': offsets[1][0], 'byteLength': offsets[1][1], 'target': 34962},
+            {'buffer': 0, 'byteOffset': offsets[2][0], 'byteLength': offsets[2][1], 'target': 34963},
+        ],
+        'accessors': [
+            {'bufferView': 0, 'componentType': 5126, 'count': len(positions) // 3, 'type': 'VEC3', 'min': min_pos, 'max': max_pos},
+            {'bufferView': 1, 'componentType': 5126, 'count': len(normals) // 3, 'type': 'VEC3'},
+            {'bufferView': 2, 'componentType': 5123, 'count': len(indices), 'type': 'SCALAR', 'min': [min(indices)], 'max': [max(indices)]},
+        ],
+    }
+    json_chunk = json.dumps(doc, separators=(',', ':')).encode()
+    json_chunk += b' ' * (-len(json_chunk) % 4)
+    binary += b'\0' * (-len(binary) % 4)
+    total = 12 + 8 + len(json_chunk) + 8 + len(binary)
+    return (struct.pack('<III', 0x46546C67, 2, total)
+            + struct.pack('<II', len(json_chunk), 0x4E4F534A) + json_chunk
+            + struct.pack('<II', len(binary), 0x004E4942) + binary)
 
 
 def wait_until(check, timeout=12):
@@ -50,6 +109,21 @@ def main():
             time.sleep(.5)
             config=json.loads((ROOT/"robots/goob/modules.example.json").read_text())
             config['robot']['id']='module-integration'
+            config['services']['module_host']['modules'].append({
+                'id': 'orientation-preview',
+                'use': 'modules/telemetry/module.json',
+                'endpoints': ['imu'],
+                'ui': {'columns': 1, 'controls': [{
+                    'kind': 'orientation-3d', 'label': '3D orientation preview',
+                    'endpoint': 'imu', 'model_url': '/test-assets/orientation-block.glb',
+                    'model_rotation_deg': {'x': 90, 'y': 0, 'z': -90},
+                }]},
+            })
+            config['services']['module_host']['modules'].append({
+                'id': 'gripper-demo',
+                'use': 'robots/goob/modules/gripper-demo/module.json',
+                'adapters': {'command': {'kind': 'echo', 'state_endpoint': 'state'}},
+            })
             config['local_mqtt']={'host':'127.0.0.1','port':18884}
             config['services']['mqtt_bridge']={'enabled':True,'remote_mqtt':{'host':'127.0.0.1','port':18885}}
             host=ModuleHost(config,ROOT/"control/configs/config.json")
@@ -66,7 +140,16 @@ def main():
             local_publisher.publish(base+'/o/online',json.dumps({'online':True}),qos=1,retain=True).wait_for_publish()
             local_publisher.publish(base+'/o/soundboard/files',json.dumps({'files':['demo.wav'],'controls':True,'timestamp':time.time()}),qos=1,retain=True).wait_for_publish()
             local_publisher.publish(base+'/o/soundboard/status',json.dumps({'playing':False,'file':None,'error':None,'controls':True,'timestamp':time.time()}),qos=1,retain=True).wait_for_publish()
+            local_publisher.publish(base+'/o/telemetry/imu',json.dumps({
+                'orientation_deg': {'roll': 18.0, 'pitch': -12.0},
+                'accel_norm_g': 1.0, 'temperature_c': 24.5,
+                'health': {'device': 'fixture', 'protocol': 'test', 'samples_ok': 20,
+                           'samples_error': 0, 'calibration_samples': 100},
+            }),qos=1,retain=True).wait_for_publish()
             app=Flask(__name__)
+            @app.get('/test-assets/orientation-block.glb')
+            def orientation_model():
+                return Response(orientation_test_glb(), mimetype='model/gltf-binary')
             gateway=mqtt.Client(client_id='module-test-web')
             clients.append(gateway)
             def publish(topic,payload,qos=0,retain=False):
@@ -91,6 +174,12 @@ def main():
                 page.goto('http://127.0.0.1:18086/modules')
                 page.locator('[data-module="drive"]').wait_for()
                 page.locator('[data-module="soundboard"]').wait_for()
+                orientation=page.locator('[data-module="orientation-preview"] .orientation-widget')
+                orientation.wait_for()
+                canvas=orientation.locator('.orientation-canvas')
+                page.wait_for_function("document.querySelector('[data-module=\\\"orientation-preview\\\"] .orientation-canvas')?.dataset.modelLoaded==='true'")
+                assert 'Live · roll 18.0° · pitch -12.0°' in orientation.locator('.orientation-status').text_content()
+                assert canvas.evaluate('(node) => node.width > 0 && node.height > 0')
                 telemetry=page.locator('[data-module="telemetry"] .telemetry-widget')
                 telemetry.wait_for()
                 online_value=telemetry.locator('.telemetry-metric').nth(1).locator('strong')
@@ -99,7 +188,7 @@ def main():
                 assert last_seen_value.text_content() not in ('—','')
                 page.wait_for_function("document.querySelector('#connection').textContent.startsWith('Online')")
                 soundboard=page.locator('[data-module="soundboard"]')
-                soundboard.locator('select').select_option('demo.wav')
+                soundboard.get_by_label('Soundboard sound file').select_option('demo.wav')
                 soundboard.get_by_role('button',name='Play selected Soundboard sound').click()
                 wait_until(lambda:len(sound_commands())==1)
                 assert sound_commands()[-1]=={'action':'play','file':'demo.wav'}
@@ -154,7 +243,7 @@ def main():
             late.connect('127.0.0.1',18885);late.loop_start();clients.append(late)
             wait_until(lambda:len(retained)>=3)
             assert all(flag for _,flag in retained)
-            print(json.dumps({'result':'passed','checks':['two-broker discovery','generic custom controls','robot-advertised soundboard widget','telemetry online and last-seen display','soundboard file state and play/stop commands','custom keyboard actions','drive forwarding once','keyboard remapping','mapping persistence','focus-loss neutral','controller axis','controller disconnect neutral','pointer stick','retained remote manifest/state','no browser exceptions'],'drive_messages':len(drive())}))
+            print(json.dumps({'result':'passed','checks':['two-broker discovery','generic custom controls','robot-advertised soundboard widget','3D orientation widget loads a self-contained GLB and applies IMU telemetry','telemetry online and last-seen display','soundboard file state and play/stop commands','custom keyboard actions','drive forwarding once','keyboard remapping','mapping persistence','focus-loss neutral','controller axis','controller disconnect neutral','pointer stick','retained remote manifest/state','no browser exceptions'],'drive_messages':len(drive())}))
     finally:
         if server:server.shutdown()
         if bridge:bridge.stop()

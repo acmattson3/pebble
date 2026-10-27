@@ -1,0 +1,1124 @@
+0.015 TX b'V\n' bytes=2
+0.015 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=5593 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=2 motor_timeout=1
+0.515 TX b'L 0 0 0\r\n' bytes=9
+0.515 RX OK L
+0.922 TX b'F 0 0 0 2\n' bytes=10
+0.922 RX OK F
+1.312 TX b'M 0 0\n' bytes=6
+1.328 RX OK M
+1.469 RX INFO IMU initialization/calibration started
+1.484 RX ERR IMU recalibration aborted: sensor fault
+1.484 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+1.719 TX b' \tv\r\n' bytes=5
+1.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=7301 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+2.125 TX b'V\n' bytes=2
+2.125 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=7702 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+2.625 TX b'M nan 0\n' bytes=8
+2.625 RX ERR M requires finite numeric values
+3.031 TX b'V\n' bytes=2
+3.031 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=8604 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+3.531 TX b'M NaN 0\n' bytes=8
+3.531 RX ERR M requires finite numeric values
+3.922 TX b'V\n' bytes=2
+3.937 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=9505 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+4.437 TX b'M inf 0\n' bytes=8
+4.437 RX ERR M requires finite numeric values
+4.453 RX C chg=-1 v=2.337
+4.828 TX b'V\n' bytes=2
+4.844 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=10409 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+5.328 TX b'M -inf 0\n' bytes=9
+5.328 RX ERR M requires finite numeric values
+5.734 TX b'V\n' bytes=2
+5.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=11310 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+6.234 TX b'M 1e999 0\n' bytes=10
+6.234 RX ERR M requires finite numeric values
+6.640 TX b'V\n' bytes=2
+6.640 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=12212 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+7.140 TX b'M nope 0\n' bytes=9
+7.140 RX ERR M requires finite numeric values
+7.531 TX b'V\n' bytes=2
+7.547 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=13118 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+8.047 TX b'M 0oops 0\n' bytes=10
+8.047 RX ERR M requires finite numeric values
+8.437 TX b'V\n' bytes=2
+8.453 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=14019 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+8.937 TX b'M 1e-999 0\n' bytes=11
+8.937 RX ERR M requires finite numeric values
+9.344 TX b'V\n' bytes=2
+9.344 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=14921 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+9.453 RX C chg=-1 v=2.442
+9.484 RX INFO IMU initialization/calibration started
+9.500 RX ERR IMU recalibration aborted: sensor fault
+9.500 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+9.844 TX b'M 0\n' bytes=4
+9.844 RX ERR M needs 2 floats
+10.250 TX b'V                                                                                                                               \n' bytes=129
+10.265 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=15834 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+10.640 TX b'V                                                                                                                                \nV\n' bytes=132
+10.656 RX ERR command too long or invalid byte
+10.656 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=16235 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+11.047 TX b'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' bytes=8192
+12.625 TX b'\nV\n' bytes=3
+12.625 RX ERR command too long or invalid byte
+12.625 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=18206 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.031 TX b'V\x00M 0 0\nV\n' bytes=10
+13.031 RX ERR command too long or invalid byte
+13.031 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=18608 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.453 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19024 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.469 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19049 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.500 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19074 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.531 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19103 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.547 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19128 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.578 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19153 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.609 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19177 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.625 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19202 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.656 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19232 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.687 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19257 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.703 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19282 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19306 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.765 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19336 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.781 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19361 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.812 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19385 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.828 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19410 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.859 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19435 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.890 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19460 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.922 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19489 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.937 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19514 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.969 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19539 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+13.984 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19564 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.015 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19594 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.047 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19618 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.062 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19643 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.094 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19673 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.125 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19698 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.140 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19722 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19752 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.203 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19777 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.234 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19801 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.250 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19826 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.281 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19856 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.312 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19883 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.328 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19905 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19930 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.390 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19960 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.406 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=19985 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.437 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20010 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.453 RX C chg=-1 v=2.383
+14.469 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20043 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.484 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20063 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.515 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20088 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.547 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20117 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.562 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20142 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.594 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20167 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.625 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20191 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.640 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20216 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.672 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20241 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.703 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20271 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.719 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20296 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.750 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20320 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.781 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20350 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.797 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20375 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.828 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20400 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.844 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20424 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.875 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20454 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.906 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20479 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.922 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20503 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.953 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20528 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+14.984 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20558 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.015 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20583 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.031 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20607 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.062 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20632 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.094 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20662 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.109 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20687 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.140 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20712 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20741 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.187 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20766 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.219 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20791 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.234 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20815 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.265 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20845 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.297 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20870 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.328 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20895 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.344 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20920 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.375 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20944 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.406 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20974 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.422 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=20999 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.453 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21024 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.469 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21048 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.500 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21078 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.531 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21103 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.547 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21128 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.578 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21153 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.609 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21182 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.625 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21207 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.656 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21232 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.687 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21256 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.719 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21286 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21311 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.765 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21335 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.797 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21365 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.812 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21390 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.844 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21415 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.859 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21440 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.890 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21464 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.922 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21494 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.937 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21519 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+15.969 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21544 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.000 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21568 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.015 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21593 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.047 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21623 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.078 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21648 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.094 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21672 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.125 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21702 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.156 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21727 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21751 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.203 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21776 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.234 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21805 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.250 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21830 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.281 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21855 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.297 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21879 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.328 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21909 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21934 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.390 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21959 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.406 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=21983 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.437 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22008 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.469 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22038 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.484 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22063 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.515 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22087 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.531 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22112 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.562 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22137 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.594 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22167 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.609 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22191 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.640 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22216 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.672 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22246 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.703 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22270 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.719 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22295 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.750 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22320 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.781 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22350 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.797 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22374 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.828 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22399 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.859 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22429 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.875 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22454 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.906 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22478 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.937 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22508 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.953 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22533 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+16.984 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22558 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.000 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22582 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.031 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22612 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.062 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22637 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.094 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22662 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.109 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22691 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.140 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22716 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22741 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.187 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22766 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.219 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22795 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.250 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22820 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.265 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22845 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.297 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22875 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.328 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22899 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22929 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.375 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22954 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.406 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=22979 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.422 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23003 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.453 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23033 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.484 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23058 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.500 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23083 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.531 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23107 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.562 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23138 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.594 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23162 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.609 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23186 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.640 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23216 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.672 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23241 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.687 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23266 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.719 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23291 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.750 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23321 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.765 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23345 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.797 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23370 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.812 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23395 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.844 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23425 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.875 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23449 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.890 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23474 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.922 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23499 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.953 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23528 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+17.984 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23553 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.000 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23578 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.031 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23602 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.047 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23627 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.078 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23657 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.109 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23682 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.125 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23706 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.156 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23732 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.187 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23761 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.203 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23786 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.234 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23810 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.265 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23841 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.297 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23865 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.312 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23890 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.344 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23920 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.375 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23944 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.390 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23969 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.422 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=23999 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.453 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24023 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.469 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24048 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.500 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24073 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.515 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24098 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.547 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24128 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.578 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24152 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.594 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24177 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.625 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24202 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.656 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24232 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.687 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24256 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.703 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24281 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24306 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.750 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24330 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.781 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24360 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.812 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24385 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.828 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24410 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.859 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24440 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.890 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24464 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.906 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24489 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.937 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24514 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.969 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24543 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+18.984 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24568 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.015 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24593 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.047 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24618 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.078 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24647 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.094 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24672 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.125 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24697 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.140 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24722 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24751 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.203 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24776 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.219 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24801 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.250 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24831 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.281 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24855 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.297 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24880 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.328 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24905 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24934 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.390 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24959 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.406 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=24984 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.437 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25009 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.453 RX C chg=-1 v=2.422
+19.469 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25044 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.484 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25064 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.515 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25090 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.531 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25114 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.562 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25139 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.594 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25163 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.625 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25193 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.640 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25218 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.672 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25243 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.687 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25267 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.719 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25297 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.750 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25322 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.765 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25346 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.797 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25371 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.828 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25401 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.844 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25426 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.875 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25451 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.906 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25475 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.922 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25505 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.953 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25529 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+19.984 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25554 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.000 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25579 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.031 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25605 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.062 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25634 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.078 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25658 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.109 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25684 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.125 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25708 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.156 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25738 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.187 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25763 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.219 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25787 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.234 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25812 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.265 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25842 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.297 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25866 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.312 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25891 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.344 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25916 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.375 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25946 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.390 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25970 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.422 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=25995 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.437 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26020 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.469 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26050 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.500 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26075 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.531 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26099 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.547 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26129 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.578 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26154 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.609 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26178 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.625 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26203 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.656 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26228 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.687 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26258 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.703 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26282 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26307 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.750 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26332 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.781 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26362 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.812 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26387 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.828 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26411 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.859 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26441 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.890 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26466 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.922 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26490 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.937 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26515 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+20.969 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26545 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.000 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26570 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.015 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26594 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.047 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26619 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.062 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26645 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.094 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26675 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.125 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26700 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.156 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26724 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26754 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.203 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26778 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.234 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26803 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.250 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26828 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.281 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26853 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.312 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26882 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.328 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26907 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26933 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.375 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26957 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.406 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=26987 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.437 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27011 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.453 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27036 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.484 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27061 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.515 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27091 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.531 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27115 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.562 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27140 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.594 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27165 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.625 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27195 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.640 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27219 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.672 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27245 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.703 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27274 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.719 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27299 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.750 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27323 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.781 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27353 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.797 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27378 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.828 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27402 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.859 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27427 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.875 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27452 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.906 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27482 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.937 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27507 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.953 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27531 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+21.984 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27556 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.015 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27586 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.031 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27610 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.062 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27636 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.094 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27665 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.109 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27690 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.140 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27715 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27745 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.187 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27769 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.219 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27794 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.250 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27824 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.265 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27848 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.297 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27873 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.328 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27898 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.344 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27927 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.375 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27952 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.406 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=27977 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.437 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28007 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.453 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28031 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.484 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28056 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.515 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28086 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.531 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28111 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.562 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28136 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.578 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28160 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.609 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28190 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.640 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28215 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.656 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28239 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.687 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28269 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.719 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28294 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28319 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.765 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28348 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.797 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28373 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.828 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28398 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.844 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28423 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.875 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28453 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.906 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28477 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.922 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28502 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.953 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28527 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+22.984 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28557 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.000 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28581 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.031 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28606 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.047 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28631 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.078 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28660 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.109 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28685 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.125 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28710 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.156 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28735 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.187 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28765 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.219 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28789 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.234 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28814 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.265 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28839 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.297 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28869 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.312 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28893 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.344 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28918 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28943 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.390 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28972 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.422 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=28998 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.453 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29022 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.469 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29047 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.500 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29077 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.531 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29101 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.547 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29126 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.578 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29156 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.609 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29180 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.625 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29205 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.656 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29230 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.687 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29260 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.703 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29284 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29309 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.750 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29334 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.781 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29364 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.812 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29389 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.844 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29413 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.859 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29438 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.890 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29468 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.922 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29492 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.937 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29517 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+23.969 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29542 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.000 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29572 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.015 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29596 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.047 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29621 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.078 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29647 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.094 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29672 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.125 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29702 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.156 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29726 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29751 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.203 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29776 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.234 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29805 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.250 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29830 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.281 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29855 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.297 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29880 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.328 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29909 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29934 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.375 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29959 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.406 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=29984 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.437 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30008 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.453 RX C chg=-1 v=2.385
+24.469 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30049 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.484 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30068 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.515 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30088 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.531 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30113 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.562 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30139 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.594 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30168 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.609 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30193 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.640 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30218 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.672 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30242 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.687 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30272 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.719 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30297 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.750 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30322 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.765 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30346 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.797 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30376 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.828 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30401 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.844 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30425 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.875 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30455 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.906 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30480 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.922 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30505 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.953 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30529 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+24.984 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30554 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.000 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30584 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.031 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30609 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.062 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30633 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.078 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30658 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.109 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30683 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.140 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30713 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.156 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30737 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.187 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30763 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.203 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30787 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.234 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30817 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.265 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30841 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.281 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30866 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.312 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30891 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.344 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30920 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.375 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30945 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.390 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30970 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.422 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=30995 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.453 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31024 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.469 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31049 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.500 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31074 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.500 RX INFO IMU initialization/calibration started
+25.500 RX ERR IMU recalibration aborted: sensor fault
+25.500 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+25.515 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31099 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.547 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31129 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.578 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31153 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.594 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31178 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.625 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31203 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.656 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31233 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.672 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31257 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.703 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31282 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31307 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.765 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31336 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.781 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31361 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.812 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31386 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.844 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31416 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.859 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31440 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.890 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31465 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.906 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31490 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.937 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31520 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+25.969 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31545 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.000 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31569 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.015 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31594 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.047 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31624 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.078 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31649 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.094 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31673 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.125 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31698 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.156 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31728 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31752 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.203 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31777 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.219 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31802 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.250 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31832 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.281 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31857 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.297 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31881 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.328 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31906 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31936 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.375 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31961 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.406 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=31985 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.437 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32010 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.469 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32040 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.484 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32064 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.515 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32089 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.531 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32114 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.562 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32144 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.594 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32169 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.609 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32193 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.640 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32218 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.672 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32248 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.703 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32272 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.719 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32297 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.750 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32322 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.781 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32352 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.797 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32376 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.828 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32401 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.844 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32426 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.875 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32456 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.906 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32480 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.922 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32505 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.953 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32530 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+26.984 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32560 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.000 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32584 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.031 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32609 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.062 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32634 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.078 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32664 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.109 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32688 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.140 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32713 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32743 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.187 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32768 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.219 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32792 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.234 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32817 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.265 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32847 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.297 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32872 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.312 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32896 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.344 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32921 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.375 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32951 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.406 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=32976 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.422 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33000 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.453 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33030 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.484 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33055 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.500 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33079 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.531 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33104 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.562 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33134 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.578 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33159 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.609 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33184 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.625 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33208 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.656 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33238 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.687 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33263 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.703 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33287 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33317 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.765 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33342 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.781 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33367 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.812 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33391 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.844 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33421 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.875 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33446 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.890 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33471 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.922 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33495 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.953 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33525 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+27.969 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33550 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.000 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33575 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.015 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33599 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.047 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33629 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.078 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33654 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.094 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33679 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.125 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33703 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.156 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33733 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33758 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.203 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33783 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.234 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33807 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.265 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33837 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.281 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33862 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.312 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33887 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.328 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33911 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33941 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.390 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33966 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.406 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=33991 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.437 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34016 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.469 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34045 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.484 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34070 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.515 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34095 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.547 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34124 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.578 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34149 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.594 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34174 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.625 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34203 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.656 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34228 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.672 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34253 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.703 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34278 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34308 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.750 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34332 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.781 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34357 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.797 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34382 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.828 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34411 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.859 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34436 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.890 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34461 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.906 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34486 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.937 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34515 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.969 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34540 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+28.984 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34565 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.015 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34590 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.047 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34620 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.062 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34644 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.094 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34669 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.109 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34694 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.140 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34723 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.187 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34758 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.203 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34783 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.234 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34808 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.250 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34832 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.281 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34862 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.312 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34887 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.328 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34912 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34941 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.390 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34966 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.406 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=34991 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.437 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35016 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.453 RX C chg=-1 v=2.442
+29.469 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35049 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.484 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35069 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.515 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35099 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.547 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35123 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.562 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35148 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.594 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35173 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.625 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35198 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.656 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35227 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.672 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35252 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.703 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35282 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35307 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.750 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35331 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.781 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35356 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.797 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35381 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.828 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35411 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.859 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35435 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.875 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35460 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.906 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35490 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.937 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35515 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.953 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35539 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+29.984 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35569 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.015 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35594 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.047 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35619 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.062 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35644 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.094 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35668 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.125 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35698 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.140 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35722 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35747 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.187 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35772 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.219 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35802 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.250 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35826 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.265 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35851 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.297 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35876 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.328 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35901 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35931 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.375 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35955 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.406 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=35980 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.422 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36005 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.453 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36035 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.484 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36059 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.500 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36084 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.531 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36109 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.562 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36134 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.578 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36163 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.609 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36188 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.640 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36213 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.656 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36238 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.687 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36262 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.719 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36293 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36317 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.765 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36342 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.781 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36366 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.812 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36391 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.844 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36421 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.859 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36445 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.890 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36471 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.922 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36495 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.953 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36525 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+30.969 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36549 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.000 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36574 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.031 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36604 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.047 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36629 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.078 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36653 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.094 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36678 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.125 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36708 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.156 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36733 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36758 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.203 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36787 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.234 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36812 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.265 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36837 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.281 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36866 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.312 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36891 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.344 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36916 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36941 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.390 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36965 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.422 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=36995 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.437 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37020 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.469 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37045 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.500 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37074 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.515 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37099 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.547 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37124 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.562 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37149 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.594 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37179 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.625 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37203 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.656 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37228 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.672 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37257 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.703 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37282 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37307 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.750 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37332 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.781 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37361 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.812 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37390 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.828 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37411 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.859 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37436 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.890 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37465 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.906 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37490 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.937 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37515 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.953 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37540 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+31.984 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37564 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.015 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37594 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.047 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37619 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.062 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37644 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.094 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37668 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.109 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37693 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.140 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37723 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37748 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.187 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37772 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.219 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37798 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.250 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37827 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.265 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37852 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.297 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37877 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.328 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37901 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37931 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.375 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37956 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.406 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=37980 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.422 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38005 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.453 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38035 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.484 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38060 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.500 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38084 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.531 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38109 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.562 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38134 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.578 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38164 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.609 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38189 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.640 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38213 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.656 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38238 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.687 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38268 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.719 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38292 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38317 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.765 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38347 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.797 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38372 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.812 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38396 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.844 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38421 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.875 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38451 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.890 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38476 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.922 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38500 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.953 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38525 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+32.969 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38555 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.000 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38580 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.031 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38604 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.062 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38634 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.078 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38659 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.109 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38683 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.125 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38708 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.156 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38733 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38758 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.203 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38788 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.234 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38813 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.265 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38837 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.281 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38862 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.312 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38892 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.344 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38916 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38941 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.390 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38971 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+33.422 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=38995 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+34.422 TX b'V\n' bytes=2
+34.422 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=40005 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+34.453 RX C chg=-1 v=2.410
+34.922 TX b'V\n' bytes=2
+34.922 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=40506 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+39.453 RX C chg=-1 v=2.356
+44.453 RX C chg=-1 v=2.349
+45.453 TX b'V\n' bytes=2
+45.453 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=51035 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+49.453 RX C chg=-1 v=2.400
+54.453 RX C chg=-1 v=2.415
+55.500 RX INFO IMU initialization/calibration started
+55.515 RX ERR IMU recalibration aborted: sensor fault
+55.515 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+56.000 TX b'V\n' bytes=2
+56.015 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=61596 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+59.469 RX C chg=-1 v=2.343
+64.469 RX C chg=-1 v=2.410
+66.531 TX b'V\n' bytes=2
+66.531 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=72120 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+69.469 RX C chg=-1 v=2.419
+74.469 RX C chg=-1 v=2.378
+77.062 TX b'V\n' bytes=2
+77.062 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=82648 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+79.469 RX C chg=-1 v=2.408
+84.469 RX C chg=-1 v=2.415
+85.500 RX INFO IMU initialization/calibration started
+85.515 RX ERR IMU recalibration aborted: sensor fault
+85.515 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+87.578 TX b'V\n' bytes=2
+87.578 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=93171 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+89.469 RX C chg=-1 v=2.394
+94.469 RX C chg=-1 v=2.391
+98.140 TX b'V\n' bytes=2
+98.156 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=103744 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+99.469 RX C chg=-1 v=2.415
+104.469 RX C chg=-1 v=2.434
+108.672 TX b'V\n' bytes=2
+108.672 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=114268 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+109.469 RX C chg=-1 v=2.421
+114.469 RX C chg=-1 v=2.385
+115.515 RX INFO IMU initialization/calibration started
+115.515 RX ERR IMU recalibration aborted: sensor fault
+115.515 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+119.203 TX b'V\n' bytes=2
+119.203 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=124807 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+119.469 RX C chg=-1 v=2.471
+124.469 RX C chg=-1 v=2.406
+129.469 RX C chg=-1 v=2.399
+129.719 TX b'V\n' bytes=2
+129.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=135330 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+134.484 RX C chg=-1 v=2.354
+139.484 RX C chg=-1 v=2.352
+140.250 TX b'V\n' bytes=2
+140.250 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=145853 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+144.469 RX C chg=-1 v=2.405
+145.515 RX INFO IMU initialization/calibration started
+145.515 RX ERR IMU recalibration aborted: sensor fault
+145.515 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+149.469 RX C chg=-1 v=2.427
+150.765 TX b'V\n' bytes=2
+150.765 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=156378 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+154.469 RX C chg=-1 v=2.331
+159.469 RX C chg=-1 v=2.433
+161.297 TX b'V\n' bytes=2
+161.297 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=166917 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+164.469 RX C chg=-1 v=2.380
+169.469 RX C chg=-1 v=2.410
+171.859 TX b'V\n' bytes=2
+171.875 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=177494 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+174.469 RX C chg=-1 v=2.348
+175.500 RX INFO IMU initialization/calibration started
+175.515 RX ERR IMU recalibration aborted: sensor fault
+175.515 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+179.469 RX C chg=-1 v=2.352
+182.390 TX b'V\n' bytes=2
+182.390 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=188022 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+184.453 RX C chg=-1 v=2.368
+189.453 RX C chg=-1 v=2.446
+192.906 TX b'V\n' bytes=2
+192.906 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=198551 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+194.453 RX C chg=-1 v=2.385
+199.453 RX C chg=-1 v=2.305
+203.422 TX b'V\n' bytes=2
+203.422 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=209074 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+204.453 RX C chg=-1 v=2.382
+205.500 RX INFO IMU initialization/calibration started
+205.500 RX ERR IMU recalibration aborted: sensor fault
+205.500 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+209.453 RX C chg=-1 v=2.401
+213.953 TX b'V\n' bytes=2
+213.953 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=219605 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+214.453 RX C chg=-1 v=2.396
+219.437 RX C chg=-1 v=2.393
+224.437 RX C chg=-1 v=2.419
+224.500 TX b'V\n' bytes=2
+224.500 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=230164 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+229.437 RX C chg=-1 v=2.410
+234.437 RX C chg=-1 v=2.419
+235.015 TX b'V\n' bytes=2
+235.031 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=240695 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+235.484 RX INFO IMU initialization/calibration started
+235.500 RX ERR IMU recalibration aborted: sensor fault
+235.500 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+239.437 RX C chg=-1 v=2.415
+244.437 RX C chg=-1 v=2.341
+245.547 TX b'V\n' bytes=2
+245.547 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=251222 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+249.422 RX C chg=-1 v=2.385
+254.422 RX C chg=-1 v=2.433
+256.062 TX b'V\n' bytes=2
+256.062 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=261750 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+259.422 RX C chg=-1 v=2.391
+264.422 RX C chg=-1 v=2.455
+265.469 RX INFO IMU initialization/calibration started
+265.484 RX ERR IMU recalibration aborted: sensor fault
+265.484 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+266.625 TX b'V\n' bytes=2
+266.625 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=272310 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+269.422 RX C chg=-1 v=2.396
+274.422 RX C chg=-1 v=2.413
+277.140 TX b'V\n' bytes=2
+277.140 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=282840 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+279.422 RX C chg=-1 v=2.379
+284.422 RX C chg=-1 v=2.374
+287.656 TX b'V\n' bytes=2
+287.672 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=293372 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+289.406 RX C chg=-1 v=2.320
+294.406 RX C chg=-1 v=2.438
+295.469 RX INFO IMU initialization/calibration started
+295.484 RX ERR IMU recalibration aborted: sensor fault
+295.484 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+298.203 TX b'V\n' bytes=2
+298.203 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=303915 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+299.406 RX C chg=-1 v=2.418
+304.406 RX C chg=-1 v=2.395
+308.719 TX b'V\n' bytes=2
+308.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=314446 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+309.406 RX C chg=-1 v=2.449
+314.406 RX C chg=-1 v=2.443
+319.234 TX b'V\n' bytes=2
+319.250 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=324973 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+319.406 RX C chg=-1 v=2.447
+324.390 RX C chg=-1 v=2.402
+325.469 RX INFO IMU initialization/calibration started
+325.469 RX ERR IMU recalibration aborted: sensor fault
+325.469 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+329.390 RX C chg=-1 v=2.360
+329.765 TX b'V\n' bytes=2
+329.765 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=335503 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+334.390 RX C chg=-1 v=2.423
+339.390 RX C chg=-1 v=2.394
+340.297 TX b'V\n' bytes=2
+340.312 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=346049 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+344.390 RX C chg=-1 v=2.425
+349.375 RX C chg=-1 v=2.402
+350.828 TX b'V\n' bytes=2
+350.828 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=356584 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+354.375 RX C chg=-1 v=2.449
+355.453 RX INFO IMU initialization/calibration started
+355.453 RX ERR IMU recalibration aborted: sensor fault
+355.453 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+359.375 RX C chg=-1 v=2.370
+361.359 TX b'V\n' bytes=2
+361.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=367118 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+364.375 RX C chg=-1 v=2.391
+369.375 RX C chg=-1 v=2.355
+371.875 TX b'V\n' bytes=2
+371.875 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=377643 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+374.359 RX C chg=-1 v=2.402
+379.359 RX C chg=-1 v=2.393
+382.390 TX b'V\n' bytes=2
+382.390 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=388169 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+384.359 RX C chg=-1 v=2.404
+385.437 RX INFO IMU initialization/calibration started
+385.453 RX ERR IMU recalibration aborted: sensor fault
+385.453 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+389.359 RX C chg=-1 v=2.442
+392.906 TX b'V\n' bytes=2
+392.922 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=398693 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+394.359 RX C chg=-1 v=2.381
+399.359 RX C chg=-1 v=2.382
+403.437 TX b'V\n' bytes=2
+403.437 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=409216 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+404.359 RX C chg=-1 v=2.390
+409.359 RX C chg=-1 v=2.365
+413.953 TX b'V\n' bytes=2
+413.953 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=419743 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+414.359 RX C chg=-1 v=2.401
+415.437 RX INFO IMU initialization/calibration started
+415.453 RX ERR IMU recalibration aborted: sensor fault
+415.453 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+419.359 RX C chg=-1 v=2.438
+424.359 RX C chg=-1 v=2.411
+424.469 TX b'V\n' bytes=2
+424.469 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=430265 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+429.375 RX C chg=-1 v=2.406
+434.375 RX C chg=-1 v=2.418
+435.000 TX b'V\n' bytes=2
+435.000 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=440791 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+439.375 RX C chg=-1 v=2.381
+444.375 RX C chg=-1 v=2.347
+445.437 RX INFO IMU initialization/calibration started
+445.453 RX ERR IMU recalibration aborted: sensor fault
+445.453 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+445.515 TX b'V\n' bytes=2
+445.515 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=451316 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+449.375 RX C chg=-1 v=2.371
+454.375 RX C chg=-1 v=2.417
+456.031 TX b'V\n' bytes=2
+456.031 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=461837 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+459.375 RX C chg=-1 v=2.379
+464.375 RX C chg=-1 v=2.394
+466.562 TX b'V\n' bytes=2
+466.562 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=472368 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+469.375 RX C chg=-1 v=2.415
+474.375 RX C chg=-1 v=2.369
+475.437 RX INFO IMU initialization/calibration started
+475.453 RX ERR IMU recalibration aborted: sensor fault
+475.453 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+477.078 TX b'V\n' bytes=2
+477.094 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=482893 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+479.375 RX C chg=-1 v=2.409
+484.375 RX C chg=-1 v=2.431
+487.609 TX b'V\n' bytes=2
+487.609 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=493418 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+489.375 RX C chg=-1 v=2.403
+494.375 RX C chg=-1 v=2.454
+498.172 TX b'V\n' bytes=2
+498.172 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=503988 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+499.375 RX C chg=-1 v=2.425
+504.375 RX C chg=-1 v=2.441
+505.437 RX INFO IMU initialization/calibration started
+505.453 RX ERR IMU recalibration aborted: sensor fault
+505.453 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+508.687 TX b'V\n' bytes=2
+508.687 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=514516 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+509.375 RX C chg=-1 v=2.260
+514.375 RX C chg=-1 v=2.350
+519.219 TX b'V\n' bytes=2
+519.219 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=525049 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+519.375 RX C chg=-1 v=2.406
+524.375 RX C chg=-1 v=2.391
+529.375 RX C chg=-1 v=2.415
+529.734 TX b'V\n' bytes=2
+529.734 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=535578 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+534.375 RX C chg=-1 v=2.405
+535.422 RX INFO IMU initialization/calibration started
+535.437 RX ERR IMU recalibration aborted: sensor fault
+535.437 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+539.375 RX C chg=-1 v=2.369
+540.250 TX b'V\n' bytes=2
+540.265 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=546109 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+544.375 RX C chg=-1 v=2.431
+549.375 RX C chg=-1 v=2.390
+550.781 TX b'V\n' bytes=2
+550.781 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=556639 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+554.375 RX C chg=-1 v=2.402
+559.375 RX C chg=-1 v=2.427
+561.297 TX b'V\n' bytes=2
+561.297 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=567169 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+564.375 RX C chg=-1 v=2.369
+565.422 RX INFO IMU initialization/calibration started
+565.422 RX ERR IMU recalibration aborted: sensor fault
+565.422 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+569.375 RX C chg=-1 v=2.415
+571.828 TX b'V\n' bytes=2
+571.828 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=577702 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+574.375 RX C chg=-1 v=2.389
+579.375 RX C chg=-1 v=2.360
+582.344 TX b'V\n' bytes=2
+582.359 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=588238 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+584.375 RX C chg=-1 v=2.373
+589.359 RX C chg=-1 v=2.432
+592.875 TX b'V\n' bytes=2
+592.875 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=598769 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1
+594.359 RX C chg=-1 v=2.374
+595.406 RX INFO IMU initialization/calibration started
+595.406 RX ERR IMU recalibration aborted: sensor fault
+595.406 RX WARN IMU unavailable stage=WHO_AM_I-read who=0x0 wire=6 bytes=0
+599.359 RX C chg=-1 v=2.426
+600.187 TX b'V\n' bytes=2
+600.187 RX INFO firmware=goob-samd21-bounded-recovery-v2 uptime_ms=606090 reset_cause=0x40 watchdog_ms=1000 imu_ready=0 imu_calibrating=0 imu_state=0 imu_error=6 imu_stage=WHO_AM_I-read motor_cmd_ms=6895 motor_timeout=1

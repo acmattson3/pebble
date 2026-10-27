@@ -1,0 +1,8 @@
+{
+  "pass": true,
+  "actual_seconds": 8.625,
+  "intentional_watchdog_triggered": true,
+  "watchdog_complete": true,
+  "serial_reconnection_events": [],
+  "pass_checks": 24
+}

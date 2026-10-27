@@ -4,7 +4,10 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Pebble · Modules</title>
   <link rel="stylesheet" href="/modules/assets/style.css">
-  <script type="module" src="/modules/assets/app.mjs"></script>
+  <script type="importmap">
+    {"imports":{"three":"/modules/assets/vendor/three-r186/three.module.js"}}
+  </script>
+  <script type="module" src="/modules/assets/app.mjs?v=20261022-gyro-calibration-1"></script>
 </head>
 <body>
   <header><a class="brand" href="/modules">● Pebble</a><span class="badge">Module controls</span><a class="legacy" href="/">Classic controls</a></header>

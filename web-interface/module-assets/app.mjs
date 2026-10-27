@@ -231,6 +231,11 @@ function syncTelemetryWidget(ctx, item) {
       ?new Date(presence.last_seen_ms).toLocaleString():'—';
   }
 }
+function syncOrientationWidget(ctx, item) {
+  const states=ctx.latestState?.states?.[ctx.module.id]??{};
+  const payload=states[item.widget.endpoint]?.value;
+  item.view.update(payload);
+}
 function renderAutonomyFields(ctx,item,descriptors) {
   item.fields.replaceChildren();item.inputs=[];
   for(const spec of descriptors) {
@@ -319,12 +324,15 @@ function syncLogsWidget(ctx, item) {
   if(bottom)item.list.scrollTop=item.list.scrollHeight;
 }
 function render(manifest) {
-  for(const ctx of contexts)for(const media of ctx.mediaWidgets??[])media.destroy();
+  for(const ctx of contexts) {
+    for(const media of ctx.mediaWidgets??[])media.destroy();
+    for(const item of ctx.orientationWidgets??[])item.view.destroy();
+  }
   container.replaceChildren(); contexts=[];
   const robot=base;
   for(const module of manifest.modules) {
     const card=element('section',undefined,'module');card.dataset.module=module.id;
-    const ctx={module,card,bindings:loadBindings(module),valueNodes:new Map(),stateNodes:[],controlNodes:[],mediaWidgets:[],soundboardWidgets:[],autonomyWidgets:[],lightsWidgets:[],telemetryWidgets:[],logsWidgets:[],latestState:null};
+    const ctx={module,card,bindings:loadBindings(module),valueNodes:new Map(),stateNodes:[],controlNodes:[],mediaWidgets:[],soundboardWidgets:[],autonomyWidgets:[],lightsWidgets:[],telemetryWidgets:[],orientationWidgets:[],logsWidgets:[],latestState:null};
     ctx.engine=new InputEngine(module,(command,payload)=>{
       const endpoint=module.endpoints?.[command.endpoint];
       if(['audio-stream','video-stream'].includes(endpoint?.resource)) {
@@ -447,6 +455,25 @@ function render(manifest) {
           presence={online:onlineValue,lastSeen:lastSeenValue};
         }
         controls.append(node);ctx.telemetryWidgets.push({metrics,presence});
+      } else if(widget.kind==='orientation-3d') {
+        const placeholder=element('div','Loading 3D orientation view…','orientation-widget-placeholder');
+        controls.append(placeholder);
+        import('./orientation-widget.mjs?v=20261022-gyro-calibration-1').then(({OrientationWidget})=>{
+          if(!card.isConnected)return;
+          const sendCalibration=widget.command_endpoint?()=>{
+            if(!beginInteraction())return false;
+            if(!window.confirm('Keep the robot completely stationary during calibration. The MCU will stop its motors while it collects gyro samples. Continue?'))return false;
+            queueCommand(robot,module,{endpoint:widget.command_endpoint},{action:'calibrate'},manifest.revision);
+            return true;
+          }:null;
+          const view=new OrientationWidget(widget,sendCalibration);
+          placeholder.replaceWith(view.node);
+          const item={widget,view};ctx.orientationWidgets.push(item);
+          if(ctx.latestState)syncOrientationWidget(ctx,item);
+        }).catch(error=>{
+          placeholder.textContent=`3D orientation view unavailable: ${error.message}`;
+          placeholder.className='orientation-widget-placeholder error';
+        });
       } else if(widget.kind==='logs') {
         const node=element('div',undefined,'logs-widget');
         const toolbar=element('div',undefined,'logs-toolbar');
@@ -499,6 +526,7 @@ function applyState(state) {
       value.textContent=datum===undefined?'—':(typeof datum==='object'?JSON.stringify(datum):String(datum));
     }
     for(const item of ctx.telemetryWidgets)syncTelemetryWidget(ctx,item);
+    for(const item of ctx.orientationWidgets)syncOrientationWidget(ctx,item);
     for(const item of ctx.autonomyWidgets)syncAutonomyWidget(ctx,item);
     for(const item of ctx.logsWidgets)syncLogsWidget(ctx,item);
     syncValues(ctx);
@@ -606,4 +634,4 @@ window.addEventListener('blur',()=>releaseAll(true,true));
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll(true,true);});
 window.addEventListener('pagehide',()=>releaseAll(true,true));
 window.addEventListener('gamepadconnected',refreshDevices);window.addEventListener('gamepaddisconnected',refreshDevices);
-setInterval(refreshRobots,3000);setInterval(refreshState,500);refreshRobots();
+setInterval(refreshRobots,3000);setInterval(refreshState,125);refreshRobots();

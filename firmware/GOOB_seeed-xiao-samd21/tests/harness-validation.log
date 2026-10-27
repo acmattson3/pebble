@@ -1,0 +1,56 @@
+I n=218 ms=3628 ax=0.000 ay=0.000 az=9.807 gx=0.000 gy=0.000 gz=0.000 t=36.53 r=0.00 p=0.00 yaw=0.00
+TEST HARNESS BEGIN (simulated I2C; bare board only)
+INFO IMU initialization/calibration started
+TEST PASS initialization forces motors off
+ERR M ignored during IMU calibration
+TEST PASS any nonzero motor command rejected during automatic calibration
+INFO IMU MPU-6050 ready
+TEST PASS incremental initialization completes; <=1 bus operation per pass
+TEST PASS automatic calibration collects 100 samples and releases lock
+TEST PASS scheduler yields throughout calibration
+TEST initialization_passes=154 max_step_us=85
+TEST PASS motor timeout fires at one second
+ERR M requires finite numeric values
+ERR M requires finite numeric values
+ERR M requires finite numeric values
+TEST PASS invalid motor values cannot refresh command age
+I n=219 ms=4401 ax=0.000 ay=0.000 az=9.807 gx=0.000 gy=0.000 gz=10.000 t=36.53 r=0.00 p=0.00 yaw=0.00
+TEST PASS sampling gap is not integrated
+I n=220 ms=4415 ax=0.000 ay=0.000 az=9.807 gx=0.000 gy=0.000 gz=10.000 t=36.53 r=0.00 p=0.00 yaw=0.14
+TEST PASS fresh samples resume bounded integration
+INFO IMU recalibration started samples=400
+TEST PASS manual calibration resets estimator and stops motors
+ERR M ignored during IMU calibration
+TEST PASS manual calibration rejects nonzero motor command
+C chg=-1 v=2.383
+INFO IMU recalibration complete samples=400 gbx=0.000 gby=0.000 gbz=0.000
+TEST PASS manual calibration completes 400 samples with fresh time origin
+TEST PASS main loop services serial during manual calibration
+WARN IMU unavailable stage=read who=0x68 wire=5 bytes=0
+TEST PASS sample fault aborts calibration, stops motors, marks unavailable
+OK M
+TEST PASS unavailable IMU permits valid zero drive command
+TEST PASS fault backoff prevents immediate reprobe
+INFO IMU initialization/calibration started
+ERR IMU recalibration aborted: sensor fault
+WARN IMU unavailable stage=bus-start who=0x0 wire=5 bytes=0
+TEST PASS failed recovery releases calibration lock
+INFO IMU initialization/calibration started
+INFO IMU MPU-6050 ready
+TEST PASS sensor recovery completes incrementally
+TEST PASS recovery does not integrate outage
+ERR IMU recalibration aborted: sensor fault
+WARN IMU unavailable stage=read who=0x68 wire=5 bytes=0
+TEST PASS manual calibration fault releases lock and shuts motors off
+INFO IMU initialization/calibration started
+ERR IMU recalibration aborted: sensor fault
+WARN IMU unavailable stage=calibration-deadline who=0x0 wire=0 bytes=0
+TEST PASS overall initialization deadline aborts and releases lock
+ERR IMU recalibration aborted: sensor fault
+WARN IMU unavailable stage=calibration-deadline who=0x0 wire=0 bytes=14
+TEST PASS overall manual calibration deadline aborts safely
+TEST HARNESS failures=0
+TEST TRIGGERING WATCHDOG (intentional, test firmware only)
+TEST PASS watchdog reboot locks out sensor probing
+TEST PASS watchdog lockout never probes sensor
+TEST WATCHDOG COMPLETE

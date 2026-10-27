@@ -48,7 +48,7 @@ It requires Docker, the `eclipse-mosquitto:2.0.22` image, and `paho-mqtt`.
 
 - `test_modules.py`: versioned manifests, command validation, compatibility adapters, compact bridge routing/retention, generic web discovery and offline handling.
 - `test_module_inputs.mjs`: shared input action semantics; run with `node --test tests/test_module_inputs.mjs`.
-- `module_browser_smoke.py`: optional two-broker browser integration checks; see [module validation](../modules/README.md#validation).
+- `module_browser_smoke.py`: optional two-broker browser integration checks, including GLB loading and IMU-driven orientation display; see [module validation](../modules/README.md#validation).
 - `minimal_profile_smoke.py`: isolated broker test of the minimal MQTT component profile and retained LWT lifecycle.
 - `test_common.py`: config loading, service config helpers, topic identity helpers.
 - `test_capabilities.py`: capability topic/payload derivation from unified config.

@@ -2,10 +2,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TARGET_DIR="$SCRIPT_DIR/GOOB_seeed-xiao-c3"
+TARGET_DIR="$SCRIPT_DIR/GOOB_seeed-xiao-samd21"
 
 PORT="${PORT:-/dev/ttyACM0}"
-FQBN="${FQBN:-esp32:esp32:XIAO_ESP32C3}"
+FQBN="${FQBN:-Seeeduino:samd:seeed_XIAO_m0}"
 
 echo "Reminder: Do NOT run with sudo!"
 echo "Compiling ${TARGET_DIR} for ${FQBN}..."

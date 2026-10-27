@@ -56,6 +56,78 @@
       },
       "qos": 0,
       "retain": false
+    },
+    "imu": {
+      "topic": "o/telemetry/imu",
+      "kind": "state",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "orientation_deg": {
+            "type": "object",
+            "properties": {
+              "roll": {"type": "number"},
+              "pitch": {"type": "number"},
+              "yaw": {"type": "number"}
+            },
+            "required": ["roll", "pitch"],
+            "additionalProperties": false
+          },
+          "accel_norm_g": {"type": "number", "minimum": 0},
+          "accel_mps2": {
+            "type": "object",
+            "properties": {
+              "x": {"type": "number"},
+              "y": {"type": "number"},
+              "z": {"type": "number"}
+            },
+            "required": ["x", "y", "z"],
+            "additionalProperties": false
+          },
+          "temperature_c": {"type": "number"},
+          "health": {
+            "type": "object",
+            "properties": {
+              "device": {"type": "string"},
+              "protocol": {"type": "string"},
+              "samples_ok": {"type": "integer", "minimum": 0},
+              "samples_error": {"type": "integer", "minimum": 0},
+              "calibration_samples": {"type": "integer", "minimum": 0},
+              "calibration_generation": {"type": "integer", "minimum": 0},
+              "gyro_bias_dps": {
+                "type": "object",
+                "properties": {
+                  "x": {"type": "number"},
+                  "y": {"type": "number"},
+                  "z": {"type": "number"}
+                },
+                "required": ["x", "y", "z"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["device", "protocol", "samples_ok", "samples_error", "calibration_samples", "calibration_generation", "gyro_bias_dps"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["orientation_deg", "accel_norm_g", "temperature_c", "health"],
+        "additionalProperties": false
+      },
+      "qos": 1,
+      "retain": true
+    },
+    "imu_calibrate": {
+      "topic": "i/imu/calibrate",
+      "kind": "command",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "action": {"const": "calibrate"}
+        },
+        "required": ["action"],
+        "additionalProperties": false
+      },
+      "qos": 1,
+      "retain": false
     }
   },
   "actions": {},
@@ -70,7 +142,10 @@
         "metrics": [
           {"label": "Charging", "endpoint": "charging", "field": "value"},
           {"label": "Battery", "endpoint": "battery", "field": "value", "unit": "V", "precision": 2},
-          {"label": "Touch sensors", "endpoint": "touch", "field": "value", "unit": "ADC"}
+          {"label": "Touch sensors", "endpoint": "touch", "field": "value", "unit": "ADC"},
+          {"label": "IMU orientation", "endpoint": "imu", "field": "orientation_deg", "unit": "deg", "precision": 1},
+          {"label": "IMU acceleration magnitude", "endpoint": "imu", "field": "accel_norm_g", "unit": "g", "precision": 3},
+          {"label": "IMU temperature", "endpoint": "imu", "field": "temperature_c", "unit": "°C", "precision": 1}
         ]
       }
     ]

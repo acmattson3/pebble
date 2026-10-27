@@ -31,8 +31,8 @@
   - Applies the same Pebble drive topic location and watchdog semantics to a ROS 1 stack.
 - `services/serial_mcu_bridge.py`
   - Bridges local MQTT command topics with MCU serial commands.
-  - Keeps high-rate touch telemetry (`a0/a1/a2`) local by default (`services.serial_mcu_bridge.telemetry.publish_touch_sensors=false`).
-  - Mirrors raw touch telemetry into local shared memory for wheel odometry consumers.
+  - Supports the legacy Goob base MCU protocol, including its MPU-6050 sample and summary records, alongside the other configured MCU serial profiles.
+  - Keeps optional raw sensor channels local by default; Goob's former encoder ADC stream has been retired and its odometry shared-memory writer is disabled.
   - Publishes charging state as retained MQTT status with periodic re-announce.
 - `services/soundboard_handler.py`
   - Handles soundboard playback plus retained files/status topics.
@@ -221,6 +221,12 @@ Reboot control config (in `services.mqtt_bridge`):
   - Exit the IMU bridge if telemetry stops for this many seconds so the launcher restarts it.
 - `services.serial_mcu_bridge.instances.<name>.health.exit_on_serial_error`
   - Exit on serial read/write failures instead of staying alive without telemetry.
+- `services.serial_mcu_bridge.subtopics.imu_calibrate`
+  - Goob's non-retained manual gyro calibration command topic; the bridge sends the MCU's `C` serial command.
+- `services.serial_mcu_bridge.serial.fallback_ports`
+  - Ordered list of alternative serial device paths to try if `serial.port` cannot be opened. Prefer a stable `/dev/serial/by-id/...` path, and use fallbacks such as `/dev/ttyACM0` and `/dev/ttyACM1` only when the robot has a single matching MCU.
+- `services.serial_mcu_bridge.health.exit_on_serial_error`
+  - For the legacy root service, exit after a serial read/write failure so the launcher restarts it and reopens the configured path. This also recovers when a USB device re-enumerates under a different tty number.
 - `services.serial_mcu_bridge.odometry_shm.enabled`
   - Default `true`. Enables writing raw touch samples to shared memory.
 - `services.serial_mcu_bridge.odometry_shm.name`

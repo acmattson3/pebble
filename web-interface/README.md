@@ -23,6 +23,9 @@ python3 -m pip install -r web-interface/requirements.txt
 python3 web-interface/web-control.py
 ```
 
+Native Linux deployments also need `libopus0` for Opus audio. The Docker image
+installs it along with the Python media dependencies.
+
 The service reads `web-interface/config.json` by default. Copy
 `web-interface/config.json.example` for a new deployment, and set `PEBBLE_CONFIG`
 to select another file. Robot identity and runtime services belong in
@@ -30,9 +33,22 @@ to select another file. Robot identity and runtime services belong in
 belong in the web config. The older unified config is still accepted by the
 runtime compatibility loader.
 
-For Docker, mount both config files and expose the configured web port. The
-root `Dockerfile` runs the launcher-based service; see the root README for an
-example invocation.
+For a web-only Docker deployment, mount the web config and run
+`python3 -u web-interface/web-control.py` directly. The root Dockerfile's
+default command remains available for robot-runtime deployments.
+
+The parent Compose deployment on TheMind runs this web-only command, mounts
+`web-interface/config.json`, and binds port 8080 to Tailscale address
+`100.64.0.5`. Open `http://100.64.0.5:8080/modules` (or `http://themind:8080/modules`
+where the Tailscale hostname resolves). Its private web config connects to
+`mosquitto_broker:1883`, with automatic broker connection and manifest discovery;
+credentials stay outside Git and outside the built image.
+
+MiniLAMP connects to that same broker through `wss://mqtt.sssn.us:443/`. Goob
+keeps its robot-local broker and bridges to `100.64.0.5:1883` over Tailscale.
+TheMind's module gateway can therefore discover and control both robots without
+per-robot UI code. The compatibility page is still at `/`; promoting the module
+page to `/` remains a separate planned milestone.
 
 ## Robot modules
 

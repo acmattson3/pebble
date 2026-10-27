@@ -41,6 +41,12 @@ wheel_odometry_capture.csv
 !requirements.txt
 !**/requirements.txt
 
+# Reproducible Goob firmware fixtures and recorded bench evidence
+!firmware/GOOB_seeed-xiao-samd21/tests/HarnessBody.txt
+!firmware/GOOB_seeed-xiao-samd21/tests/SimulatedI2C.txt
+!firmware/GOOB_seeed-xiao-samd21/tests/*validation.log
+!firmware/GOOB_seeed-xiao-samd21/tests/connected-monitor.log
+
 # OS/editor noise
 .DS_Store
 Thumbs.db

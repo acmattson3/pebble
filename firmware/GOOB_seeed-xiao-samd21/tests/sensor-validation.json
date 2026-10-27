@@ -1,0 +1,44 @@
+{
+  "pass": true,
+  "motor_commands": "zero only",
+  "checks": {
+    "production_id": true,
+    "uptime_increases": true,
+    "samples_received": true,
+    "calibrating_state_observed": true,
+    "manual_calibration_completed": true,
+    "final_ready": true,
+    "zero_motor_ack": true,
+    "light_ack": true,
+    "no_sensor_fault": true
+  },
+  "sample_count": 2706,
+  "status_count": 36,
+  "initial_status": {
+    "firmware": "goob-samd21-bounded-recovery-v2",
+    "uptime_ms": "138316",
+    "reset_cause": "0x1",
+    "watchdog_ms": "1000",
+    "imu_ready": "1",
+    "imu_calibrating": "0",
+    "imu_state": "8",
+    "imu_error": "0",
+    "imu_stage": "none",
+    "motor_cmd_ms": "3",
+    "motor_timeout": "1"
+  },
+  "final_status": {
+    "firmware": "goob-samd21-bounded-recovery-v2",
+    "uptime_ms": "168379",
+    "reset_cause": "0x1",
+    "watchdog_ms": "1000",
+    "imu_ready": "1",
+    "imu_calibrating": "0",
+    "imu_state": "8",
+    "imu_error": "0",
+    "imu_stage": "none",
+    "motor_cmd_ms": "141807",
+    "motor_timeout": "1"
+  },
+  "actual_seconds": 31.062999999994645
+}

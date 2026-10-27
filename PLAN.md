@@ -41,8 +41,9 @@ outcomes rather than duplicating implementation details from the READMEs.
 - The minimal MQTT component profile is documented: a unique identity, agreed
   identity-scoped topics and payloads, and MQTT 3.1.1 semantics are enough to
   participate. Capabilities and presence remain optional. The MiniLAMP example
-  uses compact drive, online, and battery topics, with retained state and an
-  MQTT Last Will; presence no longer depends on NTP.
+  uses compact topics, retained state and an MQTT Last Will. Its current WSS
+  implementation obtains SNTP time for TLS certificate validation; the minimal
+  component profile itself does not require time synchronization.
 - Full-duplex acoustic echo cancellation, native browser media transport, and
   Jev integration are not implemented.
 - Robot-local MQTT topic settings now use identity-relative `subtopic` and
@@ -62,6 +63,14 @@ outcomes rather than duplicating implementation details from the READMEs.
   touch endpoints from its module manifest. The widget also shows online state
   and last seen from the standard `o/online` presence signal. Shared telemetry
   still offers charging and touch endpoints for robots that use them.
+- Goob's MCU input pins previously exposed as touch/odometry samples were
+  repurposed encoder connections, not touch sensors. A brief elevated test at
+  15% PWM showed strong changes on both odometry channels while the wheels
+  turned, but the encoder readings have not been reliable enough for useful
+  odometry. The user has now replaced the encoders with the existing MPU-6050
+  IMU on the XIAO SAMD21 I²C pins (D4/SDA, D5/SCL). This leaves one MCU pin for
+  future expansion. Goob also has two spare transistor-driven outputs:
+  currently only the red channel is connected to the white headlight LEDs.
 - The log module uses non-retained events and bounded gateway history; Goob's
   example configuration includes it.
 - The shared autonomy module is deployed on Goob and ARL. Goob advertises its
@@ -138,7 +147,11 @@ topics.
   publishing state and consuming commands without Pebble's Linux services,
   module host, or web interface.
 - [x] Compile the MiniLAMP firmware for the Seeed XIAO ESP32-C6.
-- [ ] Flash and exercise the MiniLAMP firmware against hardware.
+- [x] Flash current MiniLAMP firmware and verify authenticated WSS, discovery,
+  telemetry and zero/invalid command handling. See its October 27 REPORT.
+- [x] Restore MiniLAMP on/off drive. The user corrected reversed drivers and
+  confirmed driving works; v2 preserves the original 25% command deadband and
+  full-on GPIO outputs. Fractional PWM was unsuitable for this platform.
 
 ### 3. Grow robot-owned controls and the shared module library
 
@@ -218,6 +231,136 @@ topics.
   optional health states while keeping robot-wide availability separate from
   individual service health.
 
+#### Goob sensor and output hardware follow-up
+
+The physical encoder-to-IMU wiring change must happen before any dependent
+software is implemented or deployed. Keep the spare MCU pin and transistor
+outputs available for future robot-specific additions; do not assign them a
+Pebble contract until a concrete use case is selected.
+
+- [x] **Hardware prerequisite (user task):** replace Goob's encoder wiring with
+  the existing MPU-6050 IMU on XIAO SAMD21 D4/SDA and D5/SCL; preserve one MCU
+  pin for future expansion. The user reports the wiring is complete.
+- [x] **Depends on hardware prerequisite:** flash Goob's updated SAMD21
+  firmware. Uploaded to the replacement XIAO from Legion on COM3; BOSSA
+  checksum verification succeeded. The replacement is now installed on Goob;
+  its serial bridge opens successfully, but firmware logs show repeated MPU-6050
+  initialization failures. Verify the I²C wiring/address, then validate stable
+  sensor samples and battery/drive/lights behavior.
+- [x] **Software configuration:** retire Goob's analog encoder sampling and
+  disable its wheel-odometry shared-memory writer; keep generic odometry support
+  only if another robot uses it.
+- [x] **Software implementation:** add MPU-6050 serial parsing/publishing and a
+  reusable telemetry endpoint/widget for orientation, acceleration magnitude,
+  temperature, and sample health. Serial communication and live IMU telemetry
+  are verified after a full Goob power cycle; the root cause of the earlier
+  initialization failures remains unknown.
+- [ ] Keep orientation and other direct IMU measurements available as regular
+  telemetry, with high-rate sampling/filtering on the MCU and a lower-rate
+  summary over MQTT. Do not define a robot-wide pose or localization estimate
+  as core telemetry.
+- [x] Add a reusable 3D orientation widget to the web module interface. A
+  robot module selects the widget, binds it to orientation telemetry, and
+  references a static GLB outside MQTT. It loads a local test GLB, applies
+  roll/pitch(/yaw), supports camera orbit/zoom, and accepts a per-robot static
+  `model_rotation_deg` to align model and IMU coordinate frames. Browser
+  integration passes.
+- [x] Configure and deploy Goob's orientation widget with its GLB URL; publish
+  the model through Swag and allow cross-origin reads for public `.glb` files.
+  Confirmed the live ARL interface loads it alongside Goob's IMU telemetry.
+- [x] Add an operator-triggered gyro recalibration control for robots that
+  advertise the optional calibration endpoint. Goob's firmware command stops
+  motor outputs and averages 400 samples while the operator keeps the robot
+  stationary. Compiled and flashed the Seeed on ARL with peripherals disconnected;
+  BOSSA checksum verification succeeded.
+- [x] Reinstall the Seeed on Goob and deploy the calibration endpoint, bridge,
+  telemetry schema, and ARL web control. Verified the live manifest advertises
+  `imu_calibrate`, fresh telemetry reports calibration generation and gyro bias,
+  IMU samples continue without errors, and ARL serves the updated widget.
+- [ ] From the UI, trigger calibration while Goob is stationary; verify the
+  generation increments, the new bias is shown, and stationary yaw drift falls.
+- [x] **Incident review (2026-10-26):** ARL's live log cache records repeated
+  MPU-6050 I²C initialization and sample-read failures before the reported
+  drive-control loss, two completed manual gyro calibrations, then an MCU USB
+  disconnect/reconnect. The configured MongoDB history is disabled on ARL; the
+  local Mongo archive has no current `pebble/robots/goob` records, so it cannot
+  establish the exact MQTT drive values.
+- [x] Add a SAMD21 independent watchdog and shorten the MCU's idle motor
+  timeout to one second. Main-loop watchdog feeds occur after serial, drive,
+  sensor, and telemetry work; startup latches motor pins
+  low and reports watchdog resets. Compiled on ARL and flashed successfully
+  with BOSSA checksum verification.
+- [ ] Bench-test watchdog behavior with the Seeed connected to its IMU and
+  robot peripherals. The earlier bare-board reset loop was initially attributed
+  to a possible I²C stall without capturing reset cause; later review found the
+  watchdog clock was never explicitly configured. Motor driver inputs were
+  disconnected, so their electrical state during reset has not been measured.
+- [x] Replace manual SAMD watchdog setup with Adafruit SleepyDog 1.8.4,
+  which configures its independent clock. Add a read-only `V` command for
+  firmware ID, uptime, reset cause, watchdog period, and IMU readiness.
+  V2 retains the 1000 ms watchdog and adds IMU/motor state diagnostics. Its
+  on-target simulated-sensor harness verified an intentional watchdog reset
+  and IMU probing lockout for that boot; USB/drive/light handling stays available.
+- [x] Make absent-IMU startup return safely with USB and commands available.
+  V2's bounded adapter handles line-low/NACK/error states and retries with
+  backoff. Legion's bare-board soak passed for 600.687 seconds without reset.
+  Physical externally stuck-line tests remain separate pending hardware checks.
+- [x] Add a Goob-side watcher that waits for the Seeed's UF2 boot drive and
+  copies a prebuilt firmware image, restoring `pebble-control.service` after
+  the attempt. A read of the bootloader's `CURRENT.UF2` flash snapshot shows
+  the compiled application image byte-for-byte at `0x2000`, confirming the UF2
+  write.
+- [x] Confirm the corrected application exits bootloader and responds without
+  a working IMU. V2 passed the ten-minute bench soak; see
+  `firmware/GOOB_seeed-xiao-samd21/REPORT.md` and its recorded validation assets.
+- [x] Reconnect the actual IMU and verify production orientation telemetry,
+  manual calibration, and command responsiveness. Legion measured 100.002 Hz,
+  zero sample errors over 60 seconds, and a responsive 400-sample calibration.
+  Goob is now running the flashed MCU; live bridge MQTT shows advancing IMU
+  sample counts with zero errors and battery voltage near 4.07 V.
+- [ ] Run prolonged connected-IMU stability and repeated power-cycle/reconnect
+  checks. Test physical sensor disconnect/reconnect, externally stuck SDA/SCL,
+  and partial-read faults. Measure motor command-loss stop timing during sensor
+  recovery and motor-driver output states during watchdog reset; check power
+  integrity/noise under load. Previous simulated tests and ACKs do not measure
+  these electrical behaviors.
+- [x] Bound serial command length and processing per loop: 128 payload bytes,
+  fixed storage, 64 received bytes per pass. Legion tested overlong/NUL input,
+  malformed motor values and 185,856 bytes of sustained input with 768 V replies.
+- [x] Make IMU initialization/calibration incremental and stop motors on entry
+  or sensor faults. Calibration rejects nonzero drive and has a deadline;
+  main-loop motor-timeout servicing continues between steps. Verified by
+  on-target simulated tests and real manual calibration. Periodic automatic
+  recovery attempts conservatively interrupt active driving.
+- [x] Reset the estimator's sample timestamp after calibration/recovery and
+  gaps over 100 ms. Tested a simulated two-second gap and actual calibration;
+  fresh samples restart relative yaw rather than integrating the missing time.
+- [x] Replace SAMD Wire calls with a project-owned bounded SERCOM2 adapter.
+  Legion verified real MPU register writes/reads, address NACK (120 us), and
+  clock-stall timeout/recovery (10,014 us including overhead). The watchdog
+  remains the final fallback; no installed Arduino core patches are required.
+- [ ] Add selective durable drive-command and watchdog diagnostics (timestamps
+  and mapped motor values, without media payloads) so future command-loss events
+  can be attributed to MQTT input, bridge forwarding, or MCU handling.
+- [ ] Replace Euler-angle orientation state with a normalized quaternion
+  estimator and publish the quaternion directly. Compose the IMU-to-body and
+  model-to-viewer offsets as quaternions; keep Euler values as derived display
+  fields. Validate yaw direction upright and inverted, and roll/pitch through
+  the apex. MPU-6050 yaw remains relative and will drift without a magnetometer.
+- [ ] Confirm the model axes and IMU orientation mapping against the robot.
+  An OBJ/MTL source can be converted to a single GLB for delivery.
+- [ ] Implement localization as opt-in autonomy scripts, which may also serve
+  as utility scripts. Possible independent scripts include IMU-only relative
+  localization and, once tag locations and camera geometry are established,
+  localization that fuses IMU measurements with AprilTag observations. Each
+  script should document its frames, assumptions, validity, and uncertainty;
+  localization outputs belong to the script's interface rather than a
+  universal pose topic.
+- [ ] Document Goob's two spare transistor-driven outputs and current wiring
+  (red channel drives white headlights). Defer firmware controls and a shared
+  lights contract change until a concrete use for the remaining output(s) is
+  chosen.
+
 ### 6. Explore an optional Jev decision layer
 
 - [ ] Treat Jev (TypeSafe System One) as an optional typed, single-step decision
@@ -247,16 +390,71 @@ topics.
 - [x] `tests/module_browser_smoke.py` passed with Playwright/Chromium, covering
   two-broker discovery, custom controls, soundboard behavior, online/last-seen
   telemetry display, input handling, retained state, and no browser exceptions.
-- [x] MiniLAMP compiled for `esp32:esp32:XIAO_ESP32C6` with the example
-  placeholder configuration, PubSubClient 2.8.0, and ArduinoJson 7.4.3. The
-  resulting sketch uses 76% of program storage and 13% of dynamic memory.
-- [ ] Flash and bench-test MiniLAMP; no target board is attached to this host.
+- [x] MiniLAMP v2 compiled and hash-verified on its actual C6 connected to ARL,
+  using Espressif core 3.3.12 and native ESP-MQTT/cJSON. The sketch uses
+  1,199,076 flash bytes (91%) and 44,952 static RAM bytes (13%). Native drive
+  safety/deadband tests and a 68.558-second WSS verification passed.
 - [ ] Run broader reconnect and multi-robot browser integration coverage; the
   current browser smoke covers discovery across two brokers but not the full
   reconnect/load matrix.
 - [ ] Run Goob's on-robot smoke suite for broader end-to-end validation. This
   telemetry-only rollout was checked through the retained manifest and ARL
   live API, without running the full robot smoke suite.
+- [x] Restore Goob's live MPU-6050 telemetry after a full battery disconnect
+  and reconnect. Hardware-I²C MQTT samples were observed at sequences 16901
+  and 18341, with matching successful-sample counts and zero sample errors.
+  Earlier firmware diagnostics had reported `WHO_AM_I-read` address NACK
+  (SAMD `Wire` status 2); changing to one-time `Wire.begin()` and matching the
+  basic register-read sequence to Lawlor's AERO-Beam example did not resolve
+  that failure. A temporary I²C scanner's serial output was not captured, so it
+  was inconclusive. The user confirmed AD0 low, SDA/SCL pull-ups to 3.3 V, and
+  approximately 3.311 V idle on both bus lines, then replaced the GY-521. A
+  subsequent full battery power cycle restored valid production `Wire`
+  telemetry without a firmware or wiring change during that cycle. The IMU is
+  currently treated as working; the cause of the earlier failure is unknown.
+- [ ] Verify recovery behavior across a controlled MCU-only reset versus a full
+  power cycle, if the initialization issue returns. Do not disturb the current
+  working setup just to reproduce an unexplained fault.
+
+## MiniLAMP standalone firmware and TheMind gateway — October 27
+
+- [x] Use verified WSS to `mqtt.sssn.us:443/`, with private credentials,
+  native ESP-MQTT's separate network task, and an independent motor task.
+- [x] Restore on/off GPIO control and legacy grouser mixing, with independent
+  one-second drive/grouser leases, queue/validation limits and a task watchdog.
+  Output permutation/inversion and pin settings remain configurable.
+- [x] Generate MCU discovery from shared drive/battery modules and a custom
+  grouser descriptor. Render it with existing generic web controls; remove
+  variable-speed sliders for this on/off drivetrain.
+- [x] Validate fresh battery readings (~3.65–3.73 V), zero/invalid commands,
+  normal upload and forward/reverse/grouser software states. User confirmed
+  driving works. Preserve scripts and evidence in the target firmware folder.
+- [ ] Independently confirm each wheel's orientation, reverse/grouser physical
+  operation, retained-command replay rejection, network-loss stop timing,
+  electrical output behavior during reset, and longer loaded operation. The
+  startup jolt on D6/UART0 is observed; a future hardware change can relocate
+  that input or add an enable gate. Compare battery readings with a meter.
+- [x] Deploy TheMind's web-only gateway on Tailscale port 8080, using the same
+  active web assets as ARL and the local Mosquitto broker. Ignore private config
+  in Git and Docker build context. Both robots are discovered automatically.
+- [x] Move Goob's remote bridge to authenticated TCP `100.64.0.5:1883` over
+  Tailscale, preserving the robot-local broker and serial bridge process.
+- [x] Verify remote Tailscale HTTP access, browser rendering of both robots and
+  Goob's 3D widget without page errors, and zero-drive routing through the web
+  gateway to Goob's local adapter and MiniLAMP's WSS client. Updated module
+  fixture tests pass (9 tests), including generated MCU manifest consistency.
+  Added the missing container `libopus0` dependency; Opus and H.264 codec
+  round trips pass inside the deployed image. Container health check passes.
+- [ ] Investigate Goob's currently stale IMU stream at its local broker.
+  Battery/control remain live; the gateway displays the last valid IMU sample.
+  Do not treat cached orientation as a fresh measurement.
+  Add per-topic stale indications to shared telemetry/orientation widgets so
+  robot-wide availability cannot be mistaken for fresh sensor data.
+- [ ] Exercise Goob's real camera/listen/talk and other actuator modules through
+  TheMind's gateway. Rendering and zero-drive routing are verified; real media
+  and nonzero Goob actuation were not exercised during migration. Browser Talk
+  needs HTTPS or another browser-trusted secure origin; plain Tailscale HTTP
+  does not grant microphone capture in a default browser configuration.
 
 ## Deferred by choice
 

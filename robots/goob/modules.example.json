@@ -45,7 +45,13 @@
         {
           "id": "telemetry",
           "use": "modules/telemetry/module.json",
-          "endpoints": ["battery"],
+          "endpoints": ["battery", "imu", "imu_calibrate"],
+          "adapters": {
+            "imu_calibrate": {
+              "kind": "forward",
+              "subtopic": "incoming/imu/calibrate"
+            }
+          },
           "ui": {
             "columns": 1,
             "controls": [{
@@ -55,6 +61,13 @@
               "metrics": [
                 {"label": "Battery", "endpoint": "battery", "field": "value", "unit": "V", "precision": 2}
               ]
+            }, {
+              "kind": "orientation-3d",
+              "label": "Robot orientation",
+              "endpoint": "imu",
+              "command_endpoint": "imu_calibrate",
+              "model_url": "https://sssn.us/files/blockoutModel.glb",
+              "model_rotation_deg": {"x": -90, "y": -4.5, "z": 0}
             }]
           }
         },

@@ -1,0 +1,12 @@
+ADAPTER PASS real bus initialization
+ADAPTER PASS real MPU identity read
+ADAPTER who=68
+ADAPTER PASS real register write
+ADAPTER PASS real repeated-start 14-byte read
+ADAPTER PASS address NACK returns within deadline
+ADAPTER nack_us=120
+ADAPTER PASS reinitialize after NACK
+ADAPTER PASS clock-gated transaction times out in 10 ms including cleanup
+ADAPTER timeout_us=10014 error=5
+ADAPTER PASS real sensor communication recovers after timeout
+ADAPTER COMPLETE failures=0

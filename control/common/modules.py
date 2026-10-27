@@ -5,8 +5,10 @@ from copy import deepcopy
 import hashlib
 from functools import lru_cache
 import json
+import math
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from jsonschema import Draft202012Validator
 
@@ -166,6 +168,38 @@ def validate_manifest(manifest: dict) -> dict:
                     raise ValueError("Media widget requires a matching stream and action")
                 if "uplink" in widget and (widget["uplink"] not in endpoints or endpoints[widget["uplink"]]["kind"] != "uplink" or widget.get("talk_action") not in actions):
                     raise ValueError("Audio talk control requires an uplink and action")
+            if kind == "orientation-3d":
+                endpoint = endpoints.get(widget.get("endpoint"))
+                if not endpoint or endpoint["kind"] != "state":
+                    raise ValueError("3D orientation widget requires a state endpoint")
+                calibration_endpoint = widget.get("command_endpoint")
+                if calibration_endpoint:
+                    command = endpoints.get(calibration_endpoint)
+                    if (not command or command["kind"] != "command"
+                            or command["schema"].get("properties", {}).get("action", {}).get("const") != "calibrate"):
+                        raise ValueError("3D orientation calibration control requires a calibrate command endpoint")
+                orientation = endpoint["schema"].get("properties", {}).get("orientation_deg", {})
+                angle_properties = orientation.get("properties", {})
+                if (orientation.get("type") != "object"
+                        or not {"roll", "pitch"}.issubset(set(orientation.get("required", [])))
+                        or any(angle_properties.get(axis, {}).get("type") != "number" for axis in ("roll", "pitch"))):
+                    raise ValueError("3D orientation endpoint must provide numeric roll and pitch in orientation_deg")
+                model_url = widget.get("model_url", "")
+                parsed = urlsplit(model_url)
+                same_origin_path = (model_url.startswith("/") and not model_url.startswith("//")
+                                    and parsed.path.lower().endswith(".glb"))
+                remote_https_url = (parsed.scheme == "https" and parsed.netloc
+                                    and parsed.path.lower().endswith(".glb")
+                                    and not parsed.username and not parsed.password)
+                if not (same_origin_path or remote_https_url):
+                    raise ValueError("3D orientation model_url must be an HTTPS URL or same-origin absolute path")
+                model_rotation = widget.get("model_rotation_deg", {})
+                if (not isinstance(model_rotation, dict)
+                        or set(model_rotation) - {"x", "y", "z"}
+                        or any(not isinstance(value, (int, float)) or isinstance(value, bool)
+                               or not math.isfinite(value) or abs(value) > 360
+                               for value in model_rotation.values())):
+                    raise ValueError("3D orientation model_rotation_deg must contain x/y/z angles from -360 to 360")
             if kind == "soundboard":
                 command = endpoints.get(widget.get("command_endpoint"))
                 files = endpoints.get(widget.get("files_endpoint"))

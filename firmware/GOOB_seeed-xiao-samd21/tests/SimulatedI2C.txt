@@ -1,0 +1,26 @@
+#pragma once
+#include <Arduino.h>
+class BoundedI2C {
+ public:
+  uint8_t error = 0, received = 0;
+  bool broken = false;
+  int16_t gyroZ = 0;
+  unsigned int calls = 0;
+  bool begin() { ++calls; error = broken ? 5 : 0; return !broken; }
+  bool writeRegister(uint8_t, uint8_t, uint8_t) {
+    ++calls; error = broken ? 5 : 0; return !broken;
+  }
+  bool readRegister(uint8_t, uint8_t reg, uint8_t *out, size_t count) {
+    ++calls; received = 0; error = broken ? 5 : 0;
+    if (broken) return false;
+    memset(out, 0, count);
+    if (reg == 0x75 && count == 1) out[0] = 0x68;
+    else if (reg == 0x3B && count == 14) {
+      out[4] = 0x40; // +1g Z
+      out[12] = (uint16_t)gyroZ >> 8;
+      out[13] = gyroZ & 0xff;
+    } else { error = 4; return false; }
+    received = count;
+    return true;
+  }
+};

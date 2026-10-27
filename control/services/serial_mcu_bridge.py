@@ -104,6 +104,13 @@ class SerialMcuBridge:
         self.serial_port = str(serial_cfg.get("port") or "").strip()
         if not self.serial_port:
             raise SystemExit(f"{self.service_name}: serial.port is required")
+        fallback_ports_raw = serial_cfg.get("fallback_ports")
+        if isinstance(fallback_ports_raw, list):
+            self.serial_fallback_ports = [
+                str(port).strip() for port in fallback_ports_raw if str(port).strip()
+            ]
+        else:
+            self.serial_fallback_ports = []
         self.baud = int(serial_cfg.get("baud") or 115200)
         self.serial_timeout = float(serial_cfg.get("timeout_seconds") or 0.1)
         self.protocol_name = str(self.service_cfg.get("protocol") or PROTOCOL_GOOB_BASE_V1).strip().lower()
@@ -143,6 +150,8 @@ class SerialMcuBridge:
 
         self.last_imu_motion_value: Optional[dict[str, Any]] = None
         self.last_imu_low_payload: Optional[dict[str, Any]] = None
+        self.next_imu_module_publish_at = 0.0
+        self.imu_module_publish_interval_seconds = 0.125
         self.last_imu_sample_at = time.monotonic()
         self.imu_sample_timeout_seconds = 0.0
         self.imu_watchdog_armed = False
@@ -212,6 +221,16 @@ class SerialMcuBridge:
             self.module_touch_topic = self.identity.topic("o", "telemetry/touch")
             self.module_charge_topic = self.identity.topic("o", "telemetry/charging")
             self.module_charge_level_topic = self.identity.topic("o", "telemetry/battery")
+            self.imu_module_topic = self.identity.topic("o", "telemetry/imu")
+            self.imu_calibrate_topic = resolve_mapped_topic(
+                self.identity, self.service_cfg, "imu_calibrate", "incoming/imu/calibrate"
+            )
+            self.imu_high_rate_topic = resolve_mapped_topic(self.identity, self.service_cfg, "imu_high_rate", "outgoing/sensors/imu-fast")
+            self.imu_low_rate_topic = resolve_mapped_topic(self.identity, self.service_cfg, "imu_low_rate", "outgoing/sensors/imu")
+            self.imu_high_rate_qos = max(0, min(2, _parse_int(publish_cfg.get("imu_high_rate_qos"), 0)))
+            self.imu_low_rate_qos = max(0, min(2, _parse_int(publish_cfg.get("imu_low_rate_qos"), 1)))
+            self.imu_high_rate_retain = bool(publish_cfg.get("imu_high_rate_retain", False))
+            self.imu_low_rate_retain = bool(publish_cfg.get("imu_low_rate_retain", True))
             self.drive_topic = resolve_mapped_topic(self.identity, self.service_cfg, "drive_values", "incoming/drive-values")
             self.lights_solid_topic = resolve_mapped_topic(self.identity, self.service_cfg, "lights_solid", "incoming/lights-solid")
             self.lights_flash_topic = resolve_mapped_topic(self.identity, self.service_cfg, "lights_flash", "incoming/lights-flash")
@@ -236,6 +255,7 @@ class SerialMcuBridge:
                 self.drive_topic: self._handle_drive_values,
                 self.lights_solid_topic: self._handle_lights_solid,
                 self.lights_flash_topic: self._handle_lights_flash,
+                self.imu_calibrate_topic: self._handle_imu_calibrate,
             }
             return
 
@@ -327,10 +347,23 @@ class SerialMcuBridge:
         )
 
     def _open_serial(self) -> None:
-        try:
-            ser = serial.Serial(self.serial_port, self.baud, timeout=self.serial_timeout)
-        except serial.SerialException as exc:
-            raise SystemExit(f"Failed to open serial port {self.serial_port}: {exc}") from exc
+        candidates = list(dict.fromkeys([self.serial_port, *self.serial_fallback_ports]))
+        errors: list[str] = []
+        ser = None
+        selected_port = None
+        for candidate in candidates:
+            try:
+                ser = serial.Serial(candidate, self.baud, timeout=self.serial_timeout)
+                selected_port = candidate
+                break
+            except serial.SerialException as exc:
+                errors.append(f"{candidate}: {exc}")
+                if candidate != candidates[-1]:
+                    logging.warning("Could not open serial candidate %s for %s: %s", candidate, self.service_name, exc)
+        if ser is None or selected_port is None:
+            detail = "; ".join(errors)
+            raise SystemExit(f"Failed to open serial ports for {self.service_name}: {detail}")
+        self.serial_port = selected_port
         time.sleep(0.5)
         ser.reset_input_buffer()
         self.ser = ser
@@ -383,6 +416,14 @@ class SerialMcuBridge:
                 self._handle_imu_line(line)
 
     def _handle_goob_base_line(self, line: str) -> None:
+        imu_high = self._parse_imu_high_rate_telemetry_line(line)
+        if imu_high is not None:
+            self._handle_imu_high_rate_telemetry(imu_high)
+            return
+        imu_low = self._parse_imu_low_rate_telemetry_line(line)
+        if imu_low is not None:
+            self._handle_imu_low_rate_telemetry(imu_low)
+            return
         touch = self._parse_touch_telemetry_line(line)
         if touch:
             self._handle_touch_telemetry(touch)
@@ -397,6 +438,87 @@ class SerialMcuBridge:
         if charge is not None:
             return
         self._handle_non_telemetry_line(line)
+
+    def _publish_goob_imu_module_telemetry(self, data: dict[str, Any]) -> None:
+        with self.telemetry_lock:
+            motion_value = dict(self.last_imu_motion_value or {})
+        latest_orientation = motion_value.get("orientation_deg", {})
+        orientation = {
+            "roll": round(float(latest_orientation.get("roll", data["r"])), 2),
+            "pitch": round(float(latest_orientation.get("pitch", data["p"])), 2),
+        }
+        yaw = latest_orientation.get("yaw", data.get("yaw"))
+        if yaw is not None:
+            orientation["yaw"] = round(float(yaw), 2)
+        payload = {
+            "orientation_deg": orientation,
+            "accel_norm_g": round(float(data["an"]), 3),
+            "temperature_c": round(float(data["t"]), 2),
+            "health": {
+                "device": self.serial_port,
+                "protocol": self.protocol_name,
+                "samples_ok": int(data["ok"]),
+                "samples_error": int(data["err"]),
+                "calibration_samples": int(data["cal"]),
+                "calibration_generation": int(data.get("gen", 0)),
+                "gyro_bias_dps": _vector_payload(
+                    {
+                        "x": data.get("gbx", 0.0),
+                        "y": data.get("gby", 0.0),
+                        "z": data.get("gbz", 0.0),
+                    }
+                ),
+            },
+        }
+        acceleration = motion_value.get("accel_mps2")
+        if isinstance(acceleration, dict) and all(axis in acceleration for axis in ("x", "y", "z")):
+            try:
+                values = {axis: float(acceleration[axis]) for axis in ("x", "y", "z")}
+            except (TypeError, ValueError):
+                values = {}
+            if values and all(math.isfinite(value) for value in values.values()):
+                payload["accel_mps2"] = _vector_payload(values, digits=3)
+        self._publish_json(self.imu_module_topic, payload, qos=1, retain=True)
+
+    def _publish_cached_goob_imu_module_telemetry_if_due(
+        self, high_rate_data: Optional[dict[str, Any]] = None
+    ) -> None:
+        now = time.monotonic()
+        if now < self.next_imu_module_publish_at:
+            return
+        self.next_imu_module_publish_at = now + self.imu_module_publish_interval_seconds
+        with self.telemetry_lock:
+            low_payload = self.last_imu_low_payload
+            latest_sample_at = self.last_imu_sample_at
+        if high_rate_data is None and low_payload is None:
+            return
+        if self.imu_sample_timeout_seconds > 0 and now - latest_sample_at > self.imu_sample_timeout_seconds:
+            return
+        value = low_payload.get("value", {}) if low_payload is not None else {}
+        health = value.get("health", {})
+        angles = value.get("orientation_deg", {})
+        data = {
+            "r": high_rate_data.get("r", angles.get("roll", 0.0)) if high_rate_data else angles.get("roll", 0.0),
+            "p": high_rate_data.get("p", angles.get("pitch", 0.0)) if high_rate_data else angles.get("pitch", 0.0),
+            "an": value.get("accel_norm_g", 0.0),
+            "t": high_rate_data.get("t", value.get("temp_c", 0.0)) if high_rate_data else value.get("temp_c", 0.0),
+            "ok": health.get("samples_ok", 0),
+            "err": health.get("samples_error", 0),
+            "cal": health.get("calibration_samples", 0),
+            "gen": health.get("calibration_generation", 0),
+        }
+        gyro_bias = value.get("gyro_bias_dps", {})
+        if not isinstance(gyro_bias, dict):
+            gyro_bias = {}
+        for axis, key in (("x", "gbx"), ("y", "gby"), ("z", "gbz")):
+            data[key] = gyro_bias.get(axis, 0.0)
+        yaw = high_rate_data.get("yaw", angles.get("yaw")) if high_rate_data else angles.get("yaw")
+        if yaw is not None:
+            data["yaw"] = yaw
+        if high_rate_data is not None:
+            accel = [float(high_rate_data[axis]) for axis in ("ax", "ay", "az")]
+            data["an"] = math.sqrt(sum(value * value for value in accel)) / 9.80665
+        self._publish_goob_imu_module_telemetry(data)
 
     def _handle_imu_line(self, line: str) -> None:
         high_rate = self._parse_imu_high_rate_telemetry_line(line)
@@ -869,9 +991,14 @@ class SerialMcuBridge:
                 "r": float(values["r"]),
                 "p": float(values["p"]),
             }
+            if "yaw" in values:
+                parsed["yaw"] = float(values["yaw"])
         except (KeyError, ValueError):
             return None
-        if not all(math.isfinite(float(parsed[key])) for key in ("ax", "ay", "az", "gx", "gy", "gz", "t", "r", "p")):
+        finite_keys = ("ax", "ay", "az", "gx", "gy", "gz", "t", "r", "p")
+        if not all(math.isfinite(float(parsed[key])) for key in finite_keys):
+            return None
+        if "yaw" in parsed and not math.isfinite(float(parsed["yaw"])):
             return None
         return parsed
 
@@ -894,10 +1021,16 @@ class SerialMcuBridge:
                 "ok": int(values["ok"]),
                 "err": int(values["err"]),
                 "cal": int(values["cal"]),
+                "gen": int(values.get("gen", "0")),
             }
+            if "yaw" in values:
+                parsed["yaw"] = float(values["yaw"])
         except (KeyError, ValueError):
             return None
-        if not all(math.isfinite(float(parsed[key])) for key in ("r", "p", "t", "an", "gbx", "gby", "gbz")):
+        finite_keys = ("r", "p", "t", "an", "gbx", "gby", "gbz")
+        if not all(math.isfinite(float(parsed[key])) for key in finite_keys):
+            return None
+        if "yaw" in parsed and not math.isfinite(float(parsed["yaw"])):
             return None
         return parsed
 
@@ -988,6 +1121,8 @@ class SerialMcuBridge:
                 "pitch": round(float(data["p"]), 3),
             },
         }
+        if "yaw" in data:
+            motion_value["orientation_deg"]["yaw"] = round(float(data["yaw"]), 3)
         payload = {
             "t": int(time.time() * 1000.0),
             "seq": int(data["n"]),
@@ -996,6 +1131,8 @@ class SerialMcuBridge:
         }
         with self.telemetry_lock:
             self.last_imu_motion_value = motion_value
+        if self.protocol_name == PROTOCOL_GOOB_BASE_V1:
+            self._publish_cached_goob_imu_module_telemetry_if_due(data)
         self._publish_json(
             self.imu_high_rate_topic,
             payload,
@@ -1013,6 +1150,8 @@ class SerialMcuBridge:
                 "roll": round(float(data["r"]), 3),
                 "pitch": round(float(data["p"]), 3),
             }
+        if "yaw" in data:
+            motion_value["orientation_deg"]["yaw"] = round(float(data["yaw"]), 3)
         if "temp_c" not in motion_value:
             motion_value["temp_c"] = round(float(data["t"]), 3)
 
@@ -1027,6 +1166,7 @@ class SerialMcuBridge:
             "samples_ok": int(data["ok"]),
             "samples_error": int(data["err"]),
             "calibration_samples": int(data["cal"]),
+            "calibration_generation": int(data.get("gen", 0)),
         }
 
         payload = {
@@ -1043,6 +1183,8 @@ class SerialMcuBridge:
             qos=self.imu_low_rate_qos,
             retain=self.imu_low_rate_retain,
         )
+        if self.protocol_name == PROTOCOL_GOOB_BASE_V1:
+            self._publish_cached_goob_imu_module_telemetry_if_due()
 
     def _handle_telemetry(self, data: dict[str, Any]) -> None:
         self._handle_touch_telemetry({"t0": int(data["t0"]), "t1": int(data["t1"]), "t2": int(data["t2"])})
@@ -1119,6 +1261,9 @@ class SerialMcuBridge:
             return
         if msg.topic == getattr(self, "drive_topic", None) and self.ignore_retained_drive and bool(msg.retain):
             logging.info("Ignoring retained drive command on %s", msg.topic)
+            return
+        if msg.topic == getattr(self, "imu_calibrate_topic", None) and bool(msg.retain):
+            logging.info("Ignoring retained IMU calibration command on %s", msg.topic)
             return
         try:
             payload = json.loads(msg.payload.decode("utf-8"))
@@ -1213,6 +1358,14 @@ class SerialMcuBridge:
         self._send_serial_line("M", f"{left:.3f}", f"{right:.3f}")
         self.last_drive_command_at = time.monotonic()
         self.drive_timed_out = False
+
+    def _handle_imu_calibrate(self, payload: dict[str, Any]) -> None:
+        values = self._extract_value(payload)
+        if values.get("action") != "calibrate":
+            logging.warning("Ignoring unsupported IMU calibration action")
+            return
+        logging.info("Requesting stationary IMU gyro calibration for %s", self.service_name)
+        self._send_serial_line("C")
 
     def _handle_lights_solid(self, payload: dict[str, Any]) -> None:
         values = self._extract_value(payload)

@@ -1,0 +1,961 @@
+{
+  "started_utc": "2026-10-27T00:42:16.260316+00:00",
+  "port": "COM3",
+  "requested_seconds": 600.0,
+  "hardware": "user-confirmed bare board",
+  "flood_bytes": 185856,
+  "flood_v_responses": 768,
+  "flood_seconds": 21.0,
+  "initial_status": {
+    "firmware": "goob-samd21-bounded-recovery-v2",
+    "uptime_ms": "5593",
+    "reset_cause": "0x40",
+    "watchdog_ms": "1000",
+    "imu_ready": "0",
+    "imu_calibrating": "0",
+    "imu_state": "0",
+    "imu_error": "6",
+    "imu_stage": "WHO_AM_I-read",
+    "motor_cmd_ms": "2",
+    "motor_timeout": "1"
+  },
+  "final_status": {
+    "firmware": "goob-samd21-bounded-recovery-v2",
+    "uptime_ms": "606090",
+    "reset_cause": "0x40",
+    "watchdog_ms": "1000",
+    "imu_ready": "0",
+    "imu_calibrating": "0",
+    "imu_state": "0",
+    "imu_error": "6",
+    "imu_stage": "WHO_AM_I-read",
+    "motor_cmd_ms": "6895",
+    "motor_timeout": "1"
+  },
+  "v_queries": 66,
+  "pass": true,
+  "actual_seconds": 600.6869999999999,
+  "tests": [
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "absent IMU unavailable",
+      "pass": true
+    },
+    {
+      "test": "valid command b'L 0 0 0\\r\\n'",
+      "pass": true
+    },
+    {
+      "test": "valid command b'F 0 0 0 2\\n'",
+      "pass": true
+    },
+    {
+      "test": "valid command b'M 0 0\\n'",
+      "pass": true
+    },
+    {
+      "test": "valid command b' \\tv\\r\\n'",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor nan",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor NaN",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor inf",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor -inf",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor 1e999",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor nope",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor 0oops",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor 1e-999",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject incomplete motor command",
+      "pass": true
+    },
+    {
+      "test": "128-byte command accepted",
+      "pass": true
+    },
+    {
+      "test": "129-byte command discarded with one error",
+      "pass": true
+    },
+    {
+      "test": "recovery after overlong line",
+      "pass": true
+    },
+    {
+      "test": "missing newline produces no repeated errors",
+      "pass": true
+    },
+    {
+      "test": "missing-newline discard reports one error at newline",
+      "pass": true
+    },
+    {
+      "test": "parser recovers after missing newline",
+      "pass": true
+    },
+    {
+      "test": "embedded NUL discarded",
+      "pass": true
+    },
+    {
+      "test": "parser recovers after NUL",
+      "pass": true
+    },
+    {
+      "test": "sustained input keeps V responsive",
+      "pass": true
+    },
+    {
+      "test": "no reset during sustained input",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    }
+  ],
+  "reader_errors": []
+}
