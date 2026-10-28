@@ -79,7 +79,13 @@ void driveOneMotor(float val, uint8_t pinFwd, uint8_t pinBwd) {
 const bool INVERT_LEFT_MOTOR = false;
 const bool INVERT_RIGHT_MOTOR = true;
 
+float appliedMotorLeft = 0.0f, appliedMotorRight = 0.0f;
+
 void driveMotors(float left, float right) {
+  // Logical clamped outputs, before wiring inversion. Only motor commands,
+  // command timeout/validation, and reset may change these; never IMU faults.
+  appliedMotorLeft = left = clampf(left, -1.0f, 1.0f);
+  appliedMotorRight = right = clampf(right, -1.0f, 1.0f);
   if (INVERT_LEFT_MOTOR) left = -left;
   if (INVERT_RIGHT_MOTOR) right = -right;
   driveOneMotor(left,  PIN_L_FWD, PIN_L_BWD);
@@ -151,7 +157,7 @@ float imuCalibrationTotals[3] = {0, 0, 0};
 unsigned long nextImuReadUs = 0, lastImuSummaryMs = 0;
 enum ImuInitStage { IMU_UNAVAILABLE, IMU_BUS, IMU_IDENTIFY, IMU_WAKE,
   IMU_WAIT_WAKE, IMU_CONFIGURE, IMU_WAIT_SETTLE, IMU_CALIBRATE, IMU_RUNNING,
-  IMU_WATCHDOG_LOCKOUT };
+  IMU_WATCHDOG_LOCKOUT, IMU_BUS_CLEAR, IMU_RESTART };
 ImuInitStage imuStage = IMU_UNAVAILABLE;
 uint8_t imuConfigIndex = 0;
 unsigned long imuStepAtMs = 0, imuRetryAtMs = 0;
@@ -166,9 +172,23 @@ uint8_t imuWireError = 0;
 uint8_t imuWhoAmI = 0;
 uint8_t imuBytesReceived = 0;
 const unsigned long MOTOR_COMMAND_TIMEOUT_MS = 1000UL;
-const char *FIRMWARE_ID = "goob-samd21-bounded-recovery-v2";
+const char *FIRMWARE_ID = "goob-samd21-independent-drive-v4";
 uint8_t bootResetCause = 0;
 int watchdogPeriodMs = 0;
+
+// Sticky fault evidence survives adapter cleanup and subsequent retries.
+bool faultSda = true, faultScl = true;
+uint8_t faultState = 0, faultError = 0, faultBytes = 0, faultWho = 0;
+const char *faultStage = "none";
+uint32_t imuFaultCount = 0;
+bool faultWasCalibrating = false, faultLogPending = false, clearLogPending = false;
+bool diagEmitted = false;
+unsigned long lastImuDiagnosticMs = 0;
+bool busClearStarted = false;
+uint8_t busClearResult = 0, busClearPulses = 0;
+bool busClearSda = true, busClearScl = true;
+uint8_t busRestartError = 0;
+
 
 void configureWatchdog() {
 #if defined(ARDUINO_ARCH_SAMD)
@@ -207,6 +227,18 @@ bool mpuRead(uint8_t reg, uint8_t *out, size_t count) {
   return ok;
 }
 
+bool driveIsActive() {
+  return appliedMotorLeft != 0.0f || appliedMotorRight != 0.0f;
+}
+
+void cancelImuCalibration(const char *reason) {
+  if (!imuCalibrating) return;
+  imuCalibrating = false;
+  imuCalibrationCollected = 0;
+  resetEstimator();
+  Serial.print("INFO IMU calibration cancelled reason="); Serial.println(reason);
+}
+
 void stopMotors() {
   driveMotors(0.0f, 0.0f);
   motorsTimeoutApplied = true;
@@ -223,23 +255,104 @@ void resetEstimator() {
   yawDeg = 0.0f;
 }
 
-void imuFault() {
-  stopMotors();
-  if (imuCalibrating) Serial.println("ERR IMU recalibration aborted: sensor fault");
-  imuReady = false;
-  imuCalibrating = false;
+void captureImuFault() {
+  faultState = (uint8_t)imuStage;
+  faultError = imuWireError;
+  faultBytes = imuBytesReceived;
+  faultWho = imuWhoAmI;
+  faultStage = imuFailureStage;
+  faultWasCalibrating = imuCalibrating;
+  faultSda = imuBus.faultLinesValid ? imuBus.faultSda : imuBus.sdaLevel();
+  faultScl = imuBus.faultLinesValid ? imuBus.faultScl : imuBus.sclLevel();
+  ++imuFaultCount;
+  faultLogPending = true;
+}
+
+void backoffImu() {
   imuStage = IMU_UNAVAILABLE;
-  resetEstimator();
   imuRetryAtMs = millis() + imuRetryDelayMs;
   imuRetryDelayMs = min(imuRetryDelayMs * 2UL, IMU_RETRY_MAX_MS);
-  Serial.print("WARN IMU unavailable stage="); Serial.print(imuFailureStage);
-  Serial.print(" who=0x"); Serial.print(imuWhoAmI, HEX);
-  Serial.print(" wire="); Serial.print(imuWireError);
-  Serial.print(" bytes="); Serial.println(imuBytesReceived);
+}
+
+void imuFault() {
+  // Sensor health is independent of open-loop drive. Preserve motor output
+  // and valid command age; the ordinary motor timeout still runs each pass.
+  captureImuFault();
+  imuReady = false;
+  imuCalibrating = false;
+  resetEstimator();
+  // Clear first, then bounded SERCOM restart/backoff. No recursive retries.
+  imuStage = IMU_BUS_CLEAR;
+  busClearStarted = false;
+  busClearResult = 0;
+  busClearPulses = 0;
+}
+
+void serviceImuDiagnostics() {
+  if ((!faultLogPending && !clearLogPending) ||
+      (diagEmitted && millis() - lastImuDiagnosticMs < 1000UL)) return;
+  diagEmitted = true;
+  lastImuDiagnosticMs = millis();
+  // At most one diagnostic line/second. Keep latest evidence and fault count
+  // if a new failure arrives before the previous event can be printed.
+  if (faultLogPending) {
+    faultLogPending = false;
+    Serial.print("WARN IMU unavailable stage="); Serial.print(faultStage);
+    Serial.print(" who=0x"); Serial.print(faultWho, HEX);
+    Serial.print(" wire="); Serial.print(faultError);
+    Serial.print(" bytes="); Serial.print(faultBytes);
+    Serial.print(" sda="); Serial.print(faultSda ? 1 : 0);
+    Serial.print(" scl="); Serial.print(faultScl ? 1 : 0);
+    Serial.print(" state="); Serial.print(faultState);
+    Serial.print(" calibrating="); Serial.print(faultWasCalibrating ? 1 : 0);
+    Serial.print(" faults="); Serial.println(imuFaultCount);
+  } else {
+    clearLogPending = false;
+    Serial.print("INFO IMU bus_clear="); Serial.print(busClearResult);
+    Serial.print(" pulses="); Serial.print(busClearPulses);
+    Serial.print(" sda="); Serial.print(busClearSda ? 1 : 0);
+    Serial.print(" scl="); Serial.print(busClearScl ? 1 : 0);
+    Serial.print(" restart_wire="); Serial.println(busRestartError);
+  }
+}
+
+void serviceBusRecovery() {
+  if (imuStage == IMU_RESTART) {
+    // A STOP with both lines released permits a bounded SERCOM restart.
+    busRestartError = beginMpuBus() ? 0 : imuWireError;
+    if (busRestartError) captureImuFault();
+    clearLogPending = true;
+    backoffImu();
+    return;
+  }
+  if (!busClearStarted) {
+    busRestartError = 0;
+    if (!imuBus.startBusClear()) {
+      imuWireError = imuBus.error;
+      imuFailureStage = "bus-clear-disable";
+      captureImuFault();
+      busClearResult = 6; // SERCOM could not be relinquished; no GPIO clocks.
+      busClearPulses = 0;
+      busClearSda = imuBus.sdaLevel(); busClearScl = imuBus.sclLevel();
+      clearLogPending = true;
+      backoffImu();
+      return;
+    }
+    busClearStarted = true;
+    busClearResult = 1;
+    return;
+  }
+  busClearResult = imuBus.serviceBusClear();
+  busClearPulses = imuBus.clear.pulses;
+  if (busClearResult == 1) return;
+  busClearSda = imuBus.clear.finalSda; busClearScl = imuBus.clear.finalScl;
+  if (busClearResult == 2) imuStage = IMU_RESTART;
+  else { clearLogPending = true; backoffImu(); }
 }
 
 void startCalibration(uint16_t samples) {
-  stopMotors();
+  // Only calibrate at commanded rest; a subsequent drive command cancels it.
+  if (driveIsActive()) return;
   imuCalibrating = true;
   imuCalibrationCollected = 0;
   imuCalibrationTarget = samples;
@@ -258,10 +371,10 @@ void finishCalibration() {
 }
 
 void startImuInitialization() {
-  stopMotors();
   imuReady = false;
-  // Lock nonzero drive commands throughout initialization AND calibration.
-  startCalibration(100);
+  imuCalibrating = false;
+  imuCalibrationStartedMs = millis();
+  resetEstimator();
   imuStage = IMU_BUS;
   imuStepAtMs = millis();
   imuConfigIndex = 0;
@@ -288,6 +401,10 @@ bool readMpuRaw(int16_t *accel, int16_t *gyro, int16_t &temp) {
 // No delays, calibration loops, or watchdog feeds here.
 void serviceImuInitialization() {
   const unsigned long now = millis();
+  if (imuStage == IMU_BUS_CLEAR || imuStage == IMU_RESTART) {
+    serviceBusRecovery();
+    return;
+  }
   if (imuStage == IMU_RUNNING || imuStage == IMU_WATCHDOG_LOCKOUT) return;
   if (imuStage == IMU_UNAVAILABLE) {
     if ((int32_t)(now - imuRetryAtMs) >= 0) startImuInitialization();
@@ -329,25 +446,17 @@ void serviceImuInitialization() {
       }
     } break;
     case IMU_WAIT_SETTLE:
-      imuStage = IMU_CALIBRATE;
+      // Ready independently of calibration. Preserve an existing gyro bias on
+      // recovery; do not repeatedly calibrate a robot that may be moving.
+      imuReady = true;
+      imuStage = IMU_RUNNING;
+      imuFailureStage = "none";
+      imuRetryDelayMs = 1000;
+      nextImuReadUs = micros();
+      lastImuSummaryMs = millis();
+      if (imuCalibrationGeneration == 0 && !driveIsActive()) startCalibration(100);
+      Serial.println("INFO IMU MPU-6050 ready");
       break;
-    case IMU_CALIBRATE: {
-      int16_t a[3], g[3], t;
-      if (!readMpuRaw(a, g, t)) { imuFailureStage = "calibration-sample"; imuFault(); return; }
-      for (uint8_t i = 0; i < 3; ++i) imuCalibrationTotals[i] += g[i];
-      ++imuCalibrationCollected;
-      imuStepAtMs = millis() + 5;
-      if (imuCalibrationCollected >= imuCalibrationTarget) {
-        finishCalibration();
-        imuReady = true;
-        imuStage = IMU_RUNNING;
-        imuFailureStage = "none";
-        imuRetryDelayMs = 1000;
-        nextImuReadUs = micros();
-        lastImuSummaryMs = millis();
-        Serial.println("INFO IMU MPU-6050 ready");
-      }
-    } break;
     default: break;
   }
 }
@@ -369,10 +478,10 @@ void emitImuSample() {
   lastImuSampleUs = nowUs;
   if (imuCalibrating) {
     if (millis() - imuCalibrationStartedMs >= IMU_CALIBRATION_DEADLINE_MS) {
-      imuFailureStage = "calibration-deadline";
-      imuFault();
+      cancelImuCalibration("deadline");
       return;
     }
+    if (driveIsActive()) { cancelImuCalibration("drive"); return; }
     for (uint8_t i = 0; i < 3; ++i) imuCalibrationTotals[i] += rawGyro[i];
     ++imuCalibrationCollected;
     if (imuCalibrationCollected >= imuCalibrationTarget) {
@@ -588,6 +697,8 @@ void loop() {
     emitBatteryTelemetry(readBatteryVoltage());
   }
   serviceMotorTimeout();
+  serviceImuDiagnostics();
+  serviceMotorTimeout();
   // Final fallback only; all scheduled work and motor safety returned.
   feedWatchdog();
 }
@@ -617,7 +728,19 @@ void handleCommand(char *cmd) {
       Serial.print(" imu_error="); Serial.print(imuWireError);
       Serial.print(" imu_stage="); Serial.print(imuFailureStage);
       Serial.print(" motor_cmd_ms="); Serial.print(lastMotorCmdMs);
-      Serial.print(" motor_timeout="); Serial.println(motorsTimeoutApplied ? 1 : 0);
+      Serial.print(" motor_timeout="); Serial.print(motorsTimeoutApplied ? 1 : 0);
+      Serial.print(" motor_left="); Serial.print(appliedMotorLeft, 3);
+      Serial.print(" motor_right="); Serial.print(appliedMotorRight, 3);
+      Serial.print(" imu_bias_valid="); Serial.print(imuCalibrationGeneration > 0 ? 1 : 0);
+      Serial.print(" sda="); Serial.print(imuBus.sdaLevel() ? 1 : 0);
+      Serial.print(" scl="); Serial.print(imuBus.sclLevel() ? 1 : 0);
+      Serial.print(" fault_sda="); Serial.print(faultSda ? 1 : 0);
+      Serial.print(" fault_scl="); Serial.print(faultScl ? 1 : 0);
+      Serial.print(" fault_state="); Serial.print(faultState);
+      Serial.print(" fault_wire="); Serial.print(faultError);
+      Serial.print(" faults="); Serial.print(imuFaultCount);
+      Serial.print(" bus_clear="); Serial.print(busClearResult);
+      Serial.print(" clear_pulses="); Serial.println(busClearPulses);
     } break;
 
     case 'M': {
@@ -628,19 +751,19 @@ void handleCommand(char *cmd) {
         Serial.println("ERR M requires finite numeric values");
         break;
       }
-      if (imuCalibrating && (l != 0.0f || r != 0.0f)) {
-        driveMotors(0.0f, 0.0f);
-        Serial.println("ERR M ignored during IMU calibration");
-        break;
-      }
       driveMotors(l, r);
       lastMotorCmdMs = millis();
       motorsTimeoutApplied = false;
+      if (driveIsActive()) cancelImuCalibration("drive");
       Serial.println("OK M");
     } break;
 
     case 'C': {
       if (ntok != 1) { Serial.println("ERR C takes no arguments"); break; }
+      if (driveIsActive()) {
+        Serial.println("ERR IMU calibration requires stopped drive");
+        break;
+      }
       if (!imuReady || imuCalibrating) {
         Serial.println(imuCalibrating ? "ERR IMU calibration already running" : "ERR IMU not ready");
         break;

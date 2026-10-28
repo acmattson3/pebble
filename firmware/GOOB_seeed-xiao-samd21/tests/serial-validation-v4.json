@@ -1,0 +1,373 @@
+{
+  "started_utc": "2026-10-28T19:36:52.075568+00:00",
+  "port": "COM3",
+  "requested_seconds": 60.0,
+  "hardware": "IMU/peripherals",
+  "flood_bytes": 164318,
+  "flood_v_responses": 679,
+  "flood_seconds": 21.03100000001723,
+  "initial_status": {
+    "firmware": "goob-samd21-independent-drive-v4",
+    "uptime_ms": "269602",
+    "reset_cause": "0x40",
+    "watchdog_ms": "1000",
+    "imu_ready": "1",
+    "imu_calibrating": "0",
+    "imu_state": "8",
+    "imu_error": "0",
+    "imu_stage": "none",
+    "motor_cmd_ms": "220285",
+    "motor_timeout": "1",
+    "motor_left": "0.000",
+    "motor_right": "0.000",
+    "imu_bias_valid": "1",
+    "sda": "1",
+    "scl": "1",
+    "fault_sda": "0",
+    "fault_scl": "1",
+    "fault_state": "8",
+    "fault_wire": "4",
+    "faults": "8",
+    "bus_clear": "2",
+    "clear_pulses": "1"
+  },
+  "final_status": {
+    "firmware": "goob-samd21-independent-drive-v4",
+    "uptime_ms": "329672",
+    "reset_cause": "0x40",
+    "watchdog_ms": "1000",
+    "imu_ready": "1",
+    "imu_calibrating": "0",
+    "imu_state": "8",
+    "imu_error": "0",
+    "imu_stage": "none",
+    "motor_cmd_ms": "270906",
+    "motor_timeout": "1",
+    "motor_left": "0.000",
+    "motor_right": "0.000",
+    "imu_bias_valid": "1",
+    "sda": "1",
+    "scl": "1",
+    "fault_sda": "0",
+    "fault_scl": "1",
+    "fault_state": "8",
+    "fault_wire": "4",
+    "faults": "8",
+    "bus_clear": "2",
+    "clear_pulses": "1"
+  },
+  "v_queries": 15,
+  "pass": true,
+  "actual_seconds": 60.53200000000652,
+  "tests": [
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "expected IMU availability",
+      "pass": true
+    },
+    {
+      "test": "valid command b'L 0 0 0\\r\\n'",
+      "pass": true
+    },
+    {
+      "test": "valid command b'F 0 0 0 2\\n'",
+      "pass": true
+    },
+    {
+      "test": "valid command b'M 0 0\\n'",
+      "pass": true
+    },
+    {
+      "test": "valid command b' \\tv\\r\\n'",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor nan",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor NaN",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor inf",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor -inf",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor 1e999",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor nope",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor 0oops",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject invalid motor 1e-999",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "invalid motor does not renew timestamp",
+      "pass": true
+    },
+    {
+      "test": "reject incomplete motor command",
+      "pass": true
+    },
+    {
+      "test": "128-byte command accepted",
+      "pass": true
+    },
+    {
+      "test": "129-byte command discarded with one error",
+      "pass": true
+    },
+    {
+      "test": "recovery after overlong line",
+      "pass": true
+    },
+    {
+      "test": "missing newline produces no repeated errors",
+      "pass": true
+    },
+    {
+      "test": "missing-newline discard reports one error at newline",
+      "pass": true
+    },
+    {
+      "test": "parser recovers after missing newline",
+      "pass": true
+    },
+    {
+      "test": "embedded NUL discarded",
+      "pass": true
+    },
+    {
+      "test": "parser recovers after NUL",
+      "pass": true
+    },
+    {
+      "test": "sustained input keeps V responsive",
+      "pass": true
+    },
+    {
+      "test": "no reset during sustained input",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    },
+    {
+      "test": "V responds",
+      "pass": true
+    },
+    {
+      "test": "expected production firmware",
+      "pass": true
+    },
+    {
+      "test": "uptime increases without reset",
+      "pass": true
+    }
+  ],
+  "reader_errors": []
+}

@@ -3,6 +3,17 @@
 
 #include <Arduino.h>
 #include <wiring_private.h>
+#include "BusClear.h"
+
+struct GoobI2CPins {
+  // INPUT releases the line to external 3.3 V pull-ups; OUTPUT only ever LOW.
+  void releaseSda() { pinMode(SDA, INPUT); }
+  void releaseScl() { pinMode(SCL, INPUT); }
+  void pullSdaLow() { digitalWrite(SDA, LOW); pinMode(SDA, OUTPUT); }
+  void pullSclLow() { digitalWrite(SCL, LOW); pinMode(SCL, OUTPUT); }
+  bool sda() const { return digitalRead(SDA) == HIGH; }
+  bool scl() const { return digitalRead(SCL) == HIGH; }
+};
 
 // Project-owned SAMD21 SERCOM2 master, exclusively owning XIAO D4/D5.
 // No Wire calls, interrupts, or installed-core changes. Manual ACK sequencing
@@ -19,6 +30,21 @@ class BoundedI2C {
   static const uint32_t DEADLINE_US = 10000;
   uint8_t error = OK;
   uint8_t received = 0;
+  bool faultSda = true, faultScl = true, faultLinesValid = false;
+  GoobI2CPins pins;
+  GoobBusClear<GoobI2CPins> clear{pins};
+
+  bool sdaLevel() const { return pins.sda(); }
+  bool sclLevel() const { return pins.scl(); }
+  bool startBusClear() {
+    // Relinquish SERCOM before touching GPIO, within the normal 10 ms budget.
+    start(); ready = false;
+    SERCOM2->I2CM.CTRLA.bit.ENABLE = 0;
+    if (!sync()) return fail(TIMEOUT);
+    clear.start(micros());
+    return true;
+  }
+  uint8_t serviceBusClear() { return clear.service(micros()); }
 
   bool begin() {
     start();
@@ -81,7 +107,7 @@ class BoundedI2C {
  private:
   bool ready = false;
   uint32_t startedUs = 0;
-  void start() { startedUs = micros(); error = OK; received = 0; }
+  void start() { startedUs = micros(); error = OK; received = 0; faultLinesValid = false; }
   bool expired() const { return uint32_t(micros() - startedUs) >= DEADLINE_US; }
   bool linesHigh() const { return digitalRead(SDA) && digitalRead(SCL); }
   bool sync() {
@@ -89,6 +115,8 @@ class BoundedI2C {
     return !expired();
   }
   bool fail(uint8_t why) {
+    // Capture BEFORE STOP, disable or pin-mode cleanup changes the evidence.
+    faultSda = pins.sda(); faultScl = pins.scl(); faultLinesValid = true;
     error = why;
     ready = false;
     // Best-effort STOP only while owning a synchronized bus. Never start a
