@@ -201,6 +201,9 @@ function syncSoundboardWidget(ctx, item) {
   item.select.disabled=!online||!canPlay;
   item.play.disabled=!online||!canPlay;
   item.stop.disabled=!online||filesState?.controls===false;
+  if(item.volume){const v=Number(statusState?.volume);item.volume.disabled=!online||!item.widget.volume?.enabled||!Number.isFinite(v);if(Number.isFinite(v)&&document.activeElement!==item.volume)item.volume.value=String(v);}
+  if(item.volume){const v=Number(statusState?.volume);item.volume.disabled=!online||!item.widget.volume?.enabled||!Number.isFinite(v);if(Number.isFinite(v)&&document.activeElement!==item.volume)item.volume.value=String(v);}
+  if(item.volume){const v=Number(statusState?.volume);item.volume.disabled=!online||!item.widget.volume?.enabled||!Number.isFinite(v);if(Number.isFinite(v)&&document.activeElement!==item.volume)item.volume.value=String(v);}
   if(statusState?.error) item.status.textContent=String(statusState.error);
   else if(statusState?.playing) item.status.textContent=`Playing: ${statusState.file||'sound'}`;
   else if(filesState) item.status.textContent=`Ready · ${files.length} sound${files.length===1?'':'s'}`;
@@ -399,12 +402,18 @@ function render(manifest) {
         const node=element('div',undefined,'soundboard-widget');
         const title=element('strong',widget.label,'soundboard-title');
         const fileSelect=element('select');fileSelect.setAttribute('aria-label',`${widget.label} sound file`);
+        const volumeLabel=element('label','Volume','soundboard-volume-label');
+        const volume=element('input');volume.type='range';volume.min=widget.volume?.min??0;volume.max=widget.volume?.max??100;volume.step=widget.volume?.step??1;volume.setAttribute('aria-label',`${widget.label} volume`);
+        volumeLabel.append(volume);
         const status=element('p','Waiting for sound list…','soundboard-status');
         const actions=element('div',undefined,'soundboard-actions');
         const play=element('button','Play');play.setAttribute('aria-label',`Play selected ${widget.label} sound`);
         const stop=element('button','Stop');stop.className='stop';stop.setAttribute('aria-label',`Stop ${widget.label}`);
+        if(widget.volume?.enabled)node.append(volumeLabel);
         actions.append(play,stop);node.append(title,fileSelect,actions,status);controls.append(node);
-        const item={widget,select:fileSelect,play,stop,status};ctx.soundboardWidgets.push(item);ctx.controlNodes.push(fileSelect,play,stop);
+        const item={widget,select:fileSelect,play,stop,status,volume};ctx.soundboardWidgets.push(item);ctx.controlNodes.push(fileSelect,play,stop,...(widget.volume?.enabled?[volume]:[]));
+        let volumeTimer=null;
+        volume.addEventListener('input',()=>{if(!beginInteraction())return;clearTimeout(volumeTimer);volumeTimer=setTimeout(()=>queueCommand(robot,module,{endpoint:widget.command_endpoint},{action:'volume',volume:Number(volume.value)},manifest.revision),100);});
         item.playSelected=()=>{
           if(!beginInteraction()||!fileSelect.value||play.disabled)return;
           queueCommand(robot,module,{endpoint:widget.command_endpoint},{action:'play',file:fileSelect.value},manifest.revision);

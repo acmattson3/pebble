@@ -34,7 +34,7 @@ def _payload_validator_cached(serialized: str) -> Draft202012Validator:
     # remote references, executable expressions, or attacker-supplied regexes.
     allowed = {"type", "properties", "required", "additionalProperties", "minimum",
                "maximum", "enum", "const", "items", "minItems", "maxItems", "maxProperties",
-               "minLength", "maxLength", "title", "description", "default"}
+               "minLength", "maxLength", "title", "description", "default", "oneOf"}
     def check(node, depth=0):
         if not isinstance(node, dict) or depth > 12 or set(node) - allowed:
             raise ValueError("Unsupported endpoint schema keyword or nesting")
@@ -44,6 +44,8 @@ def _payload_validator_cached(serialized: str) -> Draft202012Validator:
             check(node["items"], depth+1)
         if isinstance(node.get("additionalProperties"), dict):
             check(node["additionalProperties"], depth+1)
+        for child in node.get("oneOf", []):
+            check(child, depth+1)
     check(schema)
     return Draft202012Validator(schema)
 
@@ -209,10 +211,11 @@ def validate_manifest(manifest: dict) -> dict:
                 command_schema = command["schema"]
                 properties = command_schema.get("properties", {})
                 if (command_schema.get("type") != "object"
-                        or properties.get("action", {}).get("enum") != ["play", "stop"]
+                        or not set(properties.get("action", {}).get("enum", [])).issubset({"play", "stop", "volume"})
+                        or not {"play", "stop"}.issubset(set(properties.get("action", {}).get("enum", [])))
                         or properties.get("file", {}).get("type") != "string"
-                        or not {"action", "file"}.issubset(set(command_schema.get("required", [])))):
-                    raise ValueError("Soundboard command needs play/stop action and file fields")
+                        or "action" not in command_schema.get("required", [])):
+                    raise ValueError("Soundboard command needs play/stop and optional volume action")
                 files_schema = files["schema"].get("properties", {}).get("files", {})
                 if (files["schema"].get("type") != "object" or files_schema.get("type") != "array"
                         or files_schema.get("items", {}).get("type") != "string"):

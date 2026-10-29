@@ -433,6 +433,7 @@
     "soundboard_handler": {
       "enabled": true,
       "log_level": "INFO",
+      "volume": {"enabled": true, "control": "PCM", "command": ["amixer"]},
       "playback": {
         "directory": "/opt/sounds",
         "player_command": [

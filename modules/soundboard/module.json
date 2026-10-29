@@ -2,7 +2,7 @@
   "type": "pebble.soundboard",
   "version": 1,
   "title": "Soundboard",
-  "description": "Play a sound from this robot's advertised WAV library, or stop playback.",
+  "description": "Play sounds, adjust this robot's speaker volume, or stop playback.",
   "endpoints": {
     "command": {
       "topic": "i/soundboard/command",
@@ -12,14 +12,24 @@
         "properties": {
           "action": {
             "type": "string",
-            "enum": ["play", "stop"]
+            "enum": ["play", "stop", "volume"]
           },
           "file": {
             "type": "string",
             "maxLength": 512
+          },
+          "volume": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
           }
         },
-        "required": ["action", "file"],
+        "required": ["action"],
+        "oneOf": [
+          {"properties": {"action": {"const": "play"}}, "required": ["action", "file"], "maxProperties": 2},
+          {"properties": {"action": {"const": "stop"}}, "required": ["action"], "maxProperties": 1},
+          {"properties": {"action": {"const": "volume"}}, "required": ["action", "volume"], "maxProperties": 2}
+        ],
         "additionalProperties": false
       },
       "qos": 0,
@@ -55,6 +65,7 @@
           "file": {"type": ["string", "null"]},
           "error": {"type": ["string", "null"]},
           "controls": {"type": "boolean"},
+          "volume": {"type": ["integer", "null"], "minimum": 0, "maximum": 100},
           "timestamp": {"type": "number"}
         },
         "required": ["playing", "file", "error", "controls", "timestamp"],
@@ -85,6 +96,7 @@
         "command_endpoint": "command",
         "files_endpoint": "files",
         "status_endpoint": "status",
+        "volume": {"enabled": true, "min": 0, "max": 100, "step": 1},
         "key_actions": [
           {"id": "play-selected", "label": "Play selected sound", "behavior": "play-selected"}
         ]

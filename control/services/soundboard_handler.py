@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
 import os
 import signal
 import shlex
@@ -61,6 +62,11 @@ class SoundboardHandler:
         self.stop_timeout = max(0.5, _parse_float(playback.get("stop_timeout"), 5.0))
         self.scan_interval = max(1.0, _parse_float(playback.get("scan_interval"), 10.0))
         self.playback_env = playback.get("env") if isinstance(playback.get("env"), dict) else {}
+        volume_cfg = self.service_cfg.get("volume") if isinstance(self.service_cfg.get("volume"), dict) else {}
+        self.volume_control = str(volume_cfg.get("control") or "")
+        self.volume_command = volume_cfg.get("command") or ["amixer"]
+        self.volume_supported = bool(volume_cfg.get("enabled")) and bool(self.volume_control)
+        self.current_volume: Optional[int] = None
         default_retain_interval = default_retained_publish_interval_seconds(config, default=3600.0)
         interval_raw = self.service_cfg.get("retained_publish_interval_seconds")
         try:
@@ -222,8 +228,38 @@ class SoundboardHandler:
             "file": current_file,
             "error": error,
             "controls": True,
+            "volume": self._read_volume() if self.volume_supported else None,
             "timestamp": time.time(),
         }
+
+    def _read_volume(self) -> Optional[int]:
+        if not self.volume_supported:
+            return None
+        try:
+            result = subprocess.run(self._normalize_command(self.volume_command) + ["get", self.volume_control],
+                                    capture_output=True, text=True, timeout=2, check=False)
+            match = re.search(r"\[(\d{1,3})%\]", result.stdout) if result.returncode == 0 else None
+            return min(100, int(match.group(1))) if match else self.current_volume
+        except (OSError, subprocess.TimeoutExpired):
+            return self.current_volume
+
+    def _set_volume(self, value: Any) -> None:
+        if not self.volume_supported or isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 100:
+            logging.warning("Ignoring invalid or unsupported soundboard volume")
+            return
+        volume = int(round(value))
+        try:
+            subprocess.run(self._normalize_command(self.volume_command) + ["set", self.volume_control, f"{volume}%"],
+                           capture_output=True, text=True, timeout=2, check=True)
+        except (OSError, subprocess.SubprocessError) as exc:
+            logging.error("Could not set soundboard volume: %s", exc)
+            with self.soundboard_lock:
+                self.last_error = f"Could not set volume: {exc}"
+        else:
+            self.current_volume = volume
+            with self.soundboard_lock:
+                self.last_error = None
+        self._publish_status()
 
     def _publish_status(self) -> None:
         payload = self._status_payload()
@@ -366,6 +402,10 @@ class SoundboardHandler:
             self._publish_status()
 
     def _handle_command(self, payload: Any) -> None:
+        command_payload = payload.get("value", payload) if isinstance(payload, dict) else payload
+        if isinstance(command_payload, dict) and command_payload.get("action") == "volume":
+            self._set_volume(command_payload.get("volume"))
+            return
         action, requested_file = self._parse_action(payload)
         if action is None:
             logging.warning("Invalid soundboard command payload: %s", payload)

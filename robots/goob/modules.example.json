@@ -26,7 +26,8 @@
               "kind": "forward",
               "subtopic": "incoming/soundboard-command"
             }
-          }
+          },
+          "ui": {"columns": 1, "controls": [{"kind": "soundboard", "id": "soundboard", "label": "Soundboard", "command_endpoint": "command", "files_endpoint": "files", "status_endpoint": "status", "volume": {"enabled": true, "min": 0, "max": 100, "step": 1}, "key_actions": [{"id": "play-selected", "label": "Play selected sound", "behavior": "play-selected"}]}]}
         },
         {
           "id": "lights",
