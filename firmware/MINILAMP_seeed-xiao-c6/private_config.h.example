@@ -2,7 +2,6 @@
 // Copy to private_config.h (gitignored). Never commit real credentials.
 constexpr char WIFI_SSID[] = "REPLACE_WIFI_SSID";
 constexpr char WIFI_PASS[] = "REPLACE_WIFI_PASSWORD";
-constexpr char MQTT_URI[] = "wss://mqtt.sssn.us:443/";
-constexpr char MQTT_USER[] = "REPLACE_MQTT_USERNAME";
-constexpr char MQTT_PASS[] = "REPLACE_MQTT_PASSWORD";
-// TLS verifies the server using the ESP32 core's built-in CA bundle.
+constexpr char MQTT_URI[] = "mqtt://10.10.10.163:1883";
+constexpr char MQTT_USER[] = "";
+constexpr char MQTT_PASS[] = "";

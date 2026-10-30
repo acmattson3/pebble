@@ -1,6 +1,6 @@
 #pragma once
 #include <Arduino.h>
-constexpr char FIRMWARE_ID[] = "minilamp-c6-onoff-wss-v2";
+constexpr char FIRMWARE_ID[] = "minilamp-c6-onoff-arl-tcp-v3";
 constexpr bool USE_EXTERNAL_ANTENNA = true;
 constexpr uint8_t BATTERY_PIN = D0;
 constexpr float BATTERY_DIVIDER_RATIO = 2.0f;

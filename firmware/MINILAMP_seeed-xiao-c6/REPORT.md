@@ -70,7 +70,7 @@ The controller was left stopped. Driver VM/VCC and SLP/nSLEEP voltage
 measurements have been requested. At this stage, higher-power and sustained commands had not been sent. The
 subsequent full-on comparison below resolved the movement question.
 
-## Current production: on/off WSS v2
+## Previous production: on/off WSS v2
 
 The user reported the motors jolting at startup and confirmed that MiniLAMP is
 an on/off drivetrain. A supervised 0.45-second full-on comparison using the
@@ -80,7 +80,7 @@ at a 25% deadband before mixing, then use direct GPIO forward/reverse/stop.
 There is no PWM or variable-speed setting. The advertised drive UI now shows a
 direction stick and stop, and the grouser slider has discrete -1/0/1 positions.
 
-Current firmware ID: **minilamp-c6-onoff-wss-v2**. A warning-enabled Arduino
+V2 firmware ID: **minilamp-c6-onoff-wss-v2**. A warning-enabled Arduino
 compile passed with 1,199,076 sketch bytes and 44,952 static RAM bytes. Normal
 serial upload hash verification succeeded. Native safety/deadband tests passed.
 The generated manifest is 3,343 bytes, revision **b576c760a79555b4**.
@@ -112,3 +112,25 @@ included in the Docker image.
   or provide a hardware enable gate in a later hardware revision. The user
   observed the same startup jolt as with the older firmware.
 - Independently compare battery voltage to a meter.
+
+
+## Current production: ARL LAN broker TCP v3 — October 30, 2026
+
+MiniLAMP was switched from public WSS to the anonymous MQTT broker hosted on ARL
+at `10.10.10.163:1883`, because MiniLAMP and ARL are on the same Wi-Fi. The
+firmware identity is `minilamp-c6-onoff-arl-tcp-v3`. The private build config
+uses Wi-Fi credentials from the ignored `private_config.h`; MQTT auth and TLS
+are disabled for this LAN listener. No credentials were added to tracked files.
+
+The expected C6 was identified on ARL as `/dev/ttyACM1` with base MAC
+`54:32:04:11:DE:A4`; `/dev/ttyACM0` was an Arduino Uno and was not touched. The
+user confirmed MiniLAMP was lifted with the wheels and grousers clear before
+flashing. Arduino CLI compiled with Espressif core 3.3.12 and the
+`esp32:esp32:XIAO_ESP32C6` target (1,199,068 sketch bytes, 44,952 bytes static
+RAM). Standard upload wrote and hash-verified the application, then reset the
+C6. No drive commands were sent.
+
+After reboot, retained MQTT messages on ARL confirmed MiniLAMP online with a
+new boot ID, published its manifest (revision `b576c760a79555b4`), and sent
+battery telemetry of **3.614 V**. This verifies Wi-Fi/MQTT connection and
+discovery on the local broker. Drive behavior was not exercised in this flash.

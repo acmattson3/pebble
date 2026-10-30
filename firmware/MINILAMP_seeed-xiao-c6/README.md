@@ -1,16 +1,17 @@
 # MiniLAMP — XIAO ESP32-C6
 
 MiniLAMP runs MQTT directly on its C6; no SBC or Pebble Linux runtime is required.
-The current firmware is `minilamp-c6-onoff-wss-v2`, using MQTT 3.1.1 over verified
-secure WebSockets. Its motors, battery sensing, and optional module discovery
-follow the current Pebble topic standard.
+The current firmware is `minilamp-c6-onoff-arl-tcp-v3`, using MQTT 3.1.1 over
+plain TCP to ARL's anonymous broker at `10.10.10.163:1883`. Its motors, battery
+sensing, and module discovery follow the current Pebble topic standard.
 
 ## Configuration and upload
 
 1. Install Espressif Arduino core **3.3.12** and select **XIAO_ESP32C6**.
-2. Copy `private_config.h.example` to `private_config.h`; configure Wi-Fi,
-   `MQTT_URI`, username and password. The private header is gitignored.
-   The tested broker URI is `wss://mqtt.sssn.us:443/`.
+2. Copy `private_config.h.example` to `private_config.h`; configure Wi-Fi and,
+   if needed, the MQTT URI and credentials. The private header is gitignored.
+   The current Goob/MiniLAMP LAN broker is `mqtt://10.10.10.163:1883` and permits
+   anonymous clients. For other brokers, set the appropriate URI and credentials.
 3. Hardware mapping, motor inversion/output permutation, divider ratio, antenna
    and on/off settings live in `RobotConfig.h`. The existing external-antenna
    setting is preserved.
@@ -27,9 +28,9 @@ follow the current Pebble topic standard.
 
 All runtime libraries (ESP-MQTT, cJSON, TLS certificate bundle, Wi-Fi, LEDC and
 watchdog) are supplied by the ESP32 core. PubSubClient, ArduinoJson and SleepyDog
-are not needed by this target. SNTP establishes time before MQTT starts so TLS
-can validate certificate dates. TLS checks the hostname and the core's CA
-bundle; there is no insecure fallback.
+are not needed by this target. SNTP is only needed when using a TLS broker; the
+current LAN TCP connection does not use TLS. TLS checks the hostname and the
+core's CA bundle when enabled; there is no insecure TLS fallback.
 
 ## Hardware
 
