@@ -571,7 +571,7 @@ function changeRobot(value) {
 function editing(target,code){
   if(target?.isContentEditable || ['SELECT','TEXTAREA'].includes(target?.tagName))return true;
   const native=/^(Space|Enter|ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End)$/.test(code);
-  if(target?.tagName==='BUTTON')return native;
+  if(target?.tagName==='BUTTON')return target.classList.contains('media-fullscreen-toggle')?false:native;
   if(target?.tagName==='INPUT')return ['checkbox','radio','range','button'].includes(target.type)?native:true;
   return false;
 }

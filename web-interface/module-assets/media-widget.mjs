@@ -11,6 +11,14 @@ export class MediaWidget {
     this.toggle.addEventListener('click',()=>set(widget.action,this.active?0:1));
     this.node.append(this.toggle,this.status);
     if(widget.kind==='video') {
+      this.fullscreen=document.createElement('button');this.fullscreen.textContent='Fullscreen';this.fullscreen.className='media-fullscreen-toggle';
+      this.fullscreen.setAttribute('aria-label',`${widget.label} fullscreen`);
+      this.fullscreen.addEventListener('click',()=>{
+        if(document.fullscreenElement===this.node)document.exitFullscreen?.();
+        else this.node.requestFullscreen?.().catch(error=>this.error(error.message||String(error)));
+      });
+      this.fullscreenChange=()=>{const active=document.fullscreenElement===this.node;this.fullscreen.textContent=active?'Exit fullscreen':'Fullscreen';this.fullscreen.setAttribute('aria-label',`${active?'Exit':'Enter'} ${widget.label} fullscreen`);};
+      document.addEventListener('fullscreenchange',this.fullscreenChange);this.node.append(this.fullscreen);
       this.image=document.createElement('img');this.image.alt=widget.label;this.image.hidden=true;this.node.append(this.image);
     } else if(widget.uplink) {
       this.talk=document.createElement('button');this.talk.textContent='Hold to talk';
@@ -25,7 +33,7 @@ export class MediaWidget {
   }
   url(endpoint) { return `/modules/api/media/${encodeURIComponent(this.module.id)}/${encodeURIComponent(endpoint)}?robot=${encodeURIComponent(this.base)}&revision=${encodeURIComponent(this.revision)}`; }
   sync(values,online) {
-    this.toggle.disabled=!online;if(this.talk)this.talk.disabled=!online;
+    this.toggle.disabled=!online;if(this.talk)this.talk.disabled=!online;if(this.fullscreen)this.fullscreen.disabled=!online;
     const active=online&&values[this.widget.action]>.5;
     if(active!==this.active) {
       this.active=active;this.cursor=0;
@@ -128,5 +136,5 @@ export class MediaWidget {
   }
   stopMic(){this.generation++;this.uplink?.stop();this.cleanupMic();}
   stop(){this.active=false;this.talking=false;this.abort?.abort();this.stopMic();this.clearPlayback();if(this.image){this.image.hidden=true;this.image.removeAttribute('src');}if(this.imageURL){URL.revokeObjectURL(this.imageURL);this.imageURL=null;}this.toggle.textContent=this.widget.kind==='video'?'View camera':'Listen';this.status.textContent='Off';}
-  destroy(){this.destroyed=true;clearInterval(this.timer);this.stop();this.context?.close();if(this.imageURL)URL.revokeObjectURL(this.imageURL);}
+  destroy(){this.destroyed=true;clearInterval(this.timer);if(this.fullscreenChange)document.removeEventListener('fullscreenchange',this.fullscreenChange);this.stop();this.context?.close();if(this.imageURL)URL.revokeObjectURL(this.imageURL);}
 }
