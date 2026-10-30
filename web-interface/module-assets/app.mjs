@@ -421,7 +421,7 @@ function render(manifest) {
         play.addEventListener('click',item.playSelected);
         stop.addEventListener('click',()=>{
           if(!beginInteraction())return;
-          queueCommand(robot,module,{endpoint:widget.command_endpoint},{action:'stop',file:''},manifest.revision);
+          queueCommand(robot,module,{endpoint:widget.command_endpoint},{action:'stop'},manifest.revision);
         });
       } else if(widget.kind==='autonomy') {
         const node=element('div',undefined,'autonomy-widget');
@@ -576,7 +576,8 @@ function editing(target,code){
   return false;
 }
 for(const down of [true,false]) window.addEventListener(down?'keydown':'keyup',event=>{
-  if(down&&(editing(event.target,event.code)||event.repeat||!$('keyboard').checked||!usable()))return;
+  if(down&&(editing(event.target,event.code)||event.repeat||!$('keyboard').checked||!online||document.visibilityState==='hidden'))return;
+  if(down&&suspended)beginInteraction();
   if(!down&&!keys.has(event.code))return;
   if(down)keys.add(event.code);else keys.delete(event.code);
   let matched=false;

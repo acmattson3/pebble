@@ -68,6 +68,8 @@ class ModuleTests(unittest.TestCase):
                 validate_payload(drive['endpoints']['command'], payload)
         soundboard = manifest['modules'][1]
         validate_payload(soundboard['endpoints']['command'], {'action': 'play', 'file': 'beep.wav'})
+        validate_payload(soundboard['endpoints']['command'], {'action': 'stop'})
+        validate_payload(soundboard['endpoints']['command'], {'action': 'volume', 'volume': 42})
         for payload in ({'action': 'other', 'file': 'beep.wav'}, {'action': 'play', 'file': '', 'extra': 1}):
             with self.assertRaises((ValueError, ValidationError)):
                 validate_payload(soundboard['endpoints']['command'], payload)
